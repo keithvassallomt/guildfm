@@ -1,0 +1,72 @@
+.identity {
+  padding: 4px 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.who {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.handle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.nameForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.nameForm > :first-child {
+  flex: 1;
+}
+
+.nameForm button {
+  height: 50px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sample {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+.sampleLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

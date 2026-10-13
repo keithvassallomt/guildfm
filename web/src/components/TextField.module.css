@@ -1,0 +1,46 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input {
+  height: 50px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  /* Cards set --field-bg so fields stand out against them. */
+  background: var(--field-bg, var(--surface));
+  font-size: 16px;
+}
+
+.input::placeholder {
+  color: var(--faint);
+}
+
+.input:focus-visible {
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--warn);
+}
+
+.error:empty {
+  display: none;
+}

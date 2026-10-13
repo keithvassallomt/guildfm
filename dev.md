@@ -9,7 +9,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 ## Overview
 - [x] Stage 0: Feasibility and design
 - [x] Stage 1: Foundations
-- [ ] Stage 2: Accounts and roles
+- [x] Stage 2: Accounts and roles
 - [ ] Stage 3: Sonos control
 - [ ] Stage 4: Spotify catalogue
 - [ ] Stage 5: Queue and voting
@@ -43,13 +43,13 @@ Done when: the app opens on a phone on the office network and shows an empty Que
 
 ## Stage 2: Accounts and roles
 Goal: people can sign up and sign in, and each role sees and can do only what the spec allows.
-- [ ] User model: username, display name, password hash, role, "announce my requests" (on by default)
-- [ ] Seed the admin account from `.env` on first start
-- [ ] Create account, sign in, sign out (session cookie)
-- [ ] Permission checks for user, curator and admin, following the table in stream.md
-- [ ] Profile screen: display name, announce-my-requests toggle, your requests, sign out
-- [ ] Users screen (admin): list users, change role, reset password with a temporary password, add an account
-- [ ] Tests for every permission rule
+- [x] User model: username, display name, password hash, role, "announce my requests" (on by default)
+- [x] Seed the admin account from `.env` on first start
+- [x] Create account, sign in, sign out (session cookie)
+- [x] Permission checks for user, curator and admin, following the table in stream.md
+- [x] Profile screen: display name, announce-my-requests toggle, your requests, sign out
+- [x] Users screen (admin): list users, change role, reset password with a temporary password, add an account
+- [x] Tests for every permission rule
 
 Done when: a user, a curator and an admin each see the right tabs and controls, and blocked actions are refused by the server, not just hidden.
 

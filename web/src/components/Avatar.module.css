@@ -1,0 +1,20 @@
+.avatar {
+  width: var(--size);
+  height: var(--size);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: calc(var(--size) * 0.43);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.strong {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 800;
+}

@@ -20,11 +20,21 @@ const LiveContext = createContext<LiveValue | null>(null);
 
 const PING_MS = 25_000;
 const MAX_RETRY_MS = 15_000;
+// The server closes with this code when the session is no longer valid.
+const UNAUTHORISED = 4401;
+
+type Props = {
+  children: ReactNode;
+  /** Called instead of reconnecting when the server says we're no longer signed in. */
+  onUnauthorised: () => void;
+};
 
 /** Keeps one websocket open to the server, reconnecting with backoff, and fans events out. */
-export function LiveProvider({ children }: { children: ReactNode }) {
+export function LiveProvider({ children, onUnauthorised }: Props) {
   const [connected, setConnected] = useState(false);
   const handlers = useRef(new Map<string, Set<Handler>>());
+  const unauthorised = useRef(onUnauthorised);
+  unauthorised.current = onUnauthorised;
 
   useEffect(() => {
     let socket: WebSocket | null = null;
@@ -45,10 +55,15 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         const { event, data } = JSON.parse(message.data);
         handlers.current.get(event)?.forEach((handler) => handler(data));
       };
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         setConnected(false);
         window.clearInterval(ping);
         if (stopped) return;
+        if (event.code === UNAUTHORISED) {
+          stopped = true;
+          unauthorised.current();
+          return;
+        }
         attempts += 1;
         retry = window.setTimeout(open, Math.min(1000 * 2 ** attempts, MAX_RETRY_MS));
       };

@@ -1,0 +1,181 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  --field-bg: var(--bg);
+  padding: 8px 6px 8px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.open {
+  border-color: var(--line-strong);
+  padding-bottom: 14px;
+}
+
+.summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.handle {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disclosure {
+  width: var(--touch);
+  height: var(--touch);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.disclosure svg {
+  transition: transform 0.15s;
+}
+
+.open .disclosure svg {
+  transform: rotate(180deg);
+}
+
+/* On phones, a person's controls only show once their row is opened. */
+.controls,
+.extra {
+  display: none;
+  padding-right: 8px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.open .controls,
+.open .extra {
+  display: flex;
+}
+
+.confirm {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.confirmButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.temporary {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.password {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--accent);
+  user-select: all;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formButtons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* On wider screens every row shows its controls inline, so there's nothing to open. */
+@media (min-width: 768px) {
+  .row,
+  .open {
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 20px;
+    row-gap: 12px;
+    border-color: var(--line);
+  }
+
+  .disclosure {
+    display: none;
+  }
+
+  .controls,
+  .open .controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+  }
+
+  .controls [role="radiogroup"] {
+    width: 280px;
+  }
+
+  .extra,
+  .open .extra {
+    grid-column: 1 / -1;
+    display: flex;
+    padding: 0;
+  }
+
+  .confirm {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}

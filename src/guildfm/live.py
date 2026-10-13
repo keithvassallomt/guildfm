@@ -5,6 +5,10 @@ from typing import Any
 from fastapi import WebSocket, WebSocketDisconnect
 
 from guildfm import __version__
+from guildfm.auth import session_user
+
+# Close code the browser sees when it isn't signed in, so it can stop retrying.
+UNAUTHORISED = 4401
 
 
 class LiveHub:
@@ -37,6 +41,14 @@ class LiveHub:
 
 
 async def live_socket(websocket: WebSocket) -> None:
+    async with websocket.app.state.sessionmaker() as db:
+        user = await session_user(websocket.session, db)
+    if user is None or user.must_change_password:
+        # Accept first: a close code only reaches the browser on an open socket.
+        await websocket.accept()
+        await websocket.close(code=UNAUTHORISED)
+        return
+
     hub: LiveHub = websocket.app.state.live
     await hub.connect(websocket)
     await hub.send(websocket, "hello", {"version": __version__})

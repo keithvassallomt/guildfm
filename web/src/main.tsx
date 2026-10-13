@@ -10,14 +10,14 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
-import { LiveProvider } from "./live/LiveProvider";
+import { AuthProvider } from "./auth/AuthProvider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <LiveProvider>
+      <AuthProvider>
         <App />
-      </LiveProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 );

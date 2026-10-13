@@ -1,7 +1,19 @@
+import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
+
+from guildfm.live import UNAUTHORISED
+from tests.helpers import ADMIN, register, sign_in
+
+
+def test_live_needs_you_signed_in(client: TestClient) -> None:
+    with client.websocket_connect("/ws") as ws, pytest.raises(WebSocketDisconnect) as closed:
+        ws.receive_json()
+    assert closed.value.code == UNAUTHORISED
 
 
 def test_hello_and_ping(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
     with client.websocket_connect("/ws") as ws:
         assert ws.receive_json()["event"] == "hello"
         assert ws.receive_json() == {"event": "presence", "data": {"connected": 1}}
@@ -10,6 +22,7 @@ def test_hello_and_ping(client: TestClient) -> None:
 
 
 def test_broadcast_reaches_every_browser(client: TestClient) -> None:
+    register(client, "priya")
     with client.websocket_connect("/ws") as first:
         first.receive_json()  # hello
         first.receive_json()  # presence: 1

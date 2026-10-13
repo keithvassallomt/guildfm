@@ -1,0 +1,47 @@
+.links {
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.link,
+.link:hover {
+  min-height: 64px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--surface-raised);
+}
+
+.link + .link {
+  border-top: 1px solid var(--line);
+}
+
+.link > svg:last-child {
+  color: var(--muted);
+}
+
+.linkText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.linkTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.linkHint {
+  font-size: 13px;
+  color: var(--muted);
+}

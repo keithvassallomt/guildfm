@@ -1,8 +1,10 @@
 import sqlite3
 
+from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
+from guildfm.db import MIGRATIONS
 from guildfm.main import create_app
 
 
@@ -13,8 +15,9 @@ def test_health(client: TestClient) -> None:
 
 
 def test_migrations_run_on_startup(client: TestClient, settings: Settings) -> None:
+    head = ScriptDirectory(str(MIGRATIONS)).get_current_head()
     with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
-        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("0001",)
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == (head,)
 
 
 def test_unbuilt_front_end_says_so(client: TestClient) -> None:

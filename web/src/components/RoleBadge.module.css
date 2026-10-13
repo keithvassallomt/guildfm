@@ -1,0 +1,22 @@
+.badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.user {
+  background: var(--line);
+  color: var(--text-soft);
+}
+
+.curator {
+  background: var(--down-soft);
+  color: var(--down);
+}
+
+.admin {
+  background: var(--accent);
+  color: var(--on-accent);
+}
