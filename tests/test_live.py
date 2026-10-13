@@ -21,6 +21,19 @@ def test_hello_and_ping(client: TestClient) -> None:
         assert ws.receive_json()["event"] == "pong"
 
 
+@pytest.mark.parametrize(("method", "path"), [("delete", ""), ("post", "/reset-password")])
+def test_reset_and_delete_close_live_connections(client: TestClient, method, path) -> None:
+    priya = register(client, "priya")
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()  # hello
+        ws.receive_json()  # presence
+        sign_in(client, *ADMIN)
+        client.request(method, f"/api/users/{priya['id']}{path}").raise_for_status()
+        with pytest.raises(WebSocketDisconnect) as closed:
+            ws.receive_json()
+    assert closed.value.code == UNAUTHORISED
+
+
 def test_broadcast_reaches_every_browser(client: TestClient) -> None:
     register(client, "priya")
     with client.websocket_connect("/ws") as first:

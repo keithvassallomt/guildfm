@@ -83,6 +83,22 @@ def test_choosing_a_password_is_only_for_temporary_ones(client: TestClient) -> N
     assert response.status_code == 403
 
 
+def test_deleting_a_user(client: TestClient) -> None:
+    priya = register(client, "priya")
+    old_cookies = dict(client.cookies)
+
+    sign_in(client, *ADMIN)
+    assert client.delete(f"/api/users/{priya['id']}").status_code == 204
+    assert "priya" not in [user["username"] for user in client.get("/api/users").json()]
+    assert client.delete(f"/api/users/{priya['id']}").status_code == 404
+
+    client.cookies.clear()
+    client.cookies.update(old_cookies)
+    assert client.get("/api/me").status_code == 401
+    # The username is free again.
+    register(client, "priya")
+
+
 def test_password_reset_signs_the_user_out_everywhere(client: TestClient) -> None:
     priya = register(client, "priya")
     old_cookies = dict(client.cookies)

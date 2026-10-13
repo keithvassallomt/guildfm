@@ -14,6 +14,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 ## Users and Roles
 - Users must register an account and log in to access the system. Users can create their own accounts.
 - An initial admin account is seeded to the system.
+- Admins can delete accounts, though not their own. Deleting someone signs them out straight away, and their queued requests and votes go with them.
 - There are three roles: user, curator and admin.
 
 | Permission | User | Curator | Admin |
@@ -27,7 +28,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 | Start or switch playlists and AI stations | | Yes | Yes |
 | Playback controls (play, pause, resume, skip, volume, stop) | | | Yes |
 | Create announcements | | | Yes |
-| Manage users (create accounts, reset passwords, promote to curator or admin) | | | Yes |
+| Manage users (create accounts, reset passwords, promote to curator or admin, delete accounts) | | | Yes |
 | Change settings | | | Yes |
 
 ### Profile settings

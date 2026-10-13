@@ -89,6 +89,12 @@
   display: flex;
 }
 
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .confirm {
   padding: 12px;
   border-radius: var(--radius-sm);
@@ -140,7 +146,7 @@
 }
 
 /* When the list is wide enough, every row shows its controls inline, so there's nothing to open. */
-@container users (min-width: 760px) {
+@container users (min-width: 900px) {
   .row,
   .open {
     padding: 10px 14px;
@@ -165,7 +171,11 @@
   }
 
   .controls [role="radiogroup"] {
-    width: 280px;
+    width: 260px;
+  }
+
+  .actions {
+    display: flex;
   }
 
   .extra,

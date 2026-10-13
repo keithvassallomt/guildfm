@@ -49,6 +49,7 @@ Goal: people can sign up and sign in, and each role sees and can do only what th
 - [x] Permission checks for user, curator and admin, following the table in stream.md
 - [x] Profile screen: display name, announce-my-requests toggle, your requests, sign out
 - [x] Users screen (admin): list users, change role, reset password with a temporary password, add an account
+- [x] Delete accounts (admin, not your own), signing the person out straight away, including their live connection
 - [x] Tests for every permission rule
 
 Done when: a user, a curator and an admin each see the right tabs and controls, and blocked actions are refused by the server, not just hidden.

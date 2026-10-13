@@ -29,9 +29,10 @@ export function UsersPage() {
   const replace = (user: User) =>
     setList((current) => current?.map((u) => (u.id === user.id ? user : u)) ?? null);
   const add = (user: User) => setList((current) => [...(current ?? []), user].sort(byName));
+  const remove = (id: number) => setList((current) => current?.filter((u) => u.id !== id) ?? null);
 
   return (
-    <div className={`${styles.page} ${styles.narrow}`}>
+    <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerStart}>
           <Link to="/admin" aria-label="Back to Admin" className={styles.iconLink}>
@@ -54,7 +55,13 @@ export function UsersPage() {
           </p>
           <ul className={users.list}>
             {list.map((user) => (
-              <UserRow key={user.id} user={user} isSelf={user.id === me.id} onChange={replace} />
+              <UserRow
+                key={user.id}
+                user={user}
+                isSelf={user.id === me.id}
+                onChange={replace}
+                onDeleted={remove}
+              />
             ))}
           </ul>
         </>
@@ -65,15 +72,23 @@ export function UsersPage() {
   );
 }
 
-type RowProps = { user: User; isSelf: boolean; onChange: (user: User) => void };
+type RowProps = {
+  user: User;
+  isSelf: boolean;
+  onChange: (user: User) => void;
+  onDeleted: (id: number) => void;
+};
 
-function UserRow({ user, isSelf, onChange }: RowProps) {
+type Confirming = "reset" | "delete" | null;
+
+function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<Confirming>(null);
   const [temporary, setTemporary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const controlsId = useId();
+  const name = user.display_name;
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -96,15 +111,27 @@ function UserRow({ user, isSelf, onChange }: RowProps) {
       const result = await api<TemporaryPassword>("POST", `/users/${user.id}/reset-password`);
       onChange(result.user);
       setTemporary(result.temporary_password);
-      setConfirming(false);
+      setConfirming(null);
     });
+
+  const remove = () =>
+    run(async () => {
+      await api("DELETE", `/users/${user.id}`);
+      onDeleted(user.id);
+    });
+
+  const ask = (what: Confirming) => {
+    setConfirming(what);
+    setTemporary(null);
+    setError(null);
+  };
 
   return (
     <li className={`${users.row} ${open ? users.open : ""}`}>
       <div className={users.summary}>
-        <Avatar name={user.display_name} />
+        <Avatar name={name} />
         <span className={users.who}>
-          <span className={users.name}>{user.display_name}</span>
+          <span className={users.name}>{name}</span>
           <span className={users.handle}>
             @{user.username}
             {isSelf && " · you"}
@@ -116,7 +143,7 @@ function UserRow({ user, isSelf, onChange }: RowProps) {
           className={users.disclosure}
           aria-expanded={open}
           aria-controls={controlsId}
-          aria-label={`Manage ${user.display_name}`}
+          aria-label={`Manage ${name}`}
           onClick={() => setOpen(!open)}
         >
           <Icon name="chevronDown" size={20} />
@@ -129,22 +156,20 @@ function UserRow({ user, isSelf, onChange }: RowProps) {
         ) : (
           <>
             <SegmentedControl
-              label={`Role for ${user.display_name}`}
+              label={`Role for ${name}`}
               options={roleOptions}
               value={user.role}
               onChange={changeRole}
               disabled={busy}
             />
-            <Button
-              variant="secondary"
-              disabled={busy || confirming}
-              onClick={() => {
-                setConfirming(true);
-                setTemporary(null);
-              }}
-            >
-              Reset password
-            </Button>
+            <span className={users.actions}>
+              <Button variant="secondary" disabled={busy} onClick={() => ask("reset")}>
+                Reset password
+              </Button>
+              <Button variant="secondary" disabled={busy} onClick={() => ask("delete")}>
+                Delete
+              </Button>
+            </span>
           </>
         )}
       </div>
@@ -154,19 +179,21 @@ function UserRow({ user, isSelf, onChange }: RowProps) {
           {confirming && (
             <div className={users.confirm}>
               <span>
-                Reset {user.display_name}'s password? They'll be signed out everywhere.
+                {confirming === "reset"
+                  ? `Reset ${name}'s password? They'll be signed out everywhere.`
+                  : `Delete ${name}'s account? This can't be undone.`}
               </span>
               <span className={users.confirmButtons}>
-                <Button variant="secondary" onClick={() => setConfirming(false)}>
+                <Button variant="secondary" onClick={() => setConfirming(null)}>
                   Cancel
                 </Button>
-                <Button onClick={reset} disabled={busy}>
-                  Reset
+                <Button onClick={confirming === "reset" ? reset : remove} disabled={busy}>
+                  {confirming === "reset" ? "Reset" : "Delete"}
                 </Button>
               </span>
             </div>
           )}
-          {temporary && <TemporaryPasswordBox name={user.display_name} password={temporary} />}
+          {temporary && <TemporaryPasswordBox name={name} password={temporary} />}
           <FormError message={error} />
         </div>
       )}

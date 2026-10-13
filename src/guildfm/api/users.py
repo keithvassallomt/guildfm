@@ -1,8 +1,8 @@
-"""User management for admins: list, add, change roles, reset passwords."""
+"""User management for admins: list, add, change roles, reset passwords, delete."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,8 +62,17 @@ async def change_role(user_id: int, body: RoleIn, admin: Admin, db: Db) -> UserO
 
 
 @router.post("/{user_id}/reset-password")
-async def reset(user_id: int, admin: Admin, db: Db) -> TemporaryPasswordOut:
+async def reset(user_id: int, admin: Admin, db: Db, request: Request) -> TemporaryPasswordOut:
     user = await someone_else(user_id, admin, db)
     password = reset_password(user)
     await db.commit()
+    await request.app.state.live.sign_out_user(user.id)
     return TemporaryPasswordOut(user=UserOut.model_validate(user), temporary_password=password)
+
+
+@router.delete("/{user_id}", status_code=204)
+async def delete(user_id: int, admin: Admin, db: Db, request: Request) -> None:
+    user = await someone_else(user_id, admin, db)
+    await db.delete(user)
+    await db.commit()
+    await request.app.state.live.sign_out_user(user_id)
