@@ -1,4 +1,5 @@
 .page {
+  container: page / inline-size;
   max-width: 1120px;
   padding: 18px 16px 24px;
   display: flex;
@@ -143,7 +144,8 @@
   }
 }
 
-@media (min-width: 1024px) {
+/* Two columns once the page itself has room, whatever the window and sidebar are doing. */
+@container page (min-width: 880px) {
   .columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 28px;

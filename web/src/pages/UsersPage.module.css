@@ -1,4 +1,6 @@
 .list {
+  /* Rows lay themselves out by the list's width, not the window's: the sidebar takes a share. */
+  container: users / inline-size;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -137,8 +139,8 @@
   gap: 10px;
 }
 
-/* On wider screens every row shows its controls inline, so there's nothing to open. */
-@media (min-width: 768px) {
+/* When the list is wide enough, every row shows its controls inline, so there's nothing to open. */
+@container users (min-width: 760px) {
   .row,
   .open {
     padding: 10px 14px;
