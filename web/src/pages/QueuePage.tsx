@@ -11,8 +11,11 @@ export function QueuePage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1>
-          <Logo />
+        <h1 className={styles.title}>
+          <span className={styles.narrowOnly}>
+            <Logo />
+          </span>
+          <span className={styles.wideOnly}>Queue</span>
         </h1>
         <StatusChip tone={connected ? "live" : "idle"}>
           {connected ? "Connected" : "Offline"}

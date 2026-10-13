@@ -39,7 +39,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
   - A dashboard displaying the currently playing track, upcoming tracks, and user activity.
   - A search feature to find tracks and artists.
   - A queue management system for users to add tracks, and remove their own.
-- The application should be MOBILE FIRST.
+- The application should be MOBILE FIRST, and responsive: designed for phones first, but on a desktop browser it uses the space properly (sidebar navigation, wider content, more columns where they help) instead of looking like a small portrait app.
 
 ## Queue and Voting
 - Users can vote tracks up or down, using thumbs up and thumbs down. The system automatically orders the queue by votes.

@@ -4,6 +4,8 @@ The build plan for GuildFM. The spec is [stream.md](stream.md) and the UI refere
 
 Work goes stage by stage, in order. A task is ticked when it is built and tested. A stage is ticked in the overview when all its tasks are.
 
+Every screen is mobile first and responsive: it has to work on a phone and look like a normal web app on a desktop browser.
+
 ## Overview
 - [x] Stage 0: Feasibility and design
 - [x] Stage 1: Foundations
@@ -31,12 +33,13 @@ Goal: an empty but running app, front end and back end, with the GuildFM look.
 - [x] SQLite database with SQLAlchemy and Alembic migrations
 - [x] Front end with Vite, React and TypeScript, built into static files that FastAPI serves
 - [x] The prototype's look as shared styles: colours, fonts, buttons, toggles, tab bar
+- [x] Responsive layout: tab bar along the bottom on phones, sidebar and full-width content on desktop
 - [x] Websocket channel from server to browser for live updates
 - [x] Dev tooling: one command to run everything locally, ruff, pytest
 - [x] `.gitignore` extended for Python and Node build output
 - [x] First commit
 
-Done when: the app opens on a phone on the office network and shows an empty Queue screen with the tab bar.
+Done when: the app opens on a phone on the office network and shows an empty Queue screen with the tab bar, and on a desktop browser shows the same screen with a sidebar.
 
 ## Stage 2: Accounts and roles
 Goal: people can sign up and sign in, and each role sees and can do only what the spec allows.

@@ -4,7 +4,6 @@
   color-scheme: dark;
 
   --bg: #111316;
-  --bg-deep: #0b0c0e;
   --surface: #1a1d22;
   --surface-raised: #23272d;
   --bar: #15171b;
@@ -35,7 +34,6 @@
   --radius-lg: 22px;
   --touch: 44px;
   --tab-bar-height: 80px;
-  --content-width: 560px;
 }
 
 *,
@@ -47,7 +45,7 @@
 html,
 body {
   margin: 0;
-  background: var(--bg-deep);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;

@@ -1,7 +1,17 @@
 .app {
-  max-width: var(--content-width);
   min-height: 100dvh;
-  margin: 0 auto;
   padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
-  background: var(--bg);
+}
+
+.main {
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .app {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    align-items: start;
+    padding-bottom: 0;
+  }
 }

@@ -1,16 +1,16 @@
 import { Outlet, Route, Routes } from "react-router";
 import styles from "./App.module.css";
-import { TabBar } from "./components/TabBar";
+import { Navigation } from "./components/Navigation";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { QueuePage } from "./pages/QueuePage";
 
 function Shell() {
   return (
     <div className={styles.app}>
-      <main>
+      <Navigation />
+      <main className={styles.main}>
         <Outlet />
       </main>
-      <TabBar />
     </div>
   );
 }
