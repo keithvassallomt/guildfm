@@ -1,0 +1,96 @@
+/* GuildFM "Night Dial" look, taken from the prototype. */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #111316;
+  --bg-deep: #0b0c0e;
+  --surface: #1a1d22;
+  --surface-raised: #23272d;
+  --bar: #15171b;
+  --line: #2e333a;
+  --line-strong: #3a4048;
+
+  --text: #f3f1ea;
+  --text-soft: #d9d6cc;
+  --muted: #a7adb5;
+  --faint: #7d838c;
+
+  --accent: #ff8a3d;
+  --accent-hover: #ffb07a;
+  --on-accent: #1a0e05;
+  --accent-soft: rgba(255, 138, 61, 0.16);
+  --accent-tint: rgba(255, 138, 61, 0.1);
+  --down: #8db4ff;
+  --down-soft: rgba(141, 180, 255, 0.16);
+  --warn: #f5c451;
+  --warn-soft: rgba(245, 196, 81, 0.12);
+
+  --font-display: "Bricolage Grotesque Variable", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --touch: 44px;
+  --tab-bar-height: 80px;
+  --content-width: 560px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

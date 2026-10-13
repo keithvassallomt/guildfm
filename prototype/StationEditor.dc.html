@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New AI station</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button,input,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+input::placeholder,textarea::placeholder{color:#7D838C}
+.gf-scroll{scrollbar-width:none}
+.gf-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div class="gf-scroll" style="width: 390px; height: 1900px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<header style="padding: 12px 8px 4px; display: flex; align-items: center; gap: 4px">
+<a href="Library.dc.html" aria-label="Back to Library" style="width: 44px; height: 44px; border-radius: 12px; color: #F3F1EA; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>
+<h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">New AI station</h1>
+</header>
+
+<form style="padding: 12px 16px 32px; display: flex; flex-direction: column; gap: 20px">
+
+<section aria-labelledby="secStation" style="display: flex; flex-direction: column; gap: 14px">
+<h2 id="secStation" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">Station</h2>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="sn" style="font-size: 14px; font-weight: 600">Name</label>
+<input id="sn" type="text" value="Lunchtime Grooves" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="sd" style="font-size: 14px; font-weight: 600">What should it play?</label>
+<textarea id="sd" rows="3" style="box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px; line-height: 1.45; resize: none">Upbeat soul, funk and Motown for the lunch hour. Nothing too slow.</textarea>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px; border-radius: 16px; background: #1A1D22; border: 1px solid #2E333A">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span id="gaLabel" style="font-size: 15px; font-weight: 600">Global awareness</span>
+<span style="font-size: 13px; line-height: 1.4; color: #A7ADB5">Uses the time of day, the weather in Carlisle, and music news, like an artist's passing or a song contest winner.</span>
+</div>
+<button type="button" role="switch" aria-checked="{{global}}" aria-labelledby="gaLabel" onClick="{{toggleGlobal}}" style="width: 56px; height: 44px; flex-shrink: 0; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="width: 52px; height: 30px; border-radius: 999px; padding: 3px; box-sizing: border-box; display: flex; align-items: center; background: {{globalBg}}; justify-content: {{globalSide}}"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F3F1EA"></span></span></button>
+</div>
+</section>
+
+<section aria-labelledby="secDj" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+<h2 id="secDj" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">DJ</h2>
+<div style="display: flex; align-items: center; gap: 4px">
+<span id="djLabel" style="font-size: 14px; font-weight: 600">Use a DJ</span>
+<button type="button" role="switch" aria-checked="{{dj}}" aria-labelledby="djLabel" onClick="{{toggleDj}}" style="width: 56px; height: 44px; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="width: 52px; height: 30px; border-radius: 999px; padding: 3px; box-sizing: border-box; display: flex; align-items: center; background: {{djBg}}; justify-content: {{djSide}}"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F3F1EA"></span></span></button>
+</div>
+</div>
+
+<sc-if value="{{noDj}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; padding: 14px; border-radius: 16px; background: #1A1D22; font-size: 14px; line-height: 1.5; color: #A7ADB5">Music only. Announcements still play on schedule.</p>
+</sc-if>
+
+<sc-if value="{{dj}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="dn" style="font-size: 14px; font-weight: 600">DJ name</label>
+<input id="dn" type="text" value="Della" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="dp" style="font-size: 14px; font-weight: 600">Personality</label>
+<textarea id="dp" rows="3" style="box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px; line-height: 1.45; resize: none">Warm, upbeat northern host. Loves a bit of music trivia, never talks for long.</textarea>
+</div>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600">Voice</legend>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{voices}}" as="v" hint-placeholder-count="13">
+<button type="button" aria-pressed="{{v.selected}}" onClick="{{v.pick}}" style="height: 44px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1px solid {{v.border}}; background: {{v.bg}}; color: {{v.color}}">{{v.name}}</button>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: #A7ADB5">Marin and Cedar sound the most natural.</span>
+</fieldset>
+
+<div style="padding: 14px; border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 14px; font-weight: 600">Preview {{voiceName}} as {{djName}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{phrases}}" as="ph" hint-placeholder-count="4">
+<button type="button" aria-pressed="{{ph.selected}}" onClick="{{ph.pick}}" style="min-height: 36px; padding: 0 12px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid {{ph.border}}; background: {{ph.bg}}; color: {{ph.color}}">{{ph.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{isCustom}}" hint-placeholder-val="{{false}}">
+<label for="cp" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Your phrase</label>
+<textarea id="cp" rows="2" placeholder="Type anything for the DJ to say" style="box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid #3A4048; background: #111316; color: #F3F1EA; font-size: 15px; line-height: 1.45; resize: none">Afternoon, GuildFM. Della here, keeping the lunch hour lively.</textarea>
+</sc-if>
+<sc-if value="{{isBuiltIn}}" hint-placeholder-val="{{true}}">
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #D9D6CC">"{{phraseText}}"</p>
+</sc-if>
+<button type="button" onClick="{{preview}}" style="height: 48px; border: 0; border-radius: 14px; cursor: pointer; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{previewBg}}; color: {{previewColor}}">
+<sc-if value="{{playing}}" hint-placeholder-val="{{false}}"><svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><rect x="0" y="5" width="3" height="6" rx="1.5" fill="currentColor"></rect><rect x="5" y="1" width="3" height="14" rx="1.5" fill="currentColor"></rect><rect x="10" y="4" width="3" height="8" rx="1.5" fill="currentColor"></rect><rect x="15" y="0" width="3" height="16" rx="1.5" fill="currentColor"></rect><rect x="19" y="6" width="3" height="4" rx="1.5" fill="currentColor"></rect></svg></sc-if>
+<sc-if value="{{notPlaying}}" hint-placeholder-val="{{true}}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"></path></svg></sc-if>
+{{previewLabel}}
+</button>
+<span style="font-size: 12px; line-height: 1.4; color: #A7ADB5">Plays on this device, not the office speakers. The delivery follows the personality above.</span>
+</div>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600">How often the DJ talks</legend>
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-size: 15px">Every</span>
+<label for="freq" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Number</label>
+<input id="freq" type="number" value="3" min="1" style="width: 72px; height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px; font-family: 'IBM Plex Mono', monospace">
+<div role="radiogroup" aria-label="Unit" style="flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #1A1D22; border: 1px solid #2E333A">
+<button type="button" role="radio" aria-checked="{{unitTracks}}" onClick="{{pickTracks}}" style="height: 40px; border: 0; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600; background: {{tracksBg}}; color: {{tracksColor}}">tracks</button>
+<button type="button" role="radio" aria-checked="{{unitMinutes}}" onClick="{{pickMinutes}}" style="height: 40px; border: 0; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600; background: {{minutesBg}}; color: {{minutesColor}}">minutes</button>
+</div>
+</div>
+</fieldset>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600">What the DJ says</legend>
+<sc-for list="{{styles}}" as="st" hint-placeholder-count="2">
+<button type="button" role="radio" aria-checked="{{st.selected}}" onClick="{{st.pick}}" style="padding: 12px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 3px; border: 1px solid {{st.border}}; background: {{st.bg}}; color: #F3F1EA">
+<span style="font-size: 15px; font-weight: 600">{{st.label}}</span>
+<span style="font-size: 13px; color: #A7ADB5">{{st.hint}}</span>
+</button>
+</sc-for>
+</fieldset>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span id="arLabel" style="font-size: 15px; font-weight: 600">Announce requests</span>
+<span style="font-size: 13px; line-height: 1.4; color: #A7ADB5">Says who asked for the song, unless they've opted out.</span>
+</div>
+<button type="button" role="switch" aria-checked="{{announce}}" aria-labelledby="arLabel" onClick="{{toggleAnnounce}}" style="width: 56px; height: 44px; flex-shrink: 0; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="width: 52px; height: 30px; border-radius: 999px; padding: 3px; box-sizing: border-box; display: flex; align-items: center; background: {{announceBg}}; justify-content: {{announceSide}}"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F3F1EA"></span></span></button>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #A7ADB5">The DJ chooses whether to talk over the start of a song or between songs, and mixes both.</p>
+</div>
+</sc-if>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 4px">
+<a href="Library.dc.html" style="height: 52px; border-radius: 14px; border: 1px solid #3A4048; color: #F3F1EA; text-decoration: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center">Cancel</a>
+<a href="Library.dc.html" style="height: 52px; border-radius: 14px; background: #FF8A3D; color: #1A0E05; text-decoration: none; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">Create station</a>
+</div>
+</form>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { global: true, dj: true, voice: 'Marin', phrase: 'intro', playing: false, unit: 'tracks', style: 'commentary', announce: true };
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this._previewTimer);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const toggle = (on) => ({ bg: on ? '#FF8A3D' : '#3A4048', side: on ? 'flex-end' : 'flex-start' });
+    const chip = (on) => ({ border: on ? '#FF8A3D' : '#2E333A', bg: on ? 'rgba(255,138,61,0.16)' : '#1A1D22', color: on ? '#FF8A3D' : '#F3F1EA' });
+    const voiceNames = ['Marin', 'Cedar', 'Alloy', 'Ash', 'Ballad', 'Coral', 'Echo', 'Fable', 'Nova', 'Onyx', 'Sage', 'Shimmer', 'Verse'];
+    const phrases = [
+      { id: 'intro', label: 'Track intro', text: 'That was Stevie Wonder. Next up, a bit of Aretha to keep the lunch hour moving.' },
+      { id: 'request', label: 'Request shout-out', text: 'This one is for Priya, who asked for some Fleetwood Mac. Here is Dreams.' },
+      { id: 'weather', label: 'Weather check', text: 'Grey skies over Carlisle this afternoon, so here is something to warm you up.' },
+      { id: 'custom', label: 'Your own words', text: '' }
+    ];
+    const current = phrases.find((p) => p.id === s.phrase) || phrases[0];
+    const g = toggle(s.global);
+    const d = toggle(s.dj);
+    const a = toggle(s.announce);
+    const styles = [
+      { id: 'announce', label: 'Just announce the songs', hint: 'Short and simple: what was playing and what is next.' },
+      { id: 'commentary', label: 'Add commentary', hint: 'Trivia, the weather, and the odd story about the song.' }
+    ];
+    return {
+      global: s.global,
+      toggleGlobal: () => this.setState({ global: !s.global }),
+      globalBg: g.bg,
+      globalSide: g.side,
+      dj: s.dj,
+      noDj: !s.dj,
+      toggleDj: () => this.setState({ dj: !s.dj }),
+      djBg: d.bg,
+      djSide: d.side,
+      djName: 'Della',
+      voiceName: s.voice,
+      voices: voiceNames.map((name) => {
+        const c = chip(name === s.voice);
+        return { name, selected: name === s.voice, border: c.border, bg: c.bg, color: c.color, pick: () => this.setState({ voice: name, playing: false }) };
+      }),
+      phrases: phrases.map((p) => {
+        const c = chip(p.id === s.phrase);
+        return { label: p.label, selected: p.id === s.phrase, border: c.border, bg: c.bg, color: c.color, pick: () => this.setState({ phrase: p.id, playing: false }) };
+      }),
+      isCustom: s.phrase === 'custom',
+      isBuiltIn: s.phrase !== 'custom',
+      phraseText: current.text,
+      playing: s.playing,
+      notPlaying: !s.playing,
+      previewLabel: s.playing ? 'Playing ' + s.voice + '...' : 'Play preview',
+      previewBg: s.playing ? 'rgba(255,138,61,0.16)' : '#FF8A3D',
+      previewColor: s.playing ? '#FF8A3D' : '#1A0E05',
+      preview: () => {
+        clearTimeout(this._previewTimer);
+        if (s.playing) { this.setState({ playing: false }); return; }
+        this.setState({ playing: true });
+        this._previewTimer = setTimeout(() => this.setState({ playing: false }), 3500);
+      },
+      unitTracks: s.unit === 'tracks',
+      unitMinutes: s.unit === 'minutes',
+      pickTracks: () => this.setState({ unit: 'tracks' }),
+      pickMinutes: () => this.setState({ unit: 'minutes' }),
+      tracksBg: s.unit === 'tracks' ? '#2E333A' : 'transparent',
+      tracksColor: s.unit === 'tracks' ? '#F3F1EA' : '#A7ADB5',
+      minutesBg: s.unit === 'minutes' ? '#2E333A' : 'transparent',
+      minutesColor: s.unit === 'minutes' ? '#F3F1EA' : '#A7ADB5',
+      styles: styles.map((st) => ({
+        label: st.label,
+        hint: st.hint,
+        selected: st.id === s.style,
+        border: st.id === s.style ? '#FF8A3D' : '#2E333A',
+        bg: st.id === s.style ? 'rgba(255,138,61,0.10)' : '#1A1D22',
+        pick: () => this.setState({ style: st.id })
+      })),
+      announce: s.announce,
+      toggleAnnounce: () => this.setState({ announce: !s.announce }),
+      announceBg: a.bg,
+      announceSide: a.side
+    };
+  }
+}
+</script>
+</body>
+</html>

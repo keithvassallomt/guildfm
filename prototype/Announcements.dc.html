@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuildFM announcements</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+.gf-scroll{scrollbar-width:none}
+.gf-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<header style="padding: 12px 12px 8px 8px; display: flex; align-items: center; gap: 4px">
+<a href="Control.dc.html" aria-label="Back to Admin" style="width: 44px; height: 44px; border-radius: 12px; color: #F3F1EA; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>
+<h1 style="flex: 1; margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">Announcements</h1>
+<a href="NewAnnouncement.dc.html" style="height: 44px; padding: 0 14px; border-radius: 12px; background: #FF8A3D; color: #1A0E05; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New</a>
+</header>
+
+<main class="gf-scroll" style="flex: 1; overflow-y: auto; padding: 8px 16px 32px; display: flex; flex-direction: column; gap: 22px">
+
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #A7ADB5">Announcements always go before the DJ. They don't play while GuildFM is stopped or outside playback hours.</p>
+
+<section aria-labelledby="sched" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="sched" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 700">Scheduled</h2>
+<ul style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{scheduled}}" as="a" hint-placeholder-count="3">
+<li style="list-style: none; padding: 14px; border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column; gap: 10px; opacity: {{a.opacity}}">
+<p style="margin: 0; font-size: 15px; line-height: 1.45">"{{a.text}}"</p>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: #23272D; color: #D9D6CC; font-size: 12px; font-weight: 500"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{a.when}}</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #23272D; color: #D9D6CC; font-size: 12px; font-weight: 500">{{a.where}}</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #23272D; color: #D9D6CC; font-size: 12px; font-weight: 500">{{a.how}}</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<button type="button" onClick="{{a.playNow}}" style="height: 44px; padding: 0 14px; border: 1px solid #3A4048; border-radius: 12px; background: transparent; color: #F3F1EA; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"></path></svg>Play now</button>
+<div style="display: flex; align-items: center; gap: 2px">
+<span id="{{a.labelId}}" style="font-size: 13px; color: #A7ADB5">{{a.activeLabel}}</span>
+<button type="button" role="switch" aria-checked="{{a.active}}" aria-labelledby="{{a.labelId}}" onClick="{{a.toggle}}" style="width: 56px; height: 44px; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="width: 52px; height: 30px; border-radius: 999px; padding: 3px; box-sizing: border-box; display: flex; align-items: center; background: {{a.trackBg}}; justify-content: {{a.knobSide}}"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F3F1EA"></span></span></button>
+</div>
+</div>
+</li>
+</sc-for>
+</ul>
+</section>
+
+<section aria-labelledby="past" style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="past" style="margin: 0 0 6px; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 700">Recently played</h2>
+<div style="padding: 10px 0; border-bottom: 1px solid #23272D; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px">"Lunch is ready in the kitchen. Come and get it while it's hot."</span>
+<span style="font-size: 12px; color: #A7ADB5">Yesterday 12:31 · All rooms</span>
+</div>
+<div style="padding: 10px 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px">"Welcome to everyone joining us this week. Say hello in the kitchen."</span>
+<span style="font-size: 12px; color: #A7ADB5">Monday 09:00 · All rooms</span>
+</div>
+</section>
+</main>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 24px; padding: 12px 16px; border-radius: 14px; background: #F3F1EA; color: #111316; font-size: 14px; font-weight: 500">{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { paused: {}, toast: '' };
+  }
+
+  items() {
+    return [
+      { id: 'lunch', text: 'Lunch is ready in the kitchen. Come and get it while it\'s hot.', when: 'Weekdays 12:30', where: 'All rooms', how: 'After the current song' },
+      { id: 'alarm', text: 'Quick heads up: the fire alarm test is at ten. No need to leave the building.', when: 'Wed 14 Oct, 09:55', where: 'All rooms', how: 'Over the music' },
+      { id: 'drinks', text: 'Friday drinks start in the Donut Shop at five. See you there.', when: 'Fridays 16:45', where: 'Kitchen, Donut Shop', how: 'After the current song' }
+    ];
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+
+  renderVals() {
+    return {
+      scheduled: this.items().map((a) => {
+        const active = !this.state.paused[a.id];
+        return {
+          text: a.text,
+          when: a.when,
+          where: a.where,
+          how: a.how,
+          active,
+          labelId: 'active-' + a.id,
+          activeLabel: active ? 'Active' : 'Paused',
+          opacity: active ? '1' : '0.6',
+          trackBg: active ? '#FF8A3D' : '#3A4048',
+          knobSide: active ? 'flex-end' : 'flex-start',
+          toggle: () => this.setState({ paused: Object.assign({}, this.state.paused, { [a.id]: active }) }),
+          playNow: () => this.flash('Playing now in ' + (a.where === 'All rooms' ? 'all rooms' : a.where) + ', over the music')
+        };
+      }),
+      hasToast: !!this.state.toast,
+      toast: this.state.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

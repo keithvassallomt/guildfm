@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuildFM settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button,input,select{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+input::placeholder{color:#7D838C}
+input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.8)}
+.gf-scroll{scrollbar-width:none}
+.gf-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div class="gf-scroll" style="width: 390px; height: 2280px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<header style="padding: 12px 8px 4px; display: flex; align-items: center; gap: 4px">
+<a href="Control.dc.html" aria-label="Back to Admin" style="width: 44px; height: 44px; border-radius: 12px; color: #F3F1EA; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>
+<h1 style="flex: 1; margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">Settings</h1>
+<span style="padding-right: 8px; font-size: 12px; color: #A7ADB5">Saves as you go</span>
+</header>
+
+<div style="padding: 12px 16px 40px; display: flex; flex-direction: column; gap: 28px">
+
+<section aria-labelledby="sQueue" style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="sQueue" style="margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">Queue and voting</h2>
+<div style="border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column">
+<sc-for list="{{steppers1}}" as="st" hint-placeholder-count="2">
+<div style="padding: 12px 8px 12px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2E333A">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">{{st.label}}</span><span style="font-size: 13px; line-height: 1.4; color: #A7ADB5">{{st.hint}}</span></div>
+<div style="display: flex; align-items: center">
+<button type="button" aria-label="Decrease {{st.label}}" onClick="{{st.dec}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #F3F1EA; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<output style="min-width: 36px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #FF8A3D">{{st.value}}</output>
+<button type="button" aria-label="Increase {{st.label}}" onClick="{{st.inc}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #F3F1EA; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+</div>
+</sc-for>
+<div style="padding: 14px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #2E333A">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Recently played means</span><span style="font-size: 13px; color: #A7ADB5">Tracks played within this time get a warning badge.</span></div>
+<div role="radiogroup" aria-label="Recently played means" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #111316">
+<sc-for list="{{recentOptions}}" as="ro" hint-placeholder-count="4">
+<button type="button" role="radio" aria-checked="{{ro.selected}}" onClick="{{ro.pick}}" style="height: 40px; border: 0; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600; background: {{ro.bg}}; color: {{ro.color}}">{{ro.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="padding: 10px 8px 10px 14px; display: flex; align-items: center; gap: 12px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span id="exLabel" style="font-size: 15px; font-weight: 600">Allow explicit tracks</span><span style="font-size: 13px; color: #A7ADB5">Turn off to hide them from search.</span></div>
+<button type="button" role="switch" aria-checked="{{explicit}}" aria-labelledby="exLabel" onClick="{{toggleExplicit}}" style="width: 56px; height: 44px; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="width: 52px; height: 30px; border-radius: 999px; padding: 3px; box-sizing: border-box; display: flex; align-items: center; background: {{explicitBg}}; justify-content: {{explicitSide}}"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F3F1EA"></span></span></button>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="sBest" style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="sBest" style="margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">Best Voted playlist</h2>
+<div style="border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column">
+<sc-for list="{{steppers2}}" as="st" hint-placeholder-count="2">
+<div style="padding: 12px 8px 12px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2E333A">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">{{st.label}}</span><span style="font-size: 13px; line-height: 1.4; color: #A7ADB5">{{st.hint}}</span></div>
+<div style="display: flex; align-items: center">
+<button type="button" aria-label="Decrease {{st.label}}" onClick="{{st.dec}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #F3F1EA; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<output style="min-width: 36px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #FF8A3D">{{st.value}}</output>
+<button type="button" aria-label="Increase {{st.label}}" onClick="{{st.inc}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #F3F1EA; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+</div>
+</sc-for>
+<p style="margin: 0; padding: 12px 14px; font-size: 13px; line-height: 1.5; color: #A7ADB5">When it's full, the track with the fewest upvotes drops out. On a tie, the oldest one goes.</p>
+</div>
+</section>
+
+<section aria-labelledby="sEmpty" style="display: flex; flex-direction: column; gap: 8px">
+<h2 id="sEmpty" style="margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">When the queue runs out</h2>
+<sc-for list="{{fallbacks}}" as="f" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{f.selected}}" onClick="{{f.pick}}" style="padding: 12px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 3px; border: 1px solid {{f.border}}; background: {{f.bg}}; color: #F3F1EA">
+<span style="font-size: 15px; font-weight: 600">{{f.label}}</span>
+<span style="font-size: 13px; color: #A7ADB5">{{f.hint}}</span>
+</button>
+</sc-for>
+<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 6px">
+<label for="defStation" style="font-size: 14px; font-weight: 600">Default AI station</label>
+<select id="defStation" style="height: 50px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px; color-scheme: dark">
+<option>Morning Focus</option>
+<option>Friday Wind-down</option>
+<option>Rainy Carlisle</option>
+</select>
+</div>
+</section>
+
+<section aria-labelledby="sHours" style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="sHours" style="margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">Playback hours</h2>
+<p style="margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: #A7ADB5">Outside these hours GuildFM stays silent, announcements included.</p>
+<div style="border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+<div style="min-height: 60px; padding: 6px 4px 6px 14px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #23272D">
+<span id="{{d.labelId}}" style="width: 40px; font-size: 15px; font-weight: 600">{{d.short}}</span>
+<sc-if value="{{d.on}}" hint-placeholder-val="{{true}}">
+<label for="{{d.startId}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{d.full}} start</label>
+<input id="{{d.startId}}" type="time" value="08:00" style="width: 92px; height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #3A4048; background: #111316; color: #F3F1EA; font-size: 15px; color-scheme: dark">
+<span aria-hidden="true" style="color: #A7ADB5">to</span>
+<label for="{{d.endId}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{d.full}} end</label>
+<input id="{{d.endId}}" type="time" value="18:00" style="width: 92px; height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #3A4048; background: #111316; color: #F3F1EA; font-size: 15px; color-scheme: dark">
+</sc-if>
+<sc-if value="{{d.off}}" hint-placeholder-val="{{false}}">
+<span style="flex: 1; font-size: 14px; color: #A7ADB5">Off all day</span>
+</sc-if>
+<span style="flex: 1"></span>
+<button type="button" role="switch" aria-checked="{{d.on}}" aria-labelledby="{{d.labelId}}" onClick="{{d.toggle}}" style="width: 56px; height: 44px; flex-shrink: 0; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="width: 46px; height: 26px; border-radius: 999px; padding: 3px; box-sizing: border-box; display: flex; align-items: center; background: {{d.trackBg}}; justify-content: {{d.knobSide}}"><span style="width: 20px; height: 20px; border-radius: 50%; background: #F3F1EA"></span></span></button>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-labelledby="sAi" style="display: flex; flex-direction: column; gap: 14px">
+<h2 id="sAi" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">AI and voice</h2>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="loc" style="font-size: 14px; font-weight: 600">Weather location</label>
+<input id="loc" type="text" value="Carlisle, Cumbria, UK" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+<span style="font-size: 12px; color: #A7ADB5">Used by stations with global awareness turned on.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="annVoice" style="font-size: 14px; font-weight: 600">Announcement voice</label>
+<select id="annVoice" style="height: 50px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px; color-scheme: dark">
+<option>Cedar</option><option>Marin</option><option>Alloy</option><option>Ash</option><option>Ballad</option><option>Coral</option><option>Echo</option><option>Fable</option><option>Nova</option><option>Onyx</option><option>Sage</option><option>Shimmer</option><option>Verse</option>
+</select>
+</div>
+<div style="padding: 14px; border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column; gap: 10px">
+<label for="pp" style="font-size: 14px; font-weight: 600">Preview phrase</label>
+<input id="pp" type="text" value="Lunch is ready in the kitchen. Come and get it while it's hot." style="height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #111316; color: #F3F1EA; font-size: 15px">
+<button type="button" onClick="{{preview}}" style="height: 46px; border: 0; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{previewBg}}; color: {{previewColor}}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"></path></svg>{{previewLabel}}</button>
+</div>
+</section>
+
+<section aria-labelledby="sConn" style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="sConn" style="margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7ADB5">Connections</h2>
+<div style="border-radius: 18px; background: #1A1D22; border: 1px solid #2E333A; display: flex; flex-direction: column">
+<div style="padding: 12px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2E333A">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Spotify</span><span style="font-size: 13px; line-height: 1.4; color: #A7ADB5">Connected as the office account. Spotify asks you to reconnect every six months.</span></div>
+<button type="button" onClick="{{reconnect}}" style="height: 44px; padding: 0 14px; border: 1px solid #3A4048; border-radius: 12px; background: transparent; color: #F3F1EA; font-size: 14px; font-weight: 600; cursor: pointer">Reconnect</button>
+</div>
+<div style="padding: 12px 14px; display: flex; align-items: center; gap: 12px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Sonos</span><span style="font-size: 13px; color: #A7ADB5">6 speakers found on the office network</span></div>
+<span style="padding: 4px 10px; border-radius: 999px; background: rgba(255,138,61,0.14); color: #FF8A3D; font-size: 12px; font-weight: 600">Online</span>
+</div>
+</div>
+</section>
+</div>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="position: sticky; bottom: 24px; margin: 0 16px 24px; padding: 12px 16px; border-radius: 14px; background: #F3F1EA; color: #111316; font-size: 14px; font-weight: 500">{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2280}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      cap: 5,
+      threshold: -3,
+      recent: '24h',
+      explicit: true,
+      upvotes: 5,
+      size: 50,
+      fallback: 'station',
+      days: { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: false, Sun: false },
+      playing: false,
+      toast: ''
+    };
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this._previewTimer);
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+
+  stepper(key, label, hint, step, min, max, format) {
+    const v = this.state[key];
+    return {
+      label,
+      hint,
+      value: format ? format(v) : String(v),
+      dec: () => this.setState({ [key]: Math.max(min, v - step) }),
+      inc: () => this.setState({ [key]: Math.min(max, v + step) })
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const sw = (on) => ({ bg: on ? '#FF8A3D' : '#3A4048', side: on ? 'flex-end' : 'flex-start' });
+    const ex = sw(s.explicit);
+    const dayList = [['Mon', 'Monday'], ['Tue', 'Tuesday'], ['Wed', 'Wednesday'], ['Thu', 'Thursday'], ['Fri', 'Friday'], ['Sat', 'Saturday'], ['Sun', 'Sunday']];
+    const fallbacks = [
+      { id: 'restart', label: 'Restart the current playlist', hint: 'If no playlist is playing, the AI picks instead.' },
+      { id: 'station', label: 'Play the default AI station', hint: 'Switches to the station chosen below.' },
+      { id: 'ai', label: 'Let the AI pick the next song', hint: 'Something that fits what has been playing.' }
+    ];
+    return {
+      steppers1: [
+        this.stepper('cap', 'Requests per person', 'How many songs one person can have in the queue at once.', 1, 1, 20),
+        this.stepper('threshold', 'Remove at score', 'A track is taken out when its votes add up to this.', 1, -20, -1)
+      ],
+      steppers2: [
+        this.stepper('upvotes', 'Upvotes to get in', 'A track needs more than this many upvotes.', 1, 1, 50),
+        this.stepper('size', 'Playlist size', 'The most tracks it can hold.', 10, 10, 500)
+      ],
+      recentOptions: [['12h', '12 h'], ['24h', '24 h'], ['48h', '48 h'], ['7d', '7 days']].map((o) => ({
+        label: o[1],
+        selected: s.recent === o[0],
+        bg: s.recent === o[0] ? '#2E333A' : 'transparent',
+        color: s.recent === o[0] ? '#F3F1EA' : '#A7ADB5',
+        pick: () => this.setState({ recent: o[0] })
+      })),
+      explicit: s.explicit,
+      toggleExplicit: () => this.setState({ explicit: !s.explicit }),
+      explicitBg: ex.bg,
+      explicitSide: ex.side,
+      fallbacks: fallbacks.map((f) => ({
+        label: f.label,
+        hint: f.hint,
+        selected: s.fallback === f.id,
+        border: s.fallback === f.id ? '#FF8A3D' : '#2E333A',
+        bg: s.fallback === f.id ? 'rgba(255,138,61,0.10)' : '#1A1D22',
+        pick: () => this.setState({ fallback: f.id })
+      })),
+      days: dayList.map((d) => {
+        const on = !!s.days[d[0]];
+        const t = sw(on);
+        return {
+          short: d[0],
+          full: d[1],
+          labelId: 'day-' + d[0],
+          startId: 'start-' + d[0],
+          endId: 'end-' + d[0],
+          on,
+          off: !on,
+          trackBg: t.bg,
+          knobSide: t.side,
+          toggle: () => this.setState({ days: Object.assign({}, s.days, { [d[0]]: !on }) })
+        };
+      }),
+      preview: () => {
+        clearTimeout(this._previewTimer);
+        this.setState({ playing: true });
+        this._previewTimer = setTimeout(() => this.setState({ playing: false }), 3000);
+      },
+      previewLabel: s.playing ? 'Playing on this device...' : 'Play preview',
+      previewBg: s.playing ? 'rgba(255,138,61,0.16)' : '#FF8A3D',
+      previewColor: s.playing ? '#FF8A3D' : '#1A0E05',
+      reconnect: () => this.flash('Opening Spotify to reconnect'),
+      hasToast: !!s.toast,
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

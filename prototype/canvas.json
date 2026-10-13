@@ -1,0 +1,39 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-13T08:48:29Z"},
+  "title": "GuildFM Prototype",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Welcome.dc.html": {"x": 0, "y": 0, "w": 390, "h": 844, "title": "Sign in", "is_interactive": true},
+    "Main.dc.html": {"x": 470, "y": 0, "w": 390, "h": 844, "title": "Queue", "is_interactive": true},
+    "Search.dc.html": {"x": 940, "y": 0, "w": 390, "h": 844, "title": "Search", "is_interactive": true},
+    "Profile.dc.html": {"x": 1410, "y": 0, "w": 390, "h": 844, "title": "Profile", "is_interactive": true},
+    "Library.dc.html": {"x": 0, "y": 1264, "w": 390, "h": 844, "title": "Library", "is_interactive": true},
+    "StationEditor.dc.html": {"x": 470, "y": 1264, "w": 390, "h": 1900, "title": "New AI station", "is_interactive": true},
+    "Control.dc.html": {"x": 0, "y": 3584, "w": 390, "h": 844, "title": "Admin controls", "is_interactive": true},
+    "Announcements.dc.html": {"x": 470, "y": 3584, "w": 390, "h": 844, "title": "Announcements", "is_interactive": true},
+    "NewAnnouncement.dc.html": {"x": 940, "y": 3584, "w": 390, "h": 1400, "title": "New announcement", "is_interactive": true},
+    "Users.dc.html": {"x": 1410, "y": 3584, "w": 390, "h": 844, "title": "Users", "is_interactive": true},
+    "Settings.dc.html": {"x": 1880, "y": 3584, "w": 390, "h": 2280, "title": "Settings", "is_interactive": true}
+  },
+  "order": [
+    "Main.dc.html",
+    "Welcome.dc.html",
+    "Search.dc.html",
+    "Profile.dc.html",
+    "Library.dc.html",
+    "StationEditor.dc.html",
+    "Control.dc.html",
+    "Announcements.dc.html",
+    "NewAnnouncement.dc.html",
+    "Users.dc.html",
+    "Settings.dc.html"
+  ],
+  "notes": {
+    "rowEveryone": {"x": 0, "y": -300, "text": "Everyone", "kind": "title1", "maxW": 1800},
+    "rowCurators": {"x": 0, "y": 964, "text": "Curators", "kind": "title1", "maxW": 860},
+    "rowAdmins": {"x": 0, "y": 3284, "text": "Admins", "kind": "title1", "maxW": 2270}
+  },
+  "designSystems": []
+}

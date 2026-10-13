@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Database, generated audio and other runtime files
+data/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Front end
+web/node_modules/
+web/dist/

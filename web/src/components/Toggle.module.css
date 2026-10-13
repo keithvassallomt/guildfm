@@ -1,0 +1,41 @@
+.toggle {
+  width: 56px;
+  height: var(--touch);
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.track {
+  width: 52px;
+  height: 30px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: background 0.15s;
+}
+
+.knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.toggle[aria-checked="true"] .track {
+  background: var(--accent);
+  justify-content: flex-end;
+}

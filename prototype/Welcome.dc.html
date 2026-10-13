@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in to GuildFM</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button,input{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+input::placeholder{color:#7D838C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 64px 24px 32px; display: flex; flex-direction: column; gap: 32px; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<svg width="56" height="56" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="#FF8A3D" stroke-width="1.6"></circle><path d="M14 14L20 7" stroke="#FF8A3D" stroke-width="2" stroke-linecap="round"></path><circle cx="14" cy="14" r="2.2" fill="#FF8A3D"></circle></svg>
+<h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 40px; letter-spacing: -0.03em; line-height: 1">GuildFM</h1>
+<p style="margin: 0; font-size: 16px; line-height: 1.5; color: #A7ADB5">Pick what plays in the office. Request songs, vote on the queue, and hear your name on air.</p>
+</div>
+
+<div role="tablist" aria-label="Account" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #1A1D22; border: 1px solid #2E333A">
+<button type="button" role="tab" aria-selected="{{isSignIn}}" onClick="{{showSignIn}}" style="height: 44px; border: 0; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; background: {{signInBg}}; color: {{signInColor}}">Sign in</button>
+<button type="button" role="tab" aria-selected="{{isRegister}}" onClick="{{showRegister}}" style="height: 44px; border: 0; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; background: {{registerBg}}; color: {{registerColor}}">Create account</button>
+</div>
+
+<sc-if value="{{isSignIn}}" hint-placeholder-val="{{true}}">
+<form style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="u" style="font-size: 14px; font-weight: 600">Username</label>
+<input id="u" type="text" autocomplete="username" value="keith" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="p" style="font-size: 14px; font-weight: 600">Password</label>
+<input id="p" type="password" autocomplete="current-password" value="guildfm-demo" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+</div>
+<a href="Main.dc.html" style="height: 52px; margin-top: 8px; border-radius: 14px; background: #FF8A3D; color: #1A0E05; font-size: 16px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center">Sign in</a>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #A7ADB5; text-align: center">Forgot your password? Ask an admin to reset it.</p>
+</form>
+</sc-if>
+
+<sc-if value="{{isRegister}}" hint-placeholder-val="{{false}}">
+<form style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="dn" style="font-size: 14px; font-weight: 600">Display name</label>
+<input id="dn" type="text" placeholder="Priya" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+<span style="font-size: 12px; color: #A7ADB5">The DJ reads this out when it announces your requests.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nu" style="font-size: 14px; font-weight: 600">Username</label>
+<input id="nu" type="text" autocomplete="username" placeholder="priya" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="np" style="font-size: 14px; font-weight: 600">Password</label>
+<input id="np" type="password" autocomplete="new-password" style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px">
+</div>
+<a href="Main.dc.html" style="height: 52px; margin-top: 8px; border-radius: 14px; background: #FF8A3D; color: #1A0E05; font-size: 16px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center">Create account</a>
+</form>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'signin' };
+  }
+
+  renderVals() {
+    const signIn = this.state.mode === 'signin';
+    return {
+      isSignIn: signIn,
+      isRegister: !signIn,
+      showSignIn: () => this.setState({ mode: 'signin' }),
+      showRegister: () => this.setState({ mode: 'register' }),
+      signInBg: signIn ? '#2E333A' : 'transparent',
+      signInColor: signIn ? '#F3F1EA' : '#A7ADB5',
+      registerBg: signIn ? 'transparent' : '#2E333A',
+      registerColor: signIn ? '#A7ADB5' : '#F3F1EA'
+    };
+  }
+}
+</script>
+</body>
+</html>

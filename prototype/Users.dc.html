@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuildFM users</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button,input{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+input::placeholder{color:#7D838C}
+.gf-scroll{scrollbar-width:none}
+.gf-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<header style="padding: 12px 12px 8px 8px; display: flex; align-items: center; gap: 4px">
+<a href="Control.dc.html" aria-label="Back to Admin" style="width: 44px; height: 44px; border-radius: 12px; color: #F3F1EA; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>
+<h1 style="flex: 1; margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">Users</h1>
+<button type="button" onClick="{{openSheet}}" style="height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #FF8A3D; color: #1A0E05; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add</button>
+</header>
+
+<main class="gf-scroll" style="flex: 1; overflow-y: auto; padding: 4px 16px 32px; display: flex; flex-direction: column; gap: 12px">
+<p style="margin: 0; font-size: 13px; color: #A7ADB5">{{countLabel}} · people can also sign themselves up</p>
+<ul style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{users}}" as="u" hint-placeholder-count="8">
+<li style="list-style: none; border-radius: 16px; background: #1A1D22; border: 1px solid {{u.border}}; overflow: hidden">
+<button type="button" aria-expanded="{{u.open}}" onClick="{{u.toggle}}" style="width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; color: #F3F1EA; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: #2E333A; color: #FF8A3D; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center">{{u.initial}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">{{u.name}}</span><span style="font-size: 13px; color: #A7ADB5">{{u.handle}}</span></span>
+<span style="padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: {{u.badgeBg}}; color: {{u.badgeColor}}">{{u.role}}</span>
+</button>
+<sc-if value="{{u.open}}" hint-placeholder-val="{{false}}">
+<div style="padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 12px">
+<sc-if value="{{u.isSelf}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; font-size: 13px; color: #A7ADB5">This is you. Another admin would need to change your role.</p>
+</sc-if>
+<sc-if value="{{u.notSelf}}" hint-placeholder-val="{{true}}">
+<div role="radiogroup" aria-label="Role for {{u.name}}" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #111316">
+<sc-for list="{{u.roles}}" as="r" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{r.selected}}" onClick="{{r.pick}}" style="height: 40px; border: 0; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600; background: {{r.bg}}; color: {{r.color}}">{{r.label}}</button>
+</sc-for>
+</div>
+<button type="button" onClick="{{u.reset}}" style="height: 44px; border: 1px solid #3A4048; border-radius: 12px; background: transparent; color: #F3F1EA; font-size: 14px; font-weight: 600; cursor: pointer">Reset password</button>
+<sc-if value="{{u.hasTemp}}" hint-placeholder-val="{{false}}">
+<div style="padding: 12px; border-radius: 12px; background: #111316; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 13px; color: #A7ADB5">Temporary password for {{u.name}}</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; color: #FF8A3D">{{u.temp}}</span>
+<span style="font-size: 12px; color: #A7ADB5">Pass it on in person. They choose a new one when they sign in.</span>
+</div>
+</sc-if>
+</sc-if>
+</div>
+</sc-if>
+</li>
+</sc-for>
+</ul>
+</main>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 24px; padding: 12px 16px; border-radius: 14px; background: #F3F1EA; color: #111316; font-size: 14px; font-weight: 500">{{toast}}</div>
+</sc-if>
+
+<sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: flex-end">
+<div role="dialog" aria-modal="true" aria-labelledby="addTitle" style="padding: 20px 16px 28px; border-radius: 24px 24px 0 0; background: #1A1D22; border-top: 1px solid #2E333A; display: flex; flex-direction: column; gap: 14px">
+<h2 id="addTitle" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 20px">Add someone</h2>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="an" style="font-size: 14px; font-weight: 600">Display name</label>
+<input id="an" type="text" placeholder="Lena" style="height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #111316; color: #F3F1EA; font-size: 16px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="au" style="font-size: 14px; font-weight: 600">Username</label>
+<input id="au" type="text" placeholder="lena" style="height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #3A4048; background: #111316; color: #F3F1EA; font-size: 16px">
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #A7ADB5">GuildFM makes a temporary password for you to pass on. New accounts start as users.</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button type="button" onClick="{{closeSheet}}" style="height: 50px; border: 1px solid #3A4048; border-radius: 14px; background: transparent; color: #F3F1EA; font-size: 15px; font-weight: 600; cursor: pointer">Cancel</button>
+<button type="button" onClick="{{createUser}}" style="height: 50px; border: 0; border-radius: 14px; background: #FF8A3D; color: #1A0E05; font-size: 15px; font-weight: 700; cursor: pointer">Create account</button>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      open: 'priya',
+      roles: { keith: 'Admin', priya: 'Curator', sam: 'User', maria: 'User', tom: 'User', ali: 'User', joe: 'User', lena: 'User' },
+      temps: {},
+      sheet: false,
+      toast: ''
+    };
+  }
+
+  people() {
+    return [
+      { id: 'keith', name: 'Keith', self: true },
+      { id: 'priya', name: 'Priya' },
+      { id: 'sam', name: 'Sam' },
+      { id: 'maria', name: 'Maria' },
+      { id: 'tom', name: 'Tom' },
+      { id: 'ali', name: 'Ali' },
+      { id: 'joe', name: 'Joe' },
+      { id: 'lena', name: 'Lena' }
+    ];
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const badge = { Admin: ['#FF8A3D', '#1A0E05'], Curator: ['rgba(141,180,255,0.16)', '#8DB4FF'], User: ['#2E333A', '#D9D6CC'] };
+    const words = ['plum-river-42', 'amber-fox-17', 'quiet-dune-63', 'brass-owl-28'];
+    const people = this.people();
+    return {
+      countLabel: people.length + ' people',
+      users: people.map((p, i) => {
+        const role = s.roles[p.id];
+        const open = s.open === p.id;
+        return {
+          name: p.name,
+          handle: '@' + p.id + (p.self ? ' · you' : ''),
+          initial: p.name.charAt(0),
+          role,
+          badgeBg: badge[role][0],
+          badgeColor: badge[role][1],
+          border: open ? '#3A4048' : '#2E333A',
+          open,
+          isSelf: !!p.self,
+          notSelf: !p.self,
+          toggle: () => this.setState({ open: open ? '' : p.id }),
+          roles: ['User', 'Curator', 'Admin'].map((r) => ({
+            label: r,
+            selected: r === role,
+            bg: r === role ? '#2E333A' : 'transparent',
+            color: r === role ? '#F3F1EA' : '#A7ADB5',
+            pick: () => {
+              this.setState({ roles: Object.assign({}, s.roles, { [p.id]: r }) });
+              if (r !== role) this.flash(p.name + ' is now ' + (r === 'Admin' ? 'an admin' : 'a ' + r.toLowerCase()));
+            }
+          })),
+          reset: () => this.setState({ temps: Object.assign({}, s.temps, { [p.id]: words[i % words.length] }) }),
+          hasTemp: !!s.temps[p.id],
+          temp: s.temps[p.id] || ''
+        };
+      }),
+      openSheet: () => this.setState({ sheet: true }),
+      closeSheet: () => this.setState({ sheet: false }),
+      createUser: () => { this.setState({ sheet: false }); this.flash('Account created. Temporary password: amber-fox-17'); },
+      sheetOpen: s.sheet,
+      hasToast: !!s.toast,
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

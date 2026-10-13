@@ -1,0 +1,47 @@
+.button {
+  min-height: var(--touch);
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.block {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+.primary,
+.primary:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.secondary,
+.secondary:hover {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ghost,
+.ghost:hover {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}

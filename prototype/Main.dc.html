@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuildFM queue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+.gf-scroll{scrollbar-width:none}
+.gf-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<header style="padding: 18px 20px 12px; display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 10px">
+<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="#FF8A3D" stroke-width="2"></circle><path d="M14 14L20 7" stroke="#FF8A3D" stroke-width="2.5" stroke-linecap="round"></path><circle cx="14" cy="14" r="2.5" fill="#FF8A3D"></circle></svg>
+<span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">GuildFM</span>
+</div>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #1A1D22; border: 1px solid #2E333A; font-size: 12px; font-weight: 600">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: {{statusDot}}"></span>{{statusLabel}}
+</span>
+</header>
+
+<main class="gf-scroll" style="flex: 1; overflow-y: auto; padding: 4px 16px 100px; display: flex; flex-direction: column; gap: 22px">
+
+<sc-if value="{{isStopped}}" hint-placeholder-val="{{false}}">
+<div style="background: #1A1D22; border: 1px solid #2E333A; border-radius: 16px; padding: 14px 16px; font-size: 14px; line-height: 1.45">
+<strong style="display: block; margin-bottom: 2px">Music is stopped</strong>
+<span style="color: #A7ADB5">An admin can start it again from the Admin tab.</span>
+</div>
+</sc-if>
+<sc-if value="{{isOverridden}}" hint-placeholder-val="{{false}}">
+<div style="background: rgba(245,196,81,0.10); border: 1px solid rgba(245,196,81,0.35); border-radius: 16px; padding: 14px 16px; font-size: 14px; line-height: 1.45">
+<strong style="display: block; margin-bottom: 2px; color: #F5C451">Someone took over from the Sonos app</strong>
+<span style="color: #D9D6CC">GuildFM has stopped, including announcements, until an admin presses Play.</span>
+</div>
+</sc-if>
+
+<section aria-label="Now playing" style="background: #1A1D22; border: 1px solid #2E333A; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 14px; align-items: center">
+<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true" style="flex-shrink: 0"><rect width="84" height="84" rx="14" fill="#23272D"></rect><circle cx="42" cy="42" r="30" fill="#111316"></circle><circle cx="42" cy="42" r="22" fill="none" stroke="#2E333A"></circle><circle cx="42" cy="42" r="15" fill="none" stroke="#2E333A"></circle><circle cx="42" cy="42" r="9" fill="#FF8A3D"></circle><circle cx="42" cy="42" r="2" fill="#111316"></circle></svg>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #FF8A3D">{{nowLabel}}</span>
+<span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.2">Say It Loud - I'm Black and I'm Proud</span>
+<span style="font-size: 14px; color: #A7ADB5">James Brown</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="height: 4px; border-radius: 2px; background: #2E333A"><div style="width: 43%; height: 4px; border-radius: 2px; background: #FF8A3D"></div></div>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #A7ADB5"><span>1:12</span><span>2:47</span></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px">
+<span style="display: inline-flex; align-items: center; gap: 6px; color: #A7ADB5">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"></path></svg>
+Requested by Sam
+</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: rgba(255,138,61,0.14); color: #FF8A3D; font-weight: 600; font-size: 12px">DJ Ruby on Morning Focus</span>
+</div>
+</section>
+
+<section aria-labelledby="upnext" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="upnext" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 700">Up next</h2>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 1px dashed #3A4048">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A7ADB5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600; font-size: 15px">Superstition</span>
+<span style="font-size: 13px; color: #A7ADB5">Stevie Wonder · Requested by Maria</span>
+</div>
+<span style="font-size: 12px; color: #A7ADB5; text-align: right; max-width: 92px; line-height: 1.3">Locked in, already sent to the speakers</span>
+</div>
+</section>
+
+<section aria-labelledby="requests" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<h2 id="requests" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 700">Requests</h2>
+<span style="font-size: 12px; color: #A7ADB5">Sorted by votes · {{mineCount}} of 5 yours</span>
+</div>
+<ol style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{requests}}" as="item" hint-placeholder-count="5">
+<li style="list-style: none; background: #1A1D22; border: 1px solid #2E333A; border-radius: 16px; padding: 8px 6px 8px 14px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #A7ADB5">{{item.rank}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 6px; min-width: 0">
+<span style="font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{item.title}}</span>
+<sc-if value="{{item.explicit}}" hint-placeholder-val="{{false}}"><abbr title="Explicit" style="text-decoration: none; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #3A4048; color: #F3F1EA">E</abbr></sc-if>
+</div>
+<span style="font-size: 13px; color: #A7ADB5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{item.artist}}</span>
+</div>
+<div style="display: flex; align-items: center">
+<button type="button" aria-label="Upvote {{item.title}}" aria-pressed="{{item.upPressed}}" onClick="{{item.up}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: {{item.upBg}}; color: {{item.upColor}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="{{item.upFill}}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg></button>
+<span style="min-width: 30px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{item.scoreColor}}">{{item.scoreLabel}}</span>
+<button type="button" aria-label="Downvote {{item.title}}" aria-pressed="{{item.downPressed}}" onClick="{{item.down}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: {{item.downBg}}; color: {{item.downColor}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="{{item.downFill}}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg></button>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; padding-left: 26px; min-height: 22px">
+<span style="flex: 1; font-size: 12px; color: #A7ADB5">{{item.meta}}</span>
+<sc-if value="{{item.hasRecent}}" hint-placeholder-val="{{false}}">
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: rgba(245,196,81,0.12); color: #F5C451; font-size: 11px; font-weight: 600; white-space: nowrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{item.recent}}</span>
+</sc-if>
+<sc-if value="{{item.showMove}}" hint-placeholder-val="{{true}}">
+<button type="button" aria-label="Move {{item.title}} up" onClick="{{item.moveUp}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #A7ADB5; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+<button type="button" aria-label="Move {{item.title}} down" onClick="{{item.moveDown}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #A7ADB5; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"></path></svg></button>
+</sc-if>
+<sc-if value="{{item.showRemove}}" hint-placeholder-val="{{false}}">
+<button type="button" aria-label="Remove {{item.title}}" onClick="{{item.remove}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #A7ADB5; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</sc-if>
+</div>
+</li>
+</sc-for>
+</ol>
+</section>
+
+<section aria-labelledby="picks" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<h2 id="picks" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 700">Then from Morning Focus</h2>
+<span style="font-size: 12px; color: #A7ADB5">AI station picks</span>
+</div>
+<ol style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{picks}}" as="item" hint-placeholder-count="3">
+<li style="list-style: none; background: #15171B; border: 1px solid #2E333A; border-radius: 16px; padding: 8px 6px 8px 14px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #A7ADB5">{{item.rank}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{item.title}}</span>
+<span style="font-size: 13px; color: #A7ADB5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{item.artist}}</span>
+</div>
+<div style="display: flex; align-items: center">
+<button type="button" aria-label="Upvote {{item.title}}" aria-pressed="{{item.upPressed}}" onClick="{{item.up}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: {{item.upBg}}; color: {{item.upColor}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="{{item.upFill}}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg></button>
+<span style="min-width: 30px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{item.scoreColor}}">{{item.scoreLabel}}</span>
+<button type="button" aria-label="Downvote {{item.title}}" aria-pressed="{{item.downPressed}}" onClick="{{item.down}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: {{item.downBg}}; color: {{item.downColor}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="{{item.downFill}}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg></button>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; padding-left: 26px; min-height: 22px">
+<span style="flex: 1; font-size: 12px; color: #A7ADB5">{{item.meta}}</span>
+<sc-if value="{{item.showMove}}" hint-placeholder-val="{{true}}">
+<button type="button" aria-label="Remove {{item.title}}" onClick="{{item.remove}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: #A7ADB5; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</sc-if>
+</div>
+</li>
+</sc-for>
+</ol>
+</section>
+
+<section aria-labelledby="activity" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="activity" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 700">Activity</h2>
+<ul style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; font-size: 14px">
+<li style="list-style: none; display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #23272D"><span>Priya requested <strong>Dreams</strong></span><span style="color: #A7ADB5; font-size: 12px; white-space: nowrap">4 min</span></li>
+<li style="list-style: none; display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #23272D"><span>DJ Ruby announced Sam's request</span><span style="color: #A7ADB5; font-size: 12px; white-space: nowrap">6 min</span></li>
+<li style="list-style: none; display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #23272D"><span>Tom upvoted <strong>Electric Feel</strong></span><span style="color: #A7ADB5; font-size: 12px; white-space: nowrap">9 min</span></li>
+<li style="list-style: none; display: flex; justify-content: space-between; gap: 12px; padding: 10px 0"><span>Lunch announcement played in all rooms</span><span style="color: #A7ADB5; font-size: 12px; white-space: nowrap">12:30</span></li>
+</ul>
+</section>
+</main>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 92px; padding: 12px 16px; border-radius: 14px; background: #F3F1EA; color: #111316; font-size: 14px; font-weight: 500">{{toast}}</div>
+</sc-if>
+
+<nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 80px; padding-top: 6px; box-sizing: border-box; background: #15171B; border-top: 1px solid #2E333A; display: flex; justify-content: space-around; align-items: flex-start">
+<a href="Main.dc.html" aria-current="page" style="min-width: 60px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #FF8A3D; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Queue</a>
+<a href="Search.dc.html" style="min-width: 60px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #A7ADB5; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>Search</a>
+<sc-if value="{{isCurator}}" hint-placeholder-val="{{true}}">
+<a href="Library.dc.html" style="min-width: 60px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #A7ADB5; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4v16M9 4v16M14 4l5 16"></path></svg>Library</a>
+</sc-if>
+<sc-if value="{{isAdmin}}" hint-placeholder-val="{{true}}">
+<a href="Control.dc.html" style="min-width: 60px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #A7ADB5; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>Admin</a>
+</sc-if>
+<a href="Profile.dc.html" style="min-width: 60px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #A7ADB5; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>Profile</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"viewAs":{"editor":"enum","options":["Admin","Curator","User"],"default":"Admin"},"status":{"editor":"enum","options":["Playing","Stopped","Overridden"],"default":"Playing"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      votes: {},
+      reqOrder: ['dreams', 'brightside', 'electric', 'humble', 'seven'],
+      pickOrder: ['holocene', 'teardrop', 'midnight'],
+      toast: ''
+    };
+  }
+
+  tracks() {
+    return {
+      dreams: { title: 'Dreams', artist: 'Fleetwood Mac', by: 'Priya', base: 4 },
+      brightside: { title: 'Mr. Brightside', artist: 'The Killers', by: 'Tom', base: 3, recent: 'Played 3h ago' },
+      electric: { title: 'Electric Feel', artist: 'MGMT', by: 'You', base: 2, mine: true },
+      humble: { title: 'HUMBLE.', artist: 'Kendrick Lamar', by: 'Joe', base: 1, explicit: true },
+      seven: { title: 'Seven Nation Army', artist: 'The White Stripes', by: 'Ali', base: -2 },
+      holocene: { title: 'Holocene', artist: 'Bon Iver', base: 1, pick: true },
+      teardrop: { title: 'Teardrop', artist: 'Massive Attack', base: 0, pick: true },
+      midnight: { title: 'Midnight City', artist: 'M83', base: 0, pick: true }
+    };
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+
+  listKey(id) {
+    return this.tracks()[id].pick ? 'pickOrder' : 'reqOrder';
+  }
+
+  vote(id, dir) {
+    const T = this.tracks();
+    const current = this.state.votes[id] || 0;
+    const next = current === dir ? 0 : dir;
+    const votes = Object.assign({}, this.state.votes, { [id]: next });
+    const key = this.listKey(id);
+    const score = (x) => T[x].base + (votes[x] || 0);
+    let list = this.state[key].slice().sort((a, b) => score(b) - score(a));
+    if (score(id) <= -3) {
+      list = list.filter((x) => x !== id);
+      this.setState({ votes, [key]: list });
+      this.flash(T[id].title + ' was removed after too many downvotes');
+      return;
+    }
+    this.setState({ votes, [key]: list });
+  }
+
+  remove(id) {
+    const key = this.listKey(id);
+    this.setState({ [key]: this.state[key].filter((x) => x !== id) });
+    this.flash('Removed ' + this.tracks()[id].title + ' from the queue');
+  }
+
+  move(id, delta) {
+    const key = this.listKey(id);
+    const list = this.state[key].slice();
+    const i = list.indexOf(id);
+    const j = i + delta;
+    if (j < 0 || j >= list.length) return;
+    list[i] = list[j];
+    list[j] = id;
+    this.setState({ [key]: list });
+    this.flash('Moved ' + this.tracks()[id].title + (delta < 0 ? ' up' : ' down') + ', overriding votes');
+  }
+
+  renderVals() {
+    const viewAs = this.props.viewAs ?? 'Admin';
+    const status = this.props.status ?? 'Playing';
+    const isCurator = viewAs !== 'User';
+    const isAdmin = viewAs === 'Admin';
+    const T = this.tracks();
+    const votes = this.state.votes;
+    const row = (id, rank) => {
+      const t = T[id];
+      const v = votes[id] || 0;
+      const s = t.base + v;
+      return {
+        rank: String(rank),
+        title: t.title,
+        artist: t.artist,
+        meta: t.pick ? 'AI pick' : (t.mine ? 'Requested by you' : 'Requested by ' + t.by),
+        explicit: !!t.explicit,
+        hasRecent: !!t.recent,
+        recent: t.recent || '',
+        scoreLabel: s > 0 ? '+' + s : String(s),
+        scoreColor: v === 1 ? '#FF8A3D' : (v === -1 ? '#8DB4FF' : '#F3F1EA'),
+        upBg: v === 1 ? 'rgba(255,138,61,0.16)' : 'transparent',
+        upColor: v === 1 ? '#FF8A3D' : '#A7ADB5',
+        upPressed: v === 1,
+        upFill: v === 1 ? 'currentColor' : 'none',
+        downBg: v === -1 ? 'rgba(141,180,255,0.16)' : 'transparent',
+        downColor: v === -1 ? '#8DB4FF' : '#A7ADB5',
+        downPressed: v === -1,
+        downFill: v === -1 ? 'currentColor' : 'none',
+        showRemove: !!t.mine || isCurator,
+        showMove: isCurator,
+        up: () => this.vote(id, 1),
+        down: () => this.vote(id, -1),
+        remove: () => this.remove(id),
+        moveUp: () => this.move(id, -1),
+        moveDown: () => this.move(id, 1)
+      };
+    };
+    const requests = this.state.reqOrder.map((id, i) => row(id, i + 1));
+    const picks = this.state.pickOrder.map((id, i) => row(id, requests.length + i + 1));
+    const labels = { Playing: 'On air', Stopped: 'Stopped', Overridden: 'Overridden' };
+    const dots = { Playing: '#FF8A3D', Stopped: '#A7ADB5', Overridden: '#F5C451' };
+    return {
+      requests,
+      picks,
+      mineCount: String(this.state.reqOrder.filter((id) => T[id].mine).length),
+      isCurator,
+      isAdmin,
+      isStopped: status === 'Stopped',
+      isOverridden: status === 'Overridden',
+      statusLabel: labels[status] || 'On air',
+      statusDot: dots[status] || '#FF8A3D',
+      nowLabel: status === 'Playing' ? 'Now playing' : 'Last played',
+      hasToast: !!this.state.toast,
+      toast: this.state.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

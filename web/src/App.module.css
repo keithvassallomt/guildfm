@@ -1,0 +1,7 @@
+.app {
+  max-width: var(--content-width);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+  background: var(--bg);
+}

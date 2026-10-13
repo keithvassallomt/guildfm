@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New announcement</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B0C0E}
+a{color:#FF8A3D}a:hover{color:#FFB07A}
+button,input,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+input::placeholder,textarea::placeholder{color:#7D838C}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.8)}
+.gf-scroll{scrollbar-width:none}
+.gf-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div class="gf-scroll" style="width: 390px; height: 1400px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; background: #111316; color: #F3F1EA; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+<header style="padding: 12px 8px 4px; display: flex; align-items: center; gap: 4px">
+<a href="Announcements.dc.html" aria-label="Back to Announcements" style="width: 44px; height: 44px; border-radius: 12px; color: #F3F1EA; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>
+<h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">New announcement</h1>
+</header>
+
+<form style="padding: 12px 16px 32px; display: flex; flex-direction: column; gap: 24px">
+
+<section style="display: flex; flex-direction: column; gap: 10px">
+<label for="msg" style="font-size: 14px; font-weight: 600">What should it say?</label>
+<textarea id="msg" rows="4" style="box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 16px; line-height: 1.45; resize: none">The first floor meeting room is booked from two until four today. Please keep the noise down nearby.</textarea>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<span style="font-size: 13px; line-height: 1.4; color: #A7ADB5">Read out in <strong style="color: #F3F1EA">Cedar</strong>, the announcement voice from Settings.</span>
+<button type="button" onClick="{{preview}}" style="flex-shrink: 0; height: 44px; padding: 0 14px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; border: 1px solid {{previewBorder}}; background: transparent; color: {{previewColor}}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"></path></svg>{{previewLabel}}</button>
+</div>
+</section>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 14px; font-weight: 600">Where</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="{{allSelected}}" onClick="{{pickAll}}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1px solid {{allBorder}}; background: {{allBg}}; color: {{allColor}}">All rooms</button>
+<sc-for list="{{rooms}}" as="r" hint-placeholder-count="6">
+<button type="button" aria-pressed="{{r.selected}}" onClick="{{r.pick}}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1px solid {{r.border}}; background: {{r.bg}}; color: {{r.color}}">{{r.name}}</button>
+</sc-for>
+</div>
+</fieldset>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 12px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 14px; font-weight: 600">When</legend>
+<div role="radiogroup" aria-label="When" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #1A1D22; border: 1px solid #2E333A">
+<button type="button" role="radio" aria-checked="{{isNow}}" onClick="{{pickNow}}" style="height: 44px; border: 0; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; background: {{nowBg}}; color: {{nowColor}}">Now</button>
+<button type="button" role="radio" aria-checked="{{isLater}}" onClick="{{pickLater}}" style="height: 44px; border: 0; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; background: {{laterBg}}; color: {{laterColor}}">Schedule</button>
+</div>
+<sc-if value="{{isLater}}" hint-placeholder-val="{{true}}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="d" style="font-size: 13px; color: #A7ADB5">Starting</label>
+<input id="d" type="date" value="2026-10-14" style="height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 15px; color-scheme: dark">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="t" style="font-size: 13px; color: #A7ADB5">At</label>
+<input id="t" type="time" value="13:55" style="height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 15px; color-scheme: dark">
+</div>
+</div>
+</sc-if>
+</fieldset>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 14px; font-weight: 600">If music is playing</legend>
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="2">
+<button type="button" role="radio" aria-checked="{{m.selected}}" onClick="{{m.pick}}" style="padding: 12px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 3px; border: 1px solid {{m.border}}; background: {{m.bg}}; color: #F3F1EA">
+<span style="font-size: 15px; font-weight: 600">{{m.label}}</span>
+<span style="font-size: 13px; color: #A7ADB5">{{m.hint}}</span>
+</button>
+</sc-for>
+</fieldset>
+
+<sc-if value="{{isLater}}" hint-placeholder-val="{{true}}">
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 12px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 14px; font-weight: 600">Repeat</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{repeats}}" as="rp" hint-placeholder-count="5">
+<button type="button" role="radio" aria-checked="{{rp.selected}}" onClick="{{rp.pick}}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1px solid {{rp.border}}; background: {{rp.bg}}; color: {{rp.color}}">{{rp.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{isChosenDays}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+<button type="button" aria-label="{{day.full}}" aria-pressed="{{day.selected}}" onClick="{{day.pick}}" style="height: 44px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1px solid {{day.border}}; background: {{day.bg}}; color: {{day.color}}">{{day.short}}</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{isHourly}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; font-size: 13px; color: #A7ADB5">Plays on the hour, only during playback hours.</p>
+</sc-if>
+<sc-if value="{{repeating}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; align-items: center; gap: 10px">
+<label for="ends" style="font-size: 14px">Ends</label>
+<input id="ends" type="date" value="2026-12-19" style="flex: 1; height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid #3A4048; background: #1A1D22; color: #F3F1EA; font-size: 15px; color-scheme: dark">
+</div>
+</sc-if>
+</fieldset>
+</sc-if>
+
+<div style="padding: 14px; border-radius: 16px; background: #1A1D22; font-size: 14px; line-height: 1.5; color: #D9D6CC">{{summary}}</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<a href="Announcements.dc.html" style="height: 52px; border-radius: 14px; border: 1px solid #3A4048; color: #F3F1EA; text-decoration: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center">Cancel</a>
+<a href="Announcements.dc.html" style="height: 52px; border-radius: 14px; background: #FF8A3D; color: #1A0E05; text-decoration: none; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{submitLabel}}</a>
+</div>
+</form>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { all: false, rooms: { 'Upstairs Lounge': true, 'Entrance': true }, when: 'later', mode: 'after', repeat: 'chosen', days: { Tue: true, Thu: true }, playing: false };
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this._previewTimer);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const chip = (on) => ({ border: on ? '#FF8A3D' : '#2E333A', bg: on ? 'rgba(255,138,61,0.16)' : '#1A1D22', color: on ? '#FF8A3D' : '#F3F1EA' });
+    const seg = (on) => ({ bg: on ? '#2E333A' : 'transparent', color: on ? '#F3F1EA' : '#A7ADB5' });
+    const roomNames = ['Downstairs', 'Upstairs Lounge', 'Entrance', 'Kitchen', 'Pod', 'Donut Shop'];
+    const chosenRooms = roomNames.filter((n) => s.rooms[n]);
+    const dayList = [['Mon', 'M', 'Monday'], ['Tue', 'T', 'Tuesday'], ['Wed', 'W', 'Wednesday'], ['Thu', 'T', 'Thursday'], ['Fri', 'F', 'Friday'], ['Sat', 'S', 'Saturday'], ['Sun', 'S', 'Sunday']];
+    const repeatList = [['once', 'Just once'], ['daily', 'Every day'], ['weekdays', 'Weekdays'], ['chosen', 'Chosen days'], ['hourly', 'Every hour']];
+    const modes = [
+      { id: 'after', label: 'Wait for the song to finish', hint: 'Plays between songs, then the music carries on.' },
+      { id: 'over', label: 'Play over the music', hint: 'The music goes quiet while it plays, then comes back up.' }
+    ];
+    const allC = chip(s.all);
+    const nowS = seg(s.when === 'now');
+    const laterS = seg(s.when === 'later');
+    const where = s.all || chosenRooms.length === 0 ? 'all rooms' : chosenRooms.join(', ');
+    const chosenDays = dayList.filter((d) => s.days[d[0]]).map((d) => d[2]);
+    let when = 'now';
+    if (s.when === 'later') {
+      const patterns = {
+        once: 'on Wed 14 Oct at 13:55',
+        daily: 'every day at 13:55 from Wed 14 Oct',
+        weekdays: 'on weekdays at 13:55 from Wed 14 Oct',
+        chosen: 'every ' + (chosenDays.length ? chosenDays.join(' and ') : 'chosen day') + ' at 13:55 from Wed 14 Oct',
+        hourly: 'every hour from Wed 14 Oct'
+      };
+      when = patterns[s.repeat];
+      if (s.repeat !== 'once') when += ', until Sat 19 Dec';
+    }
+    const how = s.mode === 'after' ? 'after the current song' : 'over the music';
+    return {
+      preview: () => {
+        clearTimeout(this._previewTimer);
+        this.setState({ playing: true });
+        this._previewTimer = setTimeout(() => this.setState({ playing: false }), 3000);
+      },
+      previewLabel: s.playing ? 'Playing...' : 'Preview',
+      previewBorder: s.playing ? '#FF8A3D' : '#3A4048',
+      previewColor: s.playing ? '#FF8A3D' : '#F3F1EA',
+      allSelected: s.all,
+      allBorder: allC.border,
+      allBg: allC.bg,
+      allColor: allC.color,
+      pickAll: () => this.setState({ all: true, rooms: {} }),
+      rooms: roomNames.map((name) => {
+        const on = !s.all && !!s.rooms[name];
+        const c = chip(on);
+        return { name, selected: on, border: c.border, bg: c.bg, color: c.color, pick: () => this.setState({ all: false, rooms: Object.assign({}, s.rooms, { [name]: !on }) }) };
+      }),
+      isNow: s.when === 'now',
+      isLater: s.when === 'later',
+      pickNow: () => this.setState({ when: 'now' }),
+      pickLater: () => this.setState({ when: 'later' }),
+      nowBg: nowS.bg,
+      nowColor: nowS.color,
+      laterBg: laterS.bg,
+      laterColor: laterS.color,
+      modes: modes.map((m) => ({
+        label: m.label,
+        hint: m.hint,
+        selected: s.mode === m.id,
+        border: s.mode === m.id ? '#FF8A3D' : '#2E333A',
+        bg: s.mode === m.id ? 'rgba(255,138,61,0.10)' : '#1A1D22',
+        pick: () => this.setState({ mode: m.id })
+      })),
+      repeats: repeatList.map((r) => {
+        const c = chip(s.repeat === r[0]);
+        return { label: r[1], selected: s.repeat === r[0], border: c.border, bg: c.bg, color: c.color, pick: () => this.setState({ repeat: r[0] }) };
+      }),
+      isChosenDays: s.repeat === 'chosen',
+      isHourly: s.repeat === 'hourly',
+      repeating: s.repeat !== 'once',
+      days: dayList.map((d) => {
+        const on = !!s.days[d[0]];
+        const c = chip(on);
+        return { short: d[1], full: d[2], selected: on, border: c.border, bg: c.bg, color: c.color, pick: () => this.setState({ days: Object.assign({}, s.days, { [d[0]]: !on }) }) };
+      }),
+      summary: 'Plays in ' + where + ' ' + when + ', ' + how + '.',
+      submitLabel: s.when === 'now' ? 'Play now' : 'Schedule'
+    };
+  }
+}
+</script>
+</body>
+</html>
