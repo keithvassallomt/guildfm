@@ -14,13 +14,18 @@ from guildfm.db import make_engine, upgrade_to_head
 from guildfm.live import LiveHub, live_socket
 from guildfm.playback import PlaybackController
 from guildfm.speakers import SocoSystem, SpeakerSystem
+from guildfm.spotify import SpotifyClient
 from guildfm.web import mount_web
 
 SESSION_DAYS = 180
 
 
-def create_app(settings: Settings | None = None, speakers: SpeakerSystem | None = None) -> FastAPI:
-    """Build the app. Tests pass fake `speakers` so nothing touches the office Sonos system."""
+def create_app(
+    settings: Settings | None = None,
+    speakers: SpeakerSystem | None = None,
+    spotify: SpotifyClient | None = None,
+) -> FastAPI:
+    """Build the app. Tests pass fakes, so nothing touches the office speakers or Spotify."""
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -37,6 +42,7 @@ def create_app(settings: Settings | None = None, speakers: SpeakerSystem | None 
         poller.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await poller
+        await app.state.spotify.close()
         await engine.dispose()
 
     app = FastAPI(title="GuildFM", version=__version__, lifespan=lifespan)
@@ -44,6 +50,12 @@ def create_app(settings: Settings | None = None, speakers: SpeakerSystem | None 
     app.state.live = LiveHub()
     app.state.playback = PlaybackController(
         speakers or SocoSystem(settings.sonos_host_list), app.state.live
+    )
+    app.state.spotify = spotify or SpotifyClient(
+        client_id=settings.spotify_client_id,
+        client_secret=settings.spotify_client_secret.get_secret_value(),
+        redirect_uri=settings.spotify_redirect_uri,
+        market=settings.spotify_market,
     )
     app.add_middleware(
         SessionMiddleware,
@@ -53,6 +65,7 @@ def create_app(settings: Settings | None = None, speakers: SpeakerSystem | None 
         same_site="lax",
     )
     app.include_router(api.router, prefix="/api")
+    app.include_router(api.spotify.callback_router)
     app.add_api_websocket_route("/ws", live_socket)
     # Sound files the speakers fetch, such as announcements. Open to the network, since the
     # speakers can't sign in.

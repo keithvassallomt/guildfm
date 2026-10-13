@@ -1,12 +1,14 @@
 from collections.abc import Iterator
 from pathlib import Path
 
+import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
 from guildfm.main import create_app
-from tests.fakes import FakeSpeakers
+from guildfm.spotify import SpotifyClient
+from tests.fakes import FakeSpeakers, FakeSpotify
 from tests.helpers import ADMIN, PASSWORD, register, sign_in
 
 
@@ -31,8 +33,22 @@ def speakers() -> FakeSpeakers:
 
 
 @pytest.fixture
-def client(settings: Settings, speakers: FakeSpeakers) -> Iterator[TestClient]:
-    with TestClient(create_app(settings, speakers)) as client:
+def spotify() -> FakeSpotify:
+    return FakeSpotify()
+
+
+@pytest.fixture
+def client(
+    settings: Settings, speakers: FakeSpeakers, spotify: FakeSpotify
+) -> Iterator[TestClient]:
+    api = SpotifyClient(
+        client_id="test",
+        client_secret="test",
+        redirect_uri=settings.spotify_redirect_uri,
+        market="GB",
+        http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
+    )
+    with TestClient(create_app(settings, speakers, api)) as client:
         yield client
 
 

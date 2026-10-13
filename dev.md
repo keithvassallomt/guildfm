@@ -11,7 +11,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 1: Foundations
 - [x] Stage 2: Accounts and roles
 - [x] Stage 3: Sonos control
-- [ ] Stage 4: Spotify catalogue
+- [x] Stage 4: Spotify catalogue
 - [ ] Stage 5: Queue and voting
 - [ ] Stage 6: Playback rules and settings
 - [ ] Stage 7: Playlists
@@ -70,12 +70,12 @@ Done when: an admin can run the office music from their phone, and taking over f
 
 ## Stage 4: Spotify catalogue
 Goal: people can find any song on Spotify from GuildFM.
-- [ ] Spotify app login (client credentials) with token refresh
-- [ ] Search for tracks and artists, paging past Spotify's 10-result limit
-- [ ] Store track details locally: title, artist, duration, explicit flag, artwork
-- [ ] Hide explicit tracks when the setting is off
-- [ ] Spotify account connection for playlist import (via 127.0.0.1), with a reminder before the six-month expiry
-- [ ] Search screen wired up (adding to the queue comes in Stage 5)
+- [x] Spotify app login (client credentials) with token refresh
+- [x] Search for tracks and artists, paging past Spotify's 10-result limit
+- [x] Store track details locally: title, artist, duration, explicit flag, artwork
+- [x] Hide explicit tracks when the setting is off (the setting is stored now; its switch comes with the Settings screen in stage 6)
+- [x] Spotify account connection for playlist import (via 127.0.0.1), with a reminder before the six-month expiry
+- [x] Search screen wired up (adding to the queue comes in Stage 5)
 
 Done when: searching "fleetwood" on a phone shows Fleetwood Mac's tracks with artwork.
 

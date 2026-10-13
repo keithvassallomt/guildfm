@@ -94,3 +94,31 @@ export function errorText(error: unknown): string {
     ? error.message
     : "Couldn't reach GuildFM. Check you're on the office network.";
 }
+
+export type SearchTrack = {
+  id: string;
+  title: string;
+  artists: string;
+  album: string;
+  duration: number;
+  explicit: boolean;
+  art_url: string | null;
+};
+
+export type SearchArtist = { id: string; name: string; art_url: string | null };
+
+export type SearchResult = {
+  tracks: SearchTrack[];
+  artists: SearchArtist[];
+  next_offset: number | null;
+};
+
+export type SpotifyAccount = {
+  connected: boolean;
+  display_name: string | null;
+  connected_at: string | null;
+  reconnect_by: string | null;
+  reconnect_soon: boolean;
+  playlists: number | null;
+  problem: string | null;
+};

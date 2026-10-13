@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     spotify_client_id: str
     spotify_client_secret: SecretStr
     spotify_redirect_uri: str = "http://127.0.0.1:8000/auth/spotify/callback"
+    # Search only shows tracks playable in this country (ISO 3166 code).
+    spotify_market: str = "GB"
     guildfm_secret_key: SecretStr
     guildfm_admin_username: str = "admin"
     guildfm_admin_password: SecretStr

@@ -1,6 +1,12 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { api, errorText, type PlaybackState, type PlaybackStatus } from "../api";
+import {
+  api,
+  errorText,
+  type PlaybackState,
+  type PlaybackStatus,
+  type SpotifyAccount,
+} from "../api";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { StatusChip } from "../components/StatusChip";
@@ -67,6 +73,7 @@ export function AdminPage() {
 
         <div className={styles.stack}>
           <Volumes state={state} send={send} />
+          <SpotifyConnection />
           <section className={styles.section} aria-labelledby="manage">
             <h2 id="manage" className={styles.sectionTitle}>
               Manage
@@ -276,12 +283,133 @@ function SpotifyTester({ busy, send }: { busy: boolean; send: Send }) {
           required
           autoComplete="off"
           placeholder="https://open.spotify.com/track/..."
-          hint="For trying the speakers out until search arrives in stage 4. Plays straight away."
+          hint="For trying the speakers out until the queue arrives in stage 5. Plays straight away."
         />
         <Button type="submit" variant="secondary" disabled={busy}>
           Play now
         </Button>
       </form>
+    </section>
+  );
+}
+
+const THIS_MACHINE = ["127.0.0.1", "localhost", "[::1]"];
+
+const longDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+
+/** The Spotify account curators import playlists from. */
+function SpotifyConnection() {
+  const [account, setAccount] = useState<SpotifyAccount | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const load = useCallback(() => {
+    api<SpotifyAccount>("GET", "/spotify/account")
+      .then(setAccount)
+      .catch((caught) => setError(errorText(caught)));
+  }, []);
+
+  useEffect(() => {
+    load();
+    // Connecting happens in another tab, so check again on coming back to this one.
+    const onVisible = () => document.visibilityState === "visible" && load();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [load]);
+
+  const connect = async () => {
+    // Open the tab straight away, inside the click, so pop-up blockers allow it.
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    try {
+      const { url } = await api<{ url: string }>("POST", "/spotify/connect");
+      if (tab) tab.location.href = url;
+      else window.location.assign(url);
+    } catch (caught) {
+      tab?.close();
+      setError(errorText(caught));
+    }
+  };
+
+  const disconnect = async () => {
+    try {
+      await api("DELETE", "/spotify/account");
+      setConfirming(false);
+      load();
+    } catch (caught) {
+      setError(errorText(caught));
+    }
+  };
+
+  const onThisMachine = THIS_MACHINE.includes(window.location.hostname);
+  const here = `http://127.0.0.1:${window.location.port || "80"}/admin`;
+
+  return (
+    <section className={styles.section} aria-labelledby="connections">
+      <h2 id="connections" className={styles.sectionTitle}>
+        Connections
+      </h2>
+      <div className={styles.card}>
+        <div className={admin.connection}>
+          <Icon name="spotify" />
+          <span className={admin.linkText}>
+            <span className={admin.linkTitle}>Spotify account</span>
+            <span className={admin.linkHint}>
+              {account?.connected
+                ? `Connected as ${account.display_name}${
+                    account.playlists !== null ? `, ${account.playlists} playlists` : ""
+                  }`
+                : "Not connected"}
+            </span>
+          </span>
+        </div>
+
+        {account?.connected && account.reconnect_by && (
+          <p className={account.reconnect_soon ? admin.soon : styles.muted}>
+            {account.reconnect_soon ? "Reconnect soon: " : ""}Spotify asks for the account to be
+            connected again by {longDate(account.reconnect_by)}.
+          </p>
+        )}
+        {account && !account.connected && (
+          <p className={styles.muted}>
+            Curators import playlists from this account. Only playlists it owns or collaborates
+            on can be imported.
+          </p>
+        )}
+        {account?.problem && <p className={admin.soon}>{account.problem}</p>}
+
+        {onThisMachine ? (
+          <div className={admin.buttons}>
+            <Button variant={account?.connected ? "secondary" : "primary"} onClick={connect}>
+              {account?.connected ? "Reconnect" : "Connect Spotify"}
+            </Button>
+            {account?.connected && !confirming && (
+              <Button variant="ghost" onClick={() => setConfirming(true)}>
+                Disconnect
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className={styles.muted}>
+            Spotify only lets GuildFM connect from the machine it runs on. Open{" "}
+            <strong>{here}</strong> there, sign in, and connect from this page.
+          </p>
+        )}
+
+        {confirming && (
+          <div className={admin.confirm}>
+            <span>Disconnect {account?.display_name}? Curators won't be able to import.</span>
+            <span className={admin.buttons}>
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
+                Cancel
+              </Button>
+              <Button onClick={disconnect}>Disconnect</Button>
+            </span>
+          </div>
+        )}
+        <FormError message={error} />
+      </div>
     </section>
   );
 }

@@ -10,6 +10,7 @@ import { ChoosePasswordPage } from "./pages/ChoosePasswordPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { QueuePage } from "./pages/QueuePage";
+import { SearchPage } from "./pages/SearchPage";
 import { UsersPage } from "./pages/UsersPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
@@ -42,7 +43,7 @@ export function App() {
       <Routes>
         <Route element={<Shell />}>
           <Route index element={<QueuePage />} />
-          <Route path="search" element={<PlaceholderPage title="Search" stage={4} />} />
+          <Route path="search" element={<SearchPage />} />
           <Route
             path="library"
             element={

@@ -34,6 +34,12 @@ const paths = {
   back: <path d="M15 18l-6-6 6-6" />,
   chevronRight: <path d="M9 6l6 6-6 6" />,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  spotify: (
+    <>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M7.5 9.5c3-1 6.5-.7 9 .8M8 12.5c2.5-.8 5.3-.5 7.4.7M8.6 15.4c2-.6 4-.4 5.7.5" />
+    </>
+  ),
   play: <path d="M8 4.5v15l12-7.5z" fill="currentColor" stroke="none" />,
   pause: (
     <>
