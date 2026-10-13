@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { api, errorText, type PlaybackState, type QueueEntry, type QueueState } from "../api";
 import { useAuth } from "../auth/AuthProvider";
-import { ButtonLink } from "../components/Button";
+import { Button } from "../components/Button";
+import { Dialog } from "../components/Dialog";
 import { Icon } from "../components/Icon";
 import { Logo } from "../components/Logo";
 import { StatusChip } from "../components/StatusChip";
@@ -8,6 +10,7 @@ import { useToast } from "../components/Toast";
 import { ago, statusLabels, statusTones } from "../live/status";
 import { clock, usePlayback, usePosition } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
+import { type SearchChanges, SongSearch } from "../search/SongSearch";
 import styles from "./Page.module.css";
 import q from "./QueuePage.module.css";
 
@@ -19,6 +22,7 @@ export function QueuePage() {
   const { state: playback, receivedAt } = usePlayback();
   const { show, toast } = useToast();
   const curator = can("manage_queue");
+  const [searching, setSearching] = useState(false);
 
   const act: Act = async (method, path, body, done) => {
     try {
@@ -67,13 +71,17 @@ export function QueuePage() {
               </span>
             )}
           </div>
+          <button type="button" className={q.requestBar} onClick={() => setSearching(true)}>
+            <Icon name="search" size={20} />
+            Search for a song to request
+          </button>
           {queue && queue.waiting.length === 0 && (
             <div className={styles.empty}>
               <p className={styles.emptyText}>Nothing requested yet. Find a song to get it going.</p>
-              <ButtonLink to="/search">
+              <Button onClick={() => setSearching(true)}>
                 <Icon name="plus" size={18} strokeWidth={2.6} />
                 Request a song
-              </ButtonLink>
+              </Button>
             </div>
           )}
           {queue && queue.waiting.length > 0 && (
@@ -109,8 +117,48 @@ export function QueuePage() {
           </ul>
         </section>
       </div>
+      <QuickSearch open={searching} onClose={() => setSearching(false)} queue={queue} onQueue={apply} />
       {toast}
     </div>
+  );
+}
+
+type QuickSearchProps = {
+  open: boolean;
+  onClose: () => void;
+  queue: QueueState | null;
+  onQueue: (queue: QueueState) => void;
+};
+
+/** Search and request without leaving the queue. Each time it opens, it starts afresh. */
+function QuickSearch({ open, onClose, queue, onQueue }: QuickSearchProps) {
+  const [search, setSearch] = useState<{ q: string; artist: string | null }>({
+    q: "",
+    artist: null,
+  });
+
+  const close = () => {
+    setSearch({ q: "", artist: null });
+    onClose();
+  };
+
+  const update = (changes: SearchChanges) =>
+    setSearch((current) => ({
+      q: changes.q === undefined ? current.q : (changes.q ?? ""),
+      artist: changes.artist === undefined ? current.artist : changes.artist,
+    }));
+
+  return (
+    <Dialog open={open} onClose={close} title="Request a song" tall>
+      <SongSearch
+        query={search.q}
+        artist={search.artist}
+        onChange={update}
+        queue={queue}
+        onQueue={onQueue}
+        autoFocus
+      />
+    </Dialog>
   );
 }
 

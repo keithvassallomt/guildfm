@@ -1,4 +1,21 @@
+.search {
+  /* Results lay out by the search's own width, on the Search page or in a dialog. */
+  container: search / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
 .box {
+  flex: 1 1 320px;
   max-width: 720px;
   height: 52px;
   padding: 0 4px 0 14px;
@@ -199,8 +216,8 @@
   color: var(--faint);
 }
 
-/* Two columns of results once the page has room for them. */
-@container page (min-width: 760px) {
+/* Two columns of results once there's room for them. */
+@container search (min-width: 640px) {
   .results {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -243,4 +260,14 @@
   flex-shrink: 0;
   padding: 0 14px;
   font-size: 14px;
+}
+
+.added {
+  margin: 0;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.added:empty {
+  display: none;
 }

@@ -21,9 +21,60 @@
   gap: 16px;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .title {
   font-size: 20px;
   font-weight: 700;
+}
+
+.close {
+  width: var(--touch);
+  height: var(--touch);
+  margin-right: -8px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close:hover {
+  color: var(--text);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Tall dialogs keep their header in place and scroll what's below it. */
+.tall {
+  height: 92dvh;
+}
+
+.tall .body {
+  height: 100%;
+  padding-bottom: 0;
+}
+
+.tall .content {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -16px;
+  padding: 0 16px calc(28px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @media (min-width: 768px) {
@@ -36,5 +87,15 @@
 
   .body {
     padding: 24px;
+  }
+
+  .tall {
+    max-width: 760px;
+    height: min(86dvh, 860px);
+  }
+
+  .tall .content {
+    margin: 0 -24px;
+    padding: 0 24px 24px;
   }
 }
