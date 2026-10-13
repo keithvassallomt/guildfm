@@ -11,7 +11,7 @@ TRACK = spotify_item("6SP5GXlyb0yiCCMODUjeFb", sid=9, sn=1)
 OTHER = spotify_item("1sYRkVKdT2ize1HSDCwbEF", sid=9, sn=1)
 
 
-class Clock:
+class Steady:
     def __init__(self) -> None:
         self.now = 1000.0
 
@@ -23,17 +23,17 @@ class Clock:
 
 
 @pytest.fixture
-def clock() -> Clock:
-    return Clock()
+def steady() -> Steady:
+    return Steady()
 
 
 @pytest.fixture
-def controller(speakers: FakeSpeakers, clock: Clock) -> PlaybackController:
-    return PlaybackController(speakers, LiveHub(), clock=clock)
+def controller(speakers: FakeSpeakers, steady: Steady) -> PlaybackController:
+    return PlaybackController(speakers, LiveHub(), clock=steady)
 
 
-async def outside_takeover(controller, speakers, clock) -> None:
-    clock.advance(5)
+async def outside_takeover(controller, speakers, steady) -> None:
+    steady.advance(5)
     speakers.someone_plays_radio()
     await controller.poll()
     await controller.poll()
@@ -71,13 +71,13 @@ async def test_next_track_plays_without_another_takeover(controller, speakers) -
     assert speakers.position == 2
 
 
-async def test_outside_takeover_is_noticed_after_settling(controller, speakers, clock) -> None:
+async def test_outside_takeover_is_noticed_after_settling(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
     speakers.someone_plays_radio()
     await controller.poll()
     await controller.poll()
     assert controller.status == Status.PLAYING  # GuildFM's own command is still settling
-    clock.advance(5)
+    steady.advance(5)
     await controller.poll()
     assert controller.status == Status.PLAYING  # one odd reading isn't enough
     await controller.poll()
@@ -86,10 +86,10 @@ async def test_outside_takeover_is_noticed_after_settling(controller, speakers, 
         await controller.skip()
 
 
-async def test_play_takes_back_control_where_it_left_off(controller, speakers, clock) -> None:
+async def test_play_takes_back_control_where_it_left_off(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
     await controller.play_now(OTHER)
-    await outside_takeover(controller, speakers, clock)
+    await outside_takeover(controller, speakers, steady)
     assert controller.status == Status.OVERRIDDEN
 
     await controller.play()
@@ -97,9 +97,9 @@ async def test_play_takes_back_control_where_it_left_off(controller, speakers, c
     assert controller.status == Status.PLAYING
 
 
-async def test_pausing_from_the_sonos_app_isnt_a_takeover(controller, speakers, clock) -> None:
+async def test_pausing_from_the_sonos_app_isnt_a_takeover(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
-    clock.advance(5)
+    steady.advance(5)
     speakers.someone_pauses()
     await controller.poll()
     await controller.poll()
@@ -110,13 +110,13 @@ async def test_pausing_from_the_sonos_app_isnt_a_takeover(controller, speakers, 
     assert len(speakers.took_over) == 1  # resumed, not taken over again
 
 
-async def test_stop_silences_the_speakers_and_stops_watching(controller, speakers, clock) -> None:
+async def test_stop_silences_the_speakers_and_stops_watching(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
     await controller.stop()
     assert speakers.transport == "PAUSED_PLAYBACK"
     assert controller.status == Status.STOPPED
 
-    await outside_takeover(controller, speakers, clock)
+    await outside_takeover(controller, speakers, steady)
     assert controller.status == Status.STOPPED  # GuildFM had already stepped back
 
     await controller.play()
@@ -150,9 +150,9 @@ async def test_speakers_going_away_and_coming_back(controller, speakers) -> None
     assert controller.status == Status.PLAYING
 
 
-async def test_tv_takes_only_the_arc_out_of_the_group(controller, speakers, clock) -> None:
+async def test_tv_takes_only_the_arc_out_of_the_group(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
-    clock.advance(5)
+    steady.advance(5)
     speakers.tv_turns_on()
     await controller.poll(full=True)
     await controller.poll(full=True)

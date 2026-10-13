@@ -85,6 +85,8 @@ class PlaybackController:
         self.on_poll: list[Callable[[], Awaitable[None]]] = []
         # What to play when GuildFM takes the speakers over with nothing of its own left.
         self.source: Source | None = None
+        # Whether playback hours are open and when that next changes, kept up by the scheduler.
+        self.hours: dict[str, Any] | None = None
 
     # Reading the speakers
 
@@ -197,6 +199,7 @@ class PlaybackController:
             },
             "group_volume": snapshot.group_volume if snapshot else None,
             "rooms": [asdict(room) for room in self._rooms],
+            "hours": self.hours,
         }
 
     async def _publish(self) -> None:

@@ -1,0 +1,38 @@
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+}
+
+.card[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}

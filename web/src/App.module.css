@@ -5,6 +5,7 @@
 
 .main {
   min-width: 0;
+  padding-bottom: var(--fab-space, 0px);
 }
 
 @media (min-width: 768px) {

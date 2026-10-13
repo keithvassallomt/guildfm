@@ -1,6 +1,8 @@
 import asyncio
 import contextlib
+from collections.abc import Callable
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +16,7 @@ from guildfm.db import make_engine, upgrade_to_head
 from guildfm.live import LiveHub, live_socket
 from guildfm.playback import PlaybackController
 from guildfm.queue import QueueEngine
+from guildfm.schedule import Scheduler
 from guildfm.speakers import SocoSystem, SpeakerSystem
 from guildfm.spotify import SpotifyClient
 from guildfm.web import mount_web
@@ -26,9 +29,10 @@ def create_app(
     speakers: SpeakerSystem | None = None,
     spotify: SpotifyClient | None = None,
     poll: bool = True,
+    now: Callable[[], datetime] | None = None,
 ) -> FastAPI:
-    """Build the app. Tests pass fakes, so nothing touches the office speakers or Spotify, and
-    turn off `poll` so they decide when the speakers are read."""
+    """Build the app. Tests pass fakes, so nothing touches the office speakers or Spotify, turn
+    off `poll` so they decide when the speakers are read, and set `now` to pick the time."""
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -47,13 +51,18 @@ def create_app(
             sn=settings.sonos_spotify_sn,
         )
         await app.state.queue.recover()
+        app.state.schedule = Scheduler(
+            app.state.sessionmaker, app.state.playback, **({"clock": now} if now else {})
+        )
+        await app.state.schedule.tick()
 
-        poller = asyncio.create_task(app.state.playback.run()) if poll else None
+        loops = (app.state.playback.run(), app.state.schedule.run()) if poll else ()
+        tasks = [asyncio.create_task(loop) for loop in loops]
         yield
-        if poller:
-            poller.cancel()
+        for task in tasks:
+            task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await poller
+                await task
         await app.state.spotify.close()
         await engine.dispose()
 

@@ -1,0 +1,48 @@
+.connection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--accent);
+}
+
+.linkText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.linkTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.linkHint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.soon {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--warn);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.confirm {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}

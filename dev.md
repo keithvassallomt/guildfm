@@ -13,7 +13,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 3: Sonos control
 - [x] Stage 4: Spotify catalogue
 - [x] Stage 5: Queue and voting
-- [ ] Stage 6: Playback rules and settings
+- [x] Stage 6: Playback rules and settings
 - [ ] Stage 7: Playlists
 - [ ] Stage 8: Announcements
 - [ ] Stage 9: AI radio
@@ -97,11 +97,13 @@ Done when: two phones vote on the queue, both see the order change live, and the
 
 ## Stage 6: Playback rules and settings
 Goal: admins can shape when and how GuildFM plays.
-- [ ] Settings storage and the Settings screen, with every default from stream.md
-- [ ] Stop halts everything, including announcements and the DJ. Play resumes whatever was playing before.
-- [ ] Playback schedule per weekday. Outside those hours GuildFM stays silent.
-- [ ] "When the queue runs out" setting, with each option wired up as its stage lands (playlist in 7, AI station and AI pick in 9)
-- [ ] Connections section: Spotify status and reconnect, Sonos status
+- [x] Settings storage and the Settings screen, with every default from stream.md
+- [x] Stop halts everything, including announcements and the DJ. Play resumes whatever was playing before.
+- [x] Playback schedule per weekday. Outside those hours GuildFM stays silent.
+- [x] "When the queue runs out" setting, with each option wired up as its stage lands (playlist in 7, AI station and AI pick in 9)
+- [x] Connections section: Spotify status and reconnect, Sonos status
+- [x] An admin's Play works at any time, overriding the playback hours until Stop or the next closing time (added after trying it out)
+- [x] Quick controls for admins: a floating button on every screen but Admin, opening play, pause, stop and the office volume (added after trying it out)
 
 Done when: GuildFM starts and stops itself on schedule, and Stop then Play resumes the same source.
 

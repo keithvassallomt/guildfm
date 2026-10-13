@@ -1,4 +1,4 @@
-import type { PlaybackStatus } from "../api";
+import type { PlaybackState, PlaybackStatus } from "../api";
 
 export const statusLabels: Record<PlaybackStatus, string> = {
   playing: "On air",
@@ -26,4 +26,20 @@ export function ago(iso: string): string {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return hours < 48 ? "yesterday" : `${Math.round(hours / 24)} days ago`;
+}
+
+/** "Opens again Wednesday at 08:00." or "No playback hours are set." */
+export function opensAgain(hours: { next_change: string | null }): string {
+  if (!hours.next_change) return "No playback hours are set.";
+  const when = new Date(hours.next_change);
+  const day = when.toLocaleDateString(undefined, { weekday: "long" });
+  const time = when.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const today = new Date().toDateString() === when.toDateString();
+  return `Opens again ${today ? "today" : day} at ${time}.`;
+}
+
+/** The status chip's words: "Closed" rather than "Stopped" outside playback hours. */
+export function chipLabel(state: PlaybackState): string {
+  if (state.status === "stopped" && state.hours?.open === false) return "Closed";
+  return statusLabels[state.status];
 }

@@ -224,34 +224,3 @@
   font-size: 13px;
   color: var(--muted);
 }
-
-.connection {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--accent);
-}
-
-.soon {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--warn);
-}
-
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.confirm {
-  padding: 12px;
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-size: 14px;
-  line-height: 1.45;
-}

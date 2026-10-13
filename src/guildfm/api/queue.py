@@ -162,8 +162,10 @@ async def add(body: RequestIn, user: Requester, request: Request, db: Db) -> Que
 
     queue.note(f"{user.display_name} requested {track.title}")
     await queue.changed()
-    # If the speakers had run out of things to play, this starts the new request.
+    # If the speakers had run out of things to play, or GuildFM opened with nothing to play,
+    # this starts the new request.
     await queue.keep_fed()
+    await request.app.state.schedule.try_start()
     return await view(db, user, queue)
 
 

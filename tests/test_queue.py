@@ -331,3 +331,16 @@ def test_requests_on_their_way_cant_be_removed(client: TestClient, speakers, sta
     entry = queue(client)[state]
     response = client.delete(f"/api/queue/{entry['id']}")
     assert response.status_code == 409
+
+
+def test_stop_then_play_carries_on_with_the_same_song(client: TestClient, speakers) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "fm1")
+    request(client, "fm2")
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/playback/stop").raise_for_status()
+    assert queue(client)["playing"]["track"]["title"] == "Song 1"
+
+    client.post("/api/playback/play").raise_for_status()
+    assert queue(client)["playing"]["track"]["title"] == "Song 1"
+    assert len(speakers.took_over) == 1  # resumed where it was, not started over

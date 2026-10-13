@@ -55,9 +55,14 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 
 ## Playback
 - Admins can play, pause, resume, skip, change volume and stop.
+- Admins also get a floating button on every screen (except Admin, which has the full controls) that opens quick controls: play, pause, stop all, and the whole-office volume.
 - **Stop** halts all playback, including announcements and the DJ, until play is pressed again.
 - **Play** continues whatever was playing before (a playlist, an AI station, or the queue).
 - **Playback schedule** (setting): the hours GuildFM plays, for example weekdays 08:00 to 18:00. Outside these hours it behaves as if stopped, so scheduled announcements don't play either.
+    - At opening time, GuildFM starts playing by itself if there's something to play, taking over the speakers as if Play was pressed. With nothing to play yet, it starts as soon as someone makes a request.
+    - At closing time, it stops everything, as if Stop was pressed.
+    - A Stop during playback hours lasts until someone presses Play or the next opening time, whichever comes first.
+    - An admin can press Play at any time. Outside playback hours this overrides the schedule: GuildFM plays until someone presses Stop or the next closing time comes round.
 - **When the queue runs out** (setting), one of:
   1. Restart the current playlist. If no playlist is playing, fall back to option 3.
   2. Play a default AI station.

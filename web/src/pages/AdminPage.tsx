@@ -1,18 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
-import {
-  api,
-  errorText,
-  type PlaybackState,
-  type PlaybackStatus,
-  type SpotifyAccount,
-} from "../api";
-import { Button } from "../components/Button";
+import { api, errorText, type PlaybackState, type PlaybackStatus } from "../api";
 import { Icon } from "../components/Icon";
 import { StatusChip } from "../components/StatusChip";
 import { FormError } from "../components/TextField";
 import { VolumeSlider } from "../components/VolumeSlider";
-import { statusLabels, statusTones } from "../live/status";
+import { chipLabel, opensAgain, statusTones } from "../live/status";
 import { clock, usePlayback, usePosition } from "../live/usePlayback";
 import admin from "./AdminPage.module.css";
 import styles from "./Page.module.css";
@@ -40,7 +33,7 @@ export function AdminPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Admin</h1>
-        {state && <StatusChip tone={statusTones[status]}>{statusLabels[status]}</StatusChip>}
+        {state && <StatusChip tone={statusTones[status]}>{chipLabel(state)}</StatusChip>}
       </header>
 
       <div className={styles.columns}>
@@ -55,7 +48,6 @@ export function AdminPage() {
 
         <div className={styles.stack}>
           <Volumes state={state} send={send} />
-          <SpotifyConnection />
           <section className={styles.section} aria-labelledby="manage">
             <h2 id="manage" className={styles.sectionTitle}>
               Manage
@@ -66,6 +58,16 @@ export function AdminPage() {
                 <span className={admin.linkText}>
                   <span className={admin.linkTitle}>Users</span>
                   <span className={admin.linkHint}>Accounts, roles and password resets</span>
+                </span>
+                <Icon name="chevronRight" size={18} />
+              </Link>
+              <Link to="/admin/settings" className={admin.link}>
+                <Icon name="admin" />
+                <span className={admin.linkText}>
+                  <span className={admin.linkTitle}>Settings</span>
+                  <span className={admin.linkHint}>
+                    Playback hours, voting rules and connections
+                  </span>
                 </span>
                 <Icon name="chevronRight" size={18} />
               </Link>
@@ -91,6 +93,15 @@ function Banner({ state }: { state: PlaybackState | null }) {
       <div className={`${admin.banner} ${admin.warn}`} role="status">
         <strong>Can't reach the speakers</strong>
         {state.error}
+      </div>
+    );
+  }
+  if (state?.status === "stopped" && state.hours?.open === false) {
+    return (
+      <div className={admin.banner} role="status">
+        <strong>Outside playback hours</strong>
+        {opensAgain(state.hours)} Pressing Play overrides that, until Stop or the next closing
+        time.
       </div>
     );
   }
@@ -152,7 +163,9 @@ function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receiv
 
 type Send = (method: "POST" | "PUT", path: string, body?: unknown) => Promise<void>;
 
-function Transport({ status, busy, send }: { status: PlaybackStatus; busy: boolean; send: Send }) {
+type TransportProps = { status: PlaybackStatus; busy: boolean; send: Send };
+
+function Transport({ status, busy, send }: TransportProps) {
   const driving = status === "playing" || status === "paused" || status === "idle";
   const offline = status === "offline";
 
@@ -241,127 +254,6 @@ function Volumes({ state, send }: { state: PlaybackState | null; send: Send }) {
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-const THIS_MACHINE = ["127.0.0.1", "localhost", "[::1]"];
-
-const longDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
-
-/** The Spotify account curators import playlists from. */
-function SpotifyConnection() {
-  const [account, setAccount] = useState<SpotifyAccount | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
-
-  const load = useCallback(() => {
-    api<SpotifyAccount>("GET", "/spotify/account")
-      .then(setAccount)
-      .catch((caught) => setError(errorText(caught)));
-  }, []);
-
-  useEffect(() => {
-    load();
-    // Connecting happens in another tab, so check again on coming back to this one.
-    const onVisible = () => document.visibilityState === "visible" && load();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [load]);
-
-  const connect = async () => {
-    // Open the tab straight away, inside the click, so pop-up blockers allow it.
-    const tab = window.open("about:blank", "_blank");
-    if (tab) tab.opener = null;
-    try {
-      const { url } = await api<{ url: string }>("POST", "/spotify/connect");
-      if (tab) tab.location.href = url;
-      else window.location.assign(url);
-    } catch (caught) {
-      tab?.close();
-      setError(errorText(caught));
-    }
-  };
-
-  const disconnect = async () => {
-    try {
-      await api("DELETE", "/spotify/account");
-      setConfirming(false);
-      load();
-    } catch (caught) {
-      setError(errorText(caught));
-    }
-  };
-
-  const onThisMachine = THIS_MACHINE.includes(window.location.hostname);
-  const here = `http://127.0.0.1:${window.location.port || "80"}/admin`;
-
-  return (
-    <section className={styles.section} aria-labelledby="connections">
-      <h2 id="connections" className={styles.sectionTitle}>
-        Connections
-      </h2>
-      <div className={styles.card}>
-        <div className={admin.connection}>
-          <Icon name="spotify" />
-          <span className={admin.linkText}>
-            <span className={admin.linkTitle}>Spotify account</span>
-            <span className={admin.linkHint}>
-              {account?.connected
-                ? `Connected as ${account.display_name}${
-                    account.playlists !== null ? `, ${account.playlists} playlists` : ""
-                  }`
-                : "Not connected"}
-            </span>
-          </span>
-        </div>
-
-        {account?.connected && account.reconnect_by && (
-          <p className={account.reconnect_soon ? admin.soon : styles.muted}>
-            {account.reconnect_soon ? "Reconnect soon: " : ""}Spotify asks for the account to be
-            connected again by {longDate(account.reconnect_by)}.
-          </p>
-        )}
-        {account && !account.connected && (
-          <p className={styles.muted}>
-            Curators import playlists from this account. Only playlists it owns or collaborates
-            on can be imported.
-          </p>
-        )}
-        {account?.problem && <p className={admin.soon}>{account.problem}</p>}
-
-        {onThisMachine ? (
-          <div className={admin.buttons}>
-            <Button variant={account?.connected ? "secondary" : "primary"} onClick={connect}>
-              {account?.connected ? "Reconnect" : "Connect Spotify"}
-            </Button>
-            {account?.connected && !confirming && (
-              <Button variant="ghost" onClick={() => setConfirming(true)}>
-                Disconnect
-              </Button>
-            )}
-          </div>
-        ) : (
-          <p className={styles.muted}>
-            Spotify only lets GuildFM connect from the machine it runs on. Open{" "}
-            <strong>{here}</strong> there, sign in, and connect from this page.
-          </p>
-        )}
-
-        {confirming && (
-          <div className={admin.confirm}>
-            <span>Disconnect {account?.display_name}? Curators won't be able to import.</span>
-            <span className={admin.buttons}>
-              <Button variant="secondary" onClick={() => setConfirming(false)}>
-                Cancel
-              </Button>
-              <Button onClick={disconnect}>Disconnect</Button>
-            </span>
-          </div>
-        )}
-        <FormError message={error} />
-      </div>
     </section>
   );
 }

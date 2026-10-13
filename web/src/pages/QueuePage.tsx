@@ -7,7 +7,7 @@ import { Icon } from "../components/Icon";
 import { Logo } from "../components/Logo";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
-import { ago, statusLabels, statusTones } from "../live/status";
+import { ago, chipLabel, opensAgain, statusTones } from "../live/status";
 import { clock, usePlayback, usePosition } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
 import { type SearchChanges, SongSearch } from "../search/SongSearch";
@@ -43,9 +43,7 @@ export function QueuePage() {
           <span className={styles.wideOnly}>Queue</span>
         </h1>
         {playback && (
-          <StatusChip tone={statusTones[playback.status]}>
-            {statusLabels[playback.status]}
-          </StatusChip>
+          <StatusChip tone={statusTones[playback.status]}>{chipLabel(playback)}</StatusChip>
         )}
       </header>
 
@@ -159,6 +157,12 @@ function Banner({ playback }: { playback: PlaybackState | null }) {
     ],
     offline: ["Can't reach the speakers", "Requests still queue up in the meantime."],
   };
+  if (playback?.status === "stopped" && playback.hours?.open === false) {
+    messages.stopped = [
+      "Outside playback hours",
+      `${opensAgain(playback.hours)} Requests still queue up until then.`,
+    ];
+  }
   const message = playback && messages[playback.status];
   if (!message) return null;
   return (

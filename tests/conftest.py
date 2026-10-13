@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx2
@@ -32,6 +33,22 @@ def speakers() -> FakeSpeakers:
     return FakeSpeakers()
 
 
+class Clock:
+    """The time as the app sees it. Tests move it about."""
+
+    def __init__(self) -> None:
+        # A Tuesday morning: inside the default playback hours, 08:00 to 18:00 on weekdays.
+        self.now = datetime(2026, 10, 13, 9, 0, tzinfo=UTC)
+
+    def __call__(self) -> datetime:
+        return self.now
+
+
+@pytest.fixture
+def clock() -> Clock:
+    return Clock()
+
+
 @pytest.fixture
 def spotify() -> FakeSpotify:
     return FakeSpotify()
@@ -39,7 +56,7 @@ def spotify() -> FakeSpotify:
 
 @pytest.fixture
 def client(
-    settings: Settings, speakers: FakeSpeakers, spotify: FakeSpotify
+    settings: Settings, speakers: FakeSpeakers, spotify: FakeSpotify, clock: Clock
 ) -> Iterator[TestClient]:
     api = SpotifyClient(
         client_id="test",
@@ -48,7 +65,7 @@ def client(
         market="GB",
         http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
     )
-    with TestClient(create_app(settings, speakers, api, poll=False)) as client:
+    with TestClient(create_app(settings, speakers, api, poll=False, now=clock)) as client:
         yield client
 
 

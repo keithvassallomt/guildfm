@@ -53,6 +53,8 @@ export type PlaybackState = {
   } | null;
   group_volume: number | null;
   rooms: Room[];
+  /** Whether playback hours are open now, and when that next changes. */
+  hours: { open: boolean; next_change: string | null } | null;
 };
 
 export class ApiError extends Error {
@@ -154,4 +156,27 @@ export type SpotifyAccount = {
   reconnect_soon: boolean;
   playlists: number | null;
   problem: string | null;
+};
+
+export type Hours = { on: boolean; start: string; end: string };
+
+export type SettingsValues = {
+  allow_explicit: boolean;
+  request_cap: number;
+  downvote_threshold: number;
+  recently_played_hours: number;
+  best_voted_min_upvotes: number;
+  best_voted_size: number;
+  queue_runs_out: "restart_playlist" | "default_station" | "ai_pick";
+  schedule: Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", Hours>;
+  timezone: string;
+  weather_location: string;
+  announcement_voice: string;
+};
+
+export type SettingsState = {
+  values: SettingsValues;
+  voices: string[];
+  timezones: string[];
+  hours: { open: boolean; next_change: string | null };
 };

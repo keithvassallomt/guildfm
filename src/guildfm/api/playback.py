@@ -46,6 +46,8 @@ async def state(_: ActiveUser, request: Request) -> dict[str, Any]:
 
 @router.post("/play")
 async def play(_: Controls, request: Request) -> dict[str, Any]:
+    """Play, at any time: outside playback hours this overrides the schedule until Stop or the
+    next closing time."""
     async with speakers_errors():
         await controller(request).play()
     return controller(request).state()
@@ -68,6 +70,7 @@ async def skip(_: Controls, request: Request) -> dict[str, Any]:
 
 @router.post("/stop")
 async def stop(_: Controls, request: Request) -> dict[str, Any]:
+    request.app.state.schedule.stopped_by_hand()
     async with speakers_errors():
         await controller(request).stop()
     return controller(request).state()

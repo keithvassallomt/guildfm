@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router";
+import type { CSSProperties, ReactNode } from "react";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import type { Permission } from "./api";
 import styles from "./App.module.css";
 import { useAuth } from "./auth/AuthProvider";
 import { Navigation } from "./components/Navigation";
+import { QuickControls } from "./components/QuickControls";
 import { LiveProvider } from "./live/LiveProvider";
 import { AdminPage } from "./pages/AdminPage";
 import { ChoosePasswordPage } from "./pages/ChoosePasswordPage";
@@ -11,16 +12,26 @@ import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { QueuePage } from "./pages/QueuePage";
 import { SearchPage } from "./pages/SearchPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
 function Shell() {
+  const { can } = useAuth();
+  const { pathname } = useLocation();
+  // Admins get quick controls everywhere but the Admin screen, which has the full set.
+  const quick = can("control_playback") && pathname !== "/admin";
+
   return (
-    <div className={styles.app}>
+    <div
+      className={styles.app}
+      style={quick ? ({ "--fab-space": "80px" } as CSSProperties) : undefined}
+    >
       <Navigation />
       <main className={styles.main}>
         <Outlet />
       </main>
+      {quick && <QuickControls />}
     </div>
   );
 }
@@ -65,6 +76,14 @@ export function App() {
             element={
               <Allowed permission="manage_users">
                 <UsersPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="admin/settings"
+            element={
+              <Allowed permission="change_settings">
+                <SettingsPage />
               </Allowed>
             }
           />
