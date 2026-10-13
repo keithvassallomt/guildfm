@@ -12,7 +12,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 2: Accounts and roles
 - [x] Stage 3: Sonos control
 - [x] Stage 4: Spotify catalogue
-- [ ] Stage 5: Queue and voting
+- [x] Stage 5: Queue and voting
 - [ ] Stage 6: Playback rules and settings
 - [ ] Stage 7: Playlists
 - [ ] Stage 8: Announcements
@@ -81,15 +81,15 @@ Done when: searching "fleetwood" on a phone shows Fleetwood Mac's tracks with ar
 
 ## Stage 5: Queue and voting
 Goal: the core of GuildFM: requests, votes, and the music following them.
-- [ ] Queue model: requests with requester and votes, followed by tracks from the current source
-- [ ] Playback engine: picks the next track (requests by votes first, then the source), hands it to Sonos shortly before it's needed, and locks it
-- [ ] Add a request: cap per user (default 5), no duplicates in the queue, "recently played" badge (default 24 hours)
-- [ ] Voting: thumbs up and down, one vote per person per track, net score, removal at the threshold (default -3)
-- [ ] Remove your own track; curators reorder, remove any track and override votes
-- [ ] Play history, used for "recently played" and the Best Voted playlist
-- [ ] Live updates: queue, now playing and the activity feed, on every phone at once
-- [ ] Queue screen wired up, including the activity feed
-- [ ] Tests for ordering, the request cap, duplicates and the downvote threshold
+- [x] Queue model: requests with requester and votes, followed by tracks from the current source
+- [x] Playback engine: picks the next track (requests by votes first, then the source), hands it to Sonos shortly before it's needed, and locks it
+- [x] Add a request: cap per user (default 5), no duplicates in the queue, "recently played" badge (default 24 hours)
+- [x] Voting: thumbs up and down, one vote per person per track, net score, removal at the threshold (default -3)
+- [x] Remove your own track; curators reorder, remove any track and override votes
+- [x] Play history, used for "recently played" and the Best Voted playlist
+- [x] Live updates: queue, now playing and the activity feed, on every phone at once
+- [x] Queue screen wired up, including the activity feed
+- [x] Tests for ordering, the request cap, duplicates and the downvote threshold
 
 Done when: two phones vote on the queue, both see the order change live, and the speakers play the winning track next.
 

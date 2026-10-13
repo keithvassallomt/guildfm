@@ -34,6 +34,26 @@ const paths = {
   back: <path d="M15 18l-6-6 6-6" />,
   chevronRight: <path d="M9 6l6 6-6 6" />,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  thumbUp: (
+    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+  ),
+  thumbDown: (
+    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+  ),
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
   spotify: (
     <>
       <circle cx="12" cy="12" r="9.5" />
@@ -62,16 +82,18 @@ type Props = {
   name: IconName;
   size?: number;
   strokeWidth?: number;
+  /** Fill the shape too, for a pressed look. */
+  filled?: boolean;
 };
 
 /** Stroke icons drawn in the current text colour. Decorative: label the control, not the icon. */
-export function Icon({ name, size = 22, strokeWidth = 2 }: Props) {
+export function Icon({ name, size = 22, strokeWidth = 2, filled = false }: Props) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth={strokeWidth}
       strokeLinecap="round"

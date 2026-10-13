@@ -96,3 +96,26 @@ class MeOut(UserOut):
 class TemporaryPasswordOut(BaseModel):
     user: UserOut
     temporary_password: str
+
+
+class TrackOut(BaseModel):
+    id: str
+    title: str
+    artists: str
+    album: str
+    duration: int  # seconds
+    explicit: bool
+    art_url: str | None
+
+    @classmethod
+    def of(cls, track) -> TrackOut:
+        """From a stored track or a Spotify search result; both carry the same fields."""
+        return cls(
+            id=track.id,
+            title=track.title,
+            artists=track.artists,
+            album=track.album,
+            duration=round(track.duration_ms / 1000),
+            explicit=track.explicit,
+            art_url=track.art_url,
+        )

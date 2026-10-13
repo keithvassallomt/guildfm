@@ -51,6 +51,7 @@ class NothingToPlay(Exception):
 
 
 TrackChange = Callable[[str | None, str | None], Awaitable[None]]
+Source = Callable[[], Awaitable[list[QueueItem]]]
 
 
 class PlaybackController:
@@ -80,6 +81,10 @@ class PlaybackController:
         self._last_compared: dict[str, Any] | None = None
         self._last_sent_at = float("-inf")
         self.on_track_change: list[TrackChange] = []
+        # Run after every reading of the speakers, so the queue can keep them fed.
+        self.on_poll: list[Callable[[], Awaitable[None]]] = []
+        # What to play when GuildFM takes the speakers over with nothing of its own left.
+        self.source: Source | None = None
 
     # Reading the speakers
 
@@ -92,6 +97,8 @@ class PlaybackController:
         while True:
             try:
                 await self.poll(full=self._polls % FULL_EVERY == 0)
+                for callback in self.on_poll:
+                    await callback()
             except Exception:
                 log.exception("Reading the speakers failed")
             self._polls += 1
@@ -143,6 +150,18 @@ class PlaybackController:
             self._in_control = False
             self._overridden = True
             self._mismatches = 0
+
+    @property
+    def in_control(self) -> bool:
+        return self._in_control and not self._error
+
+    @property
+    def time_left(self) -> int | None:
+        """Seconds left in the current track, or None when the speakers don't know."""
+        track = self._snapshot.track if self._snapshot else None
+        if track is None or not track.duration:
+            return None
+        return max(0, track.duration - track.position)
 
     @property
     def status(self) -> Status:
@@ -207,7 +226,9 @@ class PlaybackController:
         if self._in_control or untouched:
             await self._call(self._speakers.play)
         else:
-            remaining = self._items[self._position - 1 :] or self._items[-1:]
+            remaining = self._items[self._position - 1 :]
+            if not remaining and self.source:
+                remaining = await self.source()
             if not remaining:
                 raise NothingToPlay
             await self._call(self._speakers.take_over, remaining)
@@ -235,6 +256,12 @@ class PlaybackController:
             await self._call(self._speakers.pause)
         self._in_control, self._overridden = False, False
         await self.poll()
+
+    async def queue_next(self, item: QueueItem) -> None:
+        """Line `item` up to play after the current track."""
+        self._require_control()
+        position = await self._call(self._speakers.add_next, item)
+        self._items.insert(position - 1, item)
 
     async def play_now(self, item: QueueItem) -> None:
         """Play `item` straight away, taking the speakers over if GuildFM isn't driving them."""

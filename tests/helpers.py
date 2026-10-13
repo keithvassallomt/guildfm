@@ -20,3 +20,9 @@ def register(client: TestClient, username: str) -> dict:
     )
     assert response.status_code == 201, response.text
     return response.json()
+
+
+def read_speakers(client: TestClient) -> None:
+    """Read the (fake) speakers once and let the queue react, as the app does every second."""
+    client.portal.call(client.app.state.playback.poll)
+    client.portal.call(client.app.state.queue.keep_fed)

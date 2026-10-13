@@ -8,6 +8,9 @@ from guildfm.models import Setting
 
 DEFAULTS: dict[str, Any] = {
     "allow_explicit": True,
+    "request_cap": 5,  # requests one person can have in the queue at once
+    "downvote_threshold": -3,  # a request is removed when its score falls to this
+    "recently_played_hours": 24,
 }
 
 

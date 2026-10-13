@@ -5,6 +5,13 @@ import httpx2
 from guildfm.speakers import QUEUE_URI, QueueItem, Room, Snapshot, SpeakersUnavailable, Track
 
 COORDINATOR = "RINCON_LOUNGE"
+
+
+def spotify_id(name: str) -> str:
+    """A made-up Spotify track id. Real ones are 22 letters and digits."""
+    return name.ljust(22, "x")
+
+
 RADIO = "x-sonosapi-radio:sonos%3a3094?sid=303&flags=8232&sn=8"
 
 
@@ -27,6 +34,7 @@ class FakeSpeakers:
             "RINCON_ARC": Room("RINCON_ARC", "Downstairs", "Sonos Arc", 14, True, False),
         }
         self.took_over: list[list[QueueItem]] = []
+        self.track_position = 3  # seconds into the current queued track, out of 200
 
     # Things that happen in the office
 
@@ -53,7 +61,7 @@ class FakeSpeakers:
         track = self.outside_track
         if ours:
             item = self.queue[self.position - 1] if self.position else None
-            track = item and Track(item.uri, "Queued track", "", "", None, 200, 3)
+            track = item and Track(item.uri, "Queued track", "", "", None, 200, self.track_position)
         return Snapshot(
             coordinator_uid=COORDINATOR,
             coordinator_name="Upstairs Lounge",
@@ -76,7 +84,15 @@ class FakeSpeakers:
     def skip(self) -> None:
         self._check()
         if self.position and self.position < len(self.queue):
+            self.song_ends()
+        else:
+            self.transport = "STOPPED"
+
+    def song_ends(self) -> None:
+        """The speakers move on to the next thing in their queue, as at the end of a song."""
+        if self.position and self.position < len(self.queue):
             self.position += 1
+            self.track_position = 0
         else:
             self.transport = "STOPPED"
 
@@ -132,7 +148,8 @@ class FakeSpotify:
         self.busy = False
 
     @staticmethod
-    def track(track_id: str, title: str, artist: str, album: str, explicit: bool = False):
+    def track(name: str, title: str, artist: str, album: str, explicit: bool = False):
+        track_id = spotify_id(name)
         images = [
             {"url": f"https://i.scdn.co/{track_id}-{size}", "width": size}
             for size in (640, 300, 64)
@@ -184,6 +201,9 @@ class FakeSpotify:
             return httpx2.Response(200, json=body)
         if self.busy:
             return httpx2.Response(429, headers={"Retry-After": "7"})
+        if path.startswith("/v1/tracks/"):
+            found = [t for t in self.tracks if t["id"] == path.rsplit("/", 1)[-1]]
+            return httpx2.Response(200, json=found[0]) if found else httpx2.Response(404)
         if path == "/v1/search":
             return httpx2.Response(200, json=self._search(dict(request.url.params)))
         if path == "/v1/me":

@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { api, errorText, type SearchArtist, type SearchResult, type SearchTrack } from "../api";
+import {
+  api,
+  errorText,
+  type FoundTrack,
+  type QueueState,
+  type SearchArtist,
+  type SearchResult,
+} from "../api";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { FormError } from "../components/TextField";
+import { useToast } from "../components/Toast";
+import { ago } from "../live/status";
 import { clock } from "../live/usePlayback";
+import { useQueue } from "../live/useQueue";
 import styles from "./Page.module.css";
 import search from "./SearchPage.module.css";
 
@@ -20,6 +30,24 @@ export function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const latest = useRef(0);
+  const { queue, apply } = useQueue();
+  const { show, toast } = useToast();
+  const capped = !!queue && queue.mine >= queue.request_cap;
+
+  const add = async (track: FoundTrack) => {
+    try {
+      apply(await api<QueueState>("POST", "/queue", { track_id: track.id }));
+      setResult((current) =>
+        current && {
+          ...current,
+          tracks: current.tracks.map((t) => (t.id === track.id ? { ...t, queued: true } : t)),
+        },
+      );
+      show(`Added ${track.title} to the queue`);
+    } catch (caught) {
+      show(errorText(caught));
+    }
+  };
 
   const update = (changes: { q?: string | null; artist?: string | null }) => {
     const next = new URLSearchParams(params);
@@ -78,6 +106,11 @@ export function SearchPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Search</h1>
+        {queue && (
+          <span className={search.count}>
+            Your requests: <strong>{queue.mine}</strong> of {queue.request_cap}
+          </span>
+        )}
       </header>
 
       <div className={search.box}>
@@ -173,7 +206,7 @@ export function SearchPage() {
           ) : (
             <ul className={search.results}>
               {result.tracks.map((track) => (
-                <TrackRow key={track.id} track={track} />
+                <TrackRow key={track.id} track={track} capped={capped} onAdd={add} />
               ))}
             </ul>
           )}
@@ -187,16 +220,23 @@ export function SearchPage() {
               {loading ? "Loading..." : "Show more"}
             </Button>
           )}
-          <p className={search.note}>
-            Results from Spotify. Adding songs to the queue arrives in stage 5.
-          </p>
+          {capped && (
+            <p className={styles.muted}>
+              You've used all {queue?.request_cap} requests. You can add more once one of yours
+              has played.
+            </p>
+          )}
+          <p className={search.note}>Results from Spotify.</p>
         </section>
       )}
+      {toast}
     </div>
   );
 }
 
-function TrackRow({ track }: { track: SearchTrack }) {
+type RowProps = { track: FoundTrack; capped: boolean; onAdd: (track: FoundTrack) => void };
+
+function TrackRow({ track, capped, onAdd }: RowProps) {
   return (
     <li className={search.track}>
       {track.art_url ? (
@@ -216,7 +256,26 @@ function TrackRow({ track }: { track: SearchTrack }) {
         <span className={search.meta}>
           {track.artists} · {clock(track.duration)}
         </span>
+        {track.played_at && (
+          <span className={search.recent}>
+            <Icon name="clock" size={12} strokeWidth={2.4} />
+            Played {ago(track.played_at)}
+          </span>
+        )}
       </span>
+      {track.queued ? (
+        <span className={search.queued}>In queue</span>
+      ) : (
+        <Button
+          disabled={capped}
+          aria-label={capped ? `Add ${track.title}, request limit reached` : `Add ${track.title}`}
+          onClick={() => onAdd(track)}
+          className={search.add}
+        >
+          <Icon name="plus" size={16} strokeWidth={2.6} />
+          Add
+        </Button>
+      )}
     </li>
   );
 }

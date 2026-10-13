@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
-from tests.fakes import FakeSpotify
+from tests.fakes import FakeSpotify, spotify_id
 from tests.helpers import ADMIN, sign_in
 
 # Searching
@@ -16,13 +16,15 @@ def test_search_finds_tracks_with_artwork(client: TestClient, people) -> None:
     result = client.get("/api/search", params={"q": "dreams"}).json()
     assert result["tracks"] == [
         {
-            "id": "dreams",
+            "id": spotify_id("dreams"),
             "title": "Dreams",
             "artists": "Fleetwood Mac",
             "album": "Rumours",
             "duration": 200,
             "explicit": False,
-            "art_url": "https://i.scdn.co/dreams-300",
+            "art_url": f"https://i.scdn.co/{spotify_id('dreams')}-300",
+            "queued": False,
+            "played_at": None,
         }
     ]
     assert [artist["name"] for artist in result["artists"]] == ["Fleetwood Mac"]
@@ -54,7 +56,7 @@ def test_found_tracks_are_kept_locally(client: TestClient, people, settings: Set
     client.get("/api/search", params={"q": "humble"}).raise_for_status()
     with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
         row = db.execute("SELECT title, artists, explicit, art_url FROM tracks").fetchone()
-    assert row == ("HUMBLE.", "Kendrick Lamar", 1, "https://i.scdn.co/humble-300")
+    assert row == ("HUMBLE.", "Kendrick Lamar", 1, f"https://i.scdn.co/{spotify_id('humble')}-300")
 
 
 def test_explicit_tracks_hidden_when_the_setting_is_off(client: TestClient, people, settings):

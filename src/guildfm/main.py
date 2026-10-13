@@ -13,6 +13,7 @@ from guildfm.config import Settings, get_settings
 from guildfm.db import make_engine, upgrade_to_head
 from guildfm.live import LiveHub, live_socket
 from guildfm.playback import PlaybackController
+from guildfm.queue import QueueEngine
 from guildfm.speakers import SocoSystem, SpeakerSystem
 from guildfm.spotify import SpotifyClient
 from guildfm.web import mount_web
@@ -24,8 +25,10 @@ def create_app(
     settings: Settings | None = None,
     speakers: SpeakerSystem | None = None,
     spotify: SpotifyClient | None = None,
+    poll: bool = True,
 ) -> FastAPI:
-    """Build the app. Tests pass fakes, so nothing touches the office speakers or Spotify."""
+    """Build the app. Tests pass fakes, so nothing touches the office speakers or Spotify, and
+    turn off `poll` so they decide when the speakers are read."""
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -36,12 +39,21 @@ def create_app(
         app.state.sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
         async with app.state.sessionmaker() as db:
             await seed_admin(db, settings)
+        app.state.queue = QueueEngine(
+            app.state.sessionmaker,
+            app.state.playback,
+            app.state.live,
+            sid=settings.sonos_spotify_sid,
+            sn=settings.sonos_spotify_sn,
+        )
+        await app.state.queue.recover()
 
-        poller = asyncio.create_task(app.state.playback.run())
+        poller = asyncio.create_task(app.state.playback.run()) if poll else None
         yield
-        poller.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await poller
+        if poller:
+            poller.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await poller
         await app.state.spotify.close()
         await engine.dispose()
 

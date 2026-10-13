@@ -107,8 +107,41 @@ export type SearchTrack = {
 
 export type SearchArtist = { id: string; name: string; art_url: string | null };
 
+export type FoundTrack = SearchTrack & {
+  /** Already in the queue, so it can't be requested again. */
+  queued: boolean;
+  /** When it last played, if recently. */
+  played_at: string | null;
+};
+
+export type QueueEntry = {
+  id: number;
+  state: "waiting" | "next" | "playing";
+  track: SearchTrack;
+  requested_by: { id: number; display_name: string };
+  requested_at: string;
+  up: number;
+  down: number;
+  score: number;
+  my_vote: -1 | 0 | 1;
+  mine: boolean;
+  /** Placed by a curator, so votes don't move it. */
+  pinned: boolean;
+  /** When it last played before this request, if recently. */
+  played_at: string | null;
+};
+
+export type QueueState = {
+  playing: QueueEntry | null;
+  next: QueueEntry | null;
+  waiting: QueueEntry[];
+  activity: { text: string; at: string }[];
+  mine: number;
+  request_cap: number;
+};
+
 export type SearchResult = {
-  tracks: SearchTrack[];
+  tracks: FoundTrack[];
   artists: SearchArtist[];
   next_offset: number | null;
 };

@@ -36,6 +36,10 @@ class SpotifyBusy(SpotifyError):
     """Spotify is rate limiting GuildFM."""
 
 
+class SpotifyNotFound(SpotifyError):
+    """Spotify doesn't have the thing asked for."""
+
+
 class NotConnected(SpotifyError):
     """No Spotify account is connected, or Spotify has signed it out."""
 
@@ -140,6 +144,8 @@ class SpotifyClient:
             if response.status_code == 401 and user_token is None and attempt == 0:
                 self._app_token = None  # expired early; get a new one and try once more
                 continue
+            if response.status_code in (400, 404) and path.startswith("/tracks/"):
+                raise SpotifyNotFound("Spotify doesn't have that track.")
             if response.status_code == 429:
                 wait = response.headers.get("Retry-After", "a few")
                 raise SpotifyBusy(f"Spotify is busy. Try again in {wait} seconds.")
@@ -174,6 +180,13 @@ class SpotifyClient:
         artists = [_artist(item) for item in results[0].get("artists", {}).get("items", []) if item]
         more = results[-1]["tracks"].get("next") is not None
         return tracks, artists, more
+
+    async def track(self, track_id: str) -> SpotifyTrack | None:
+        """One track by id, or None if Spotify doesn't have it."""
+        try:
+            return _track(await self._get(f"/tracks/{track_id}", {"market": self._market}))
+        except SpotifyNotFound:
+            return None
 
     # Connecting a person's account
 

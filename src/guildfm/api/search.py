@@ -1,16 +1,21 @@
 """Searching Spotify for something to request."""
 
+import time
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm.api.schemas import TrackOut
 from guildfm.auth import require
 from guildfm.db import get_session
-from guildfm.models import User
+from guildfm.models import QueueEntry, User
 from guildfm.permissions import Permission
 from guildfm.prefs import get_pref
+from guildfm.queue import recent_plays
 from guildfm.spotify import SpotifyBusy, SpotifyError, remember
 
 router = APIRouter()
@@ -19,14 +24,9 @@ Searcher = Annotated[User, require(Permission.ADD_TRACKS)]
 PER_PAGE = 20
 
 
-class TrackOut(BaseModel):
-    id: str
-    title: str
-    artists: str
-    album: str
-    duration: int  # seconds
-    explicit: bool
-    art_url: str | None
+class FoundTrackOut(TrackOut):
+    queued: bool  # already in the queue, so it can't be requested again
+    played_at: datetime | None  # when it last played, if recently
 
 
 class ArtistOut(BaseModel):
@@ -36,7 +36,7 @@ class ArtistOut(BaseModel):
 
 
 class SearchOut(BaseModel):
-    tracks: list[TrackOut]
+    tracks: list[FoundTrackOut]
     artists: list[ArtistOut]
     next_offset: int | None
 
@@ -67,16 +67,20 @@ async def search(
     await remember(db, tracks)
     if not await get_pref(db, "allow_explicit"):
         tracks = [track for track in tracks if not track.explicit]
+
+    ids = [track.id for track in tracks]
+    queued = set(await db.scalars(select(QueueEntry.track_id).where(QueueEntry.track_id.in_(ids))))
+    since = time.time() - await get_pref(db, "recently_played_hours") * 3600
+    plays = await recent_plays(db, since, ids)
+
     return SearchOut(
         tracks=[
-            TrackOut(
-                id=track.id,
-                title=track.title,
-                artists=track.artists,
-                album=track.album,
-                duration=round(track.duration_ms / 1000),
-                explicit=track.explicit,
-                art_url=track.art_url,
+            FoundTrackOut(
+                **TrackOut.of(track).model_dump(),
+                queued=track.id in queued,
+                played_at=datetime.fromtimestamp(plays[track.id][-1], UTC)
+                if track.id in plays
+                else None,
             )
             for track in tracks
         ],

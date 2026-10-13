@@ -2,8 +2,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Enum, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -79,3 +79,59 @@ class SpotifyAccount(Base):
     # Seconds since the epoch, so time zones never come into it.
     access_expires_at: Mapped[float] = mapped_column(default=0.0)
     connected_at: Mapped[float]
+
+
+class EntryState(StrEnum):
+    WAITING = "waiting"  # in the vote
+    NEXT = "next"  # already handed to the speakers, so locked in place
+    PLAYING = "playing"
+
+
+class QueueEntry(Base):
+    """A request in the queue. Deleting its requester deletes it."""
+
+    __tablename__ = "queue"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Unique: a song can only be in the queue once.
+    track_id: Mapped[str] = mapped_column(ForeignKey("tracks.id"), unique=True)
+    requested_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    added_at: Mapped[float]
+    state: Mapped[EntryState] = mapped_column(
+        Enum(EntryState, native_enum=False, length=16, values_callable=enum_values),
+        default=EntryState.WAITING,
+    )
+    # Set when a curator moves the entry; from then on votes don't move it.
+    pinned_position: Mapped[int | None] = mapped_column(default=None)
+
+    track: Mapped[Track] = relationship(lazy="joined")
+    requester: Mapped[User] = relationship(lazy="joined")
+
+
+class Vote(Base):
+    """One person's thumbs up (+1) or down (-1) on a request."""
+
+    __tablename__ = "votes"
+
+    entry_id: Mapped[int] = mapped_column(
+        ForeignKey("queue.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    value: Mapped[int]
+
+
+class Play(Base):
+    """A track GuildFM played, kept for "recently played" and the Best Voted playlist."""
+
+    __tablename__ = "plays"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    track_id: Mapped[str] = mapped_column(ForeignKey("tracks.id"), index=True)
+    requested_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    played_at: Mapped[float] = mapped_column(index=True)
+    upvotes: Mapped[int] = mapped_column(default=0)
+    downvotes: Mapped[int] = mapped_column(default=0)

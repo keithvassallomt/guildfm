@@ -78,6 +78,14 @@ def track_key(uri: str) -> str:
     return uri.split("?", 1)[0]
 
 
+def spotify_track_id(uri: str | None) -> str | None:
+    """The Spotify track id in a Sonos track URI, if it's a Spotify track."""
+    if not uri:
+        return None
+    _, found, rest = track_key(uri).partition("spotify%3atrack%3a")
+    return rest or None if found else None
+
+
 _DIDL = (
     '<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" '
     'xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" '

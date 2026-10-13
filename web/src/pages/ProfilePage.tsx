@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { errorText } from "../api";
 import { useAuth, useMe } from "../auth/AuthProvider";
+import { useQueue } from "../live/useQueue";
 import { Avatar } from "../components/Avatar";
 import { Button, ButtonLink } from "../components/Button";
 import { RoleBadge } from "../components/RoleBadge";
@@ -105,12 +106,7 @@ export function ProfilePage() {
             <h2 id="mine" className={styles.sectionTitle}>
               Your requests
             </h2>
-            <div className={styles.card}>
-              <p className={styles.muted}>Nothing requested yet.</p>
-              <ButtonLink to="/search" variant="secondary">
-                Find a song
-              </ButtonLink>
-            </div>
+            <YourRequests />
           </section>
 
           <section className={styles.section} aria-labelledby="account">
@@ -126,6 +122,52 @@ export function ProfilePage() {
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+function YourRequests() {
+  const { queue } = useQueue();
+  if (!queue) return null;
+
+  const mine = [
+    ...(queue.playing?.mine ? [{ entry: queue.playing, where: "Playing now" }] : []),
+    ...(queue.next?.mine ? [{ entry: queue.next, where: "Up next" }] : []),
+    ...queue.waiting.flatMap((entry, index) =>
+      entry.mine ? [{ entry, where: `Number ${index + 1} in the queue` }] : [],
+    ),
+  ];
+
+  return (
+    <div className={styles.card}>
+      {mine.length === 0 ? (
+        <p className={styles.muted}>Nothing requested yet.</p>
+      ) : (
+        <ul className={profile.requests}>
+          {mine.map(({ entry, where }) => (
+            <li key={entry.id} className={profile.request}>
+              {entry.track.art_url ? (
+                <img src={entry.track.art_url} alt="" className={profile.art} />
+              ) : (
+                <span aria-hidden="true" className={profile.art} />
+              )}
+              <span className={profile.requestText}>
+                <span className={profile.requestTitle}>{entry.track.title}</span>
+                <span className={styles.muted}>
+                  {entry.track.artists} · {where}
+                </span>
+              </span>
+              <span className={profile.score}>{entry.score > 0 ? `+${entry.score}` : entry.score}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className={styles.muted}>
+        {queue.mine} of {queue.request_cap} requests in use.
+      </p>
+      <ButtonLink to="/search" variant="secondary">
+        Find a song
+      </ButtonLink>
     </div>
   );
 }

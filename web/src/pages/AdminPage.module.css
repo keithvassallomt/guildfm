@@ -177,14 +177,6 @@
   font-weight: 600;
 }
 
-.tester {
-  gap: 12px;
-}
-
-.tester button {
-  align-self: flex-start;
-}
-
 .links {
   border-radius: 20px;
   background: var(--surface);

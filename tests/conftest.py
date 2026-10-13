@@ -48,7 +48,7 @@ def client(
         market="GB",
         http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
     )
-    with TestClient(create_app(settings, speakers, api)) as client:
+    with TestClient(create_app(settings, speakers, api, poll=False)) as client:
         yield client
 
 

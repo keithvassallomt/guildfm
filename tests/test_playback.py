@@ -1,16 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from guildfm.api.playback import spotify_track_id
 from guildfm.live import LiveHub
 from guildfm.playback import NothingToPlay, NotInControl, PlaybackController, Status
 from guildfm.speakers import SpeakersRefused, spotify_item
-from tests.fakes import FakeSpeakers
-from tests.helpers import ADMIN, sign_in
+from tests.fakes import FakeSpeakers, spotify_id
+from tests.helpers import ADMIN, read_speakers, sign_in
 
 TRACK = spotify_item("6SP5GXlyb0yiCCMODUjeFb", sid=9, sn=1)
 OTHER = spotify_item("1sYRkVKdT2ize1HSDCwbEF", sid=9, sn=1)
-LINK = "https://open.spotify.com/track/6SP5GXlyb0yiCCMODUjeFb?si=abc123"
 
 
 class Clock:
@@ -185,31 +183,17 @@ async def test_volumes(controller) -> None:
     assert controller.state()["group_volume"] == 10
 
 
-# Reading Spotify links
-
-
-@pytest.mark.parametrize(
-    "link",
-    [
-        LINK,
-        "spotify:track:6SP5GXlyb0yiCCMODUjeFb",
-        "https://open.spotify.com/intl-de/track/6SP5GXlyb0yiCCMODUjeFb",
-    ],
-)
-def test_spotify_track_links(link: str) -> None:
-    assert spotify_track_id(link) == "6SP5GXlyb0yiCCMODUjeFb"
-
-
-def test_other_spotify_links_arent_tracks() -> None:
-    assert spotify_track_id("https://open.spotify.com/album/7vHr7TT6ShJWWgQAJGTOpW") is None
-
-
 # The API
+
+
+def request(client: TestClient, name: str) -> None:
+    client.post("/api/queue", json={"track_id": spotify_id(name)}).raise_for_status()
 
 
 def test_everyone_signed_in_can_see_whats_playing(client: TestClient, people) -> None:
     assert client.get("/api/playback").status_code == 401
     sign_in(client, *people["user"])
+    read_speakers(client)
     state = client.get("/api/playback").json()
     assert state["status"] == "stopped"
     assert state["track"]["title"] == "Nobody's Business"
@@ -222,7 +206,6 @@ COMMANDS = [
     ("post", "/api/playback/stop", None),
     ("put", "/api/playback/volume", {"volume": 10}),
     ("put", "/api/playback/rooms/RINCON_KITCHEN/volume", {"volume": 10}),
-    ("post", "/api/playback/spotify", {"link": LINK}),
 ]
 
 
@@ -233,21 +216,19 @@ def test_only_admins_control_playback(client: TestClient, people, method, path, 
     assert client.request(method, path, json=body).status_code == 403
 
 
-def test_admin_plays_a_spotify_link(client: TestClient, speakers: FakeSpeakers) -> None:
+def test_admin_plays_pauses_and_stops(client: TestClient, speakers: FakeSpeakers) -> None:
     sign_in(client, *ADMIN)
-    state = client.post("/api/playback/spotify", json={"link": LINK}).json()
+    request(client, "dreams")
+    state = client.post("/api/playback/play").json()
     assert state["status"] == "playing"
-    assert "6SP5GXlyb0yiCCMODUjeFb" in speakers.took_over[0][0].uri
+    assert spotify_id("dreams") in speakers.took_over[0][0].uri
 
-    state = client.post("/api/playback/pause").json()
-    assert state["status"] == "paused"
+    assert client.post("/api/playback/pause").json()["status"] == "paused"
     assert client.post("/api/playback/stop").json()["status"] == "stopped"
 
 
 def test_playback_problems_read_well(client: TestClient, speakers: FakeSpeakers) -> None:
     sign_in(client, *ADMIN)
-    response = client.post("/api/playback/spotify", json={"link": "not a link"})
-    assert response.status_code == 422
     assert client.post("/api/playback/play").json()["detail"] == "There's nothing to play yet."
     assert client.post("/api/playback/skip").status_code == 409
 
@@ -257,9 +238,10 @@ def test_playback_problems_read_well(client: TestClient, speakers: FakeSpeakers)
     assert "No Sonos speakers" in response.json()["detail"]
 
 
-def test_skipping_the_last_track_ends_playback(client: TestClient) -> None:
+def test_skipping_the_last_song_ends_playback(client: TestClient) -> None:
     sign_in(client, *ADMIN)
-    client.post("/api/playback/spotify", json={"link": LINK}).raise_for_status()
+    request(client, "dreams")
+    client.post("/api/playback/play").raise_for_status()
     response = client.post("/api/playback/skip")
     assert response.status_code == 200
     assert response.json()["status"] == "idle"
@@ -267,7 +249,8 @@ def test_skipping_the_last_track_ends_playback(client: TestClient) -> None:
 
 def test_a_refusal_from_the_speakers_isnt_an_outage(client: TestClient, speakers, monkeypatch):
     sign_in(client, *ADMIN)
-    client.post("/api/playback/spotify", json={"link": LINK}).raise_for_status()
+    request(client, "dreams")
+    client.post("/api/playback/play").raise_for_status()
 
     def refuse() -> None:
         raise SpeakersRefused("The speakers wouldn't do that (Illegal seek target).")

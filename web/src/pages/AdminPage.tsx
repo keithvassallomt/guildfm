@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import {
   api,
@@ -10,29 +10,12 @@ import {
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { StatusChip } from "../components/StatusChip";
-import { FormError, TextField } from "../components/TextField";
+import { FormError } from "../components/TextField";
 import { VolumeSlider } from "../components/VolumeSlider";
+import { statusLabels, statusTones } from "../live/status";
 import { clock, usePlayback, usePosition } from "../live/usePlayback";
 import admin from "./AdminPage.module.css";
 import styles from "./Page.module.css";
-
-const statusLabels: Record<PlaybackStatus, string> = {
-  playing: "On air",
-  paused: "Paused",
-  idle: "Nothing playing",
-  stopped: "Stopped",
-  overridden: "Overridden",
-  offline: "Speakers offline",
-};
-
-const tones: Record<PlaybackStatus, "live" | "idle" | "warn"> = {
-  playing: "live",
-  paused: "idle",
-  idle: "idle",
-  stopped: "idle",
-  overridden: "warn",
-  offline: "warn",
-};
 
 export function AdminPage() {
   const { state, receivedAt, apply } = usePlayback();
@@ -57,7 +40,7 @@ export function AdminPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Admin</h1>
-        {state && <StatusChip tone={tones[status]}>{statusLabels[status]}</StatusChip>}
+        {state && <StatusChip tone={statusTones[status]}>{statusLabels[status]}</StatusChip>}
       </header>
 
       <div className={styles.columns}>
@@ -68,7 +51,6 @@ export function AdminPage() {
             <Transport status={status} busy={busy} send={send} />
             <FormError message={error} />
           </section>
-          <SpotifyTester busy={busy} send={send} />
         </div>
 
         <div className={styles.stack}>
@@ -259,36 +241,6 @@ function Volumes({ state, send }: { state: PlaybackState | null; send: Send }) {
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-/** Until search arrives, admins can play a Spotify link to try the speakers out. */
-function SpotifyTester({ busy, send }: { busy: boolean; send: Send }) {
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const link = String(new FormData(event.currentTarget).get("link") ?? "");
-    send("POST", "/spotify", { link });
-  };
-
-  return (
-    <section className={styles.section} aria-labelledby="tester">
-      <h2 id="tester" className={styles.sectionTitle}>
-        Play a Spotify link
-      </h2>
-      <form className={`${styles.card} ${admin.tester}`} onSubmit={submit}>
-        <TextField
-          label="Track link"
-          name="link"
-          required
-          autoComplete="off"
-          placeholder="https://open.spotify.com/track/..."
-          hint="For trying the speakers out until the queue arrives in stage 5. Plays straight away."
-        />
-        <Button type="submit" variant="secondary" disabled={busy}>
-          Play now
-        </Button>
-      </form>
     </section>
   );
 }
