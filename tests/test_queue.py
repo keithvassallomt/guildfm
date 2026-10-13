@@ -189,10 +189,11 @@ def test_curators_move_requests_and_votes_dont_move_them_back(client, people) ->
         request(client, f"fm{number}")
     sign_in(client, *people["curator"])
     song3 = entry_for(client, "Song 3")
-    client.post(f"/api/queue/{song3['id']}/move", json={"direction": "up"})
-    body = client.post(f"/api/queue/{song3['id']}/move", json={"direction": "up"}).json()
+    client.post(f"/api/queue/{song3['id']}/move", json={"position": 2})
+    body = client.post(f"/api/queue/{song3['id']}/move", json={"position": 1}).json()
     assert titles(body) == ["Song 3", "Song 1", "Song 2"]
     assert body["waiting"][0]["pinned"] is True
+    assert body["activity"][0]["text"] == "Curator moved Song 3 up"
 
     for name in ("dan", "eve"):
         register(client, name)
@@ -200,11 +201,33 @@ def test_curators_move_requests_and_votes_dont_move_them_back(client, people) ->
     assert titles(queue(client)) == ["Song 3", "Song 2", "Song 1"]
 
 
+def test_dragging_keeps_every_placed_request_where_it_was_dropped(client, people) -> None:
+    sign_in(client, *people["user"])
+    for number in (1, 2, 3, 4):
+        request(client, f"fm{number}")
+    sign_in(client, *people["curator"])
+
+    def drag(title: str, position: int) -> list[str]:
+        entry = entry_for(client, title)
+        return titles(
+            client.post(f"/api/queue/{entry['id']}/move", json={"position": position}).json()
+        )
+
+    assert drag("Song 4", 1) == ["Song 4", "Song 1", "Song 2", "Song 3"]
+    assert drag("Song 2", 1) == ["Song 2", "Song 4", "Song 1", "Song 3"]
+    assert drag("Song 1", 99) == ["Song 2", "Song 4", "Song 3", "Song 1"]
+    # Songs nobody placed still follow the votes, in the gaps between placed ones.
+    for name in ("dan", "eve"):
+        register(client, name)
+        vote(client, entry_for(client, "Song 3"), -1)
+    assert titles(queue(client)) == ["Song 2", "Song 4", "Song 3", "Song 1"]
+
+
 def test_only_curators_move_requests(client: TestClient, people) -> None:
     sign_in(client, *people["user"])
     request(client, "fm1")
     entry = entry_for(client, "Song 1")
-    response = client.post(f"/api/queue/{entry['id']}/move", json={"direction": "up"})
+    response = client.post(f"/api/queue/{entry['id']}/move", json={"position": 1})
     assert response.status_code == 403
 
 

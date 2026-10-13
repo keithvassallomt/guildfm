@@ -50,7 +50,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - A track that is already in the queue cannot be added again.
 - Tracks played recently show a warning badge (for example, "played 2 hours ago") in search and in the queue, but can still be added.
 - Explicit tracks are allowed by default. Admins can block them in settings.
-- Curators can manage the queue without voting: override votes, reorder tracks, and remove any track. The reorder controls (move up and down arrows) are only shown to curators and admins.
+- Curators can manage the queue without voting: override votes, reorder tracks, and remove any track. Curators and admins reorder by dragging a request (press and hold on a phone), or with the up and down arrows. A request's actions (the arrows, and remove) are tucked behind a small arrow on its right, which slides them out when tapped.
 - Votes reorder everything after the next track. GuildFM hands the next track to Sonos shortly before it plays, so that one is locked.
 
 ## Playback

@@ -226,26 +226,28 @@ async def remove(entry_id: int, user: ActiveUser, request: Request, db: Db) -> Q
 
 
 class MoveIn(BaseModel):
-    direction: Literal["up", "down"]
+    position: int = Field(ge=1)  # where in the waiting requests to put it, from 1
 
 
 @router.post("/{entry_id}/move")
 async def move(entry_id: int, body: MoveIn, user: Curator, request: Request, db: Db) -> QueueOut:
-    """Move a request one place, overriding the votes. It stays where it's put."""
+    """Put a request at `position`, overriding the votes. It stays where it's put."""
     queue = engine(request)
     async with queue.lock:
         entry = await waiting_entry(db, entry_id)
-        order = [e.id for e in (await waiting(db))[0]]
-        index = order.index(entry.id)
-        target = index - 1 if body.direction == "up" else index + 1
-        if 0 <= target < len(order):
-            neighbour = await db.get(QueueEntry, order[target])
-            if neighbour.pinned_position is not None:
-                neighbour.pinned_position = index + 1
-            entry.pinned_position = target + 1
-            await db.commit()
-        title = entry.track.title
+        order = (await waiting(db))[0]
+        before = order.index(entry) + 1
+        order.remove(entry)
+        order.insert(min(body.position, len(order) + 1) - 1, entry)
+        # Pin the moved request, and re-pin any a curator had placed before, at their new
+        # places. Requests nobody placed keep following the votes in the gaps between.
+        for index, placed in enumerate(order, start=1):
+            if placed is entry or placed.pinned_position is not None:
+                placed.pinned_position = index
+        await db.commit()
+        title, after = entry.track.title, order.index(entry) + 1
 
-    queue.note(f"{user.display_name} moved {title} {body.direction}")
+    if after != before:
+        queue.note(f"{user.display_name} moved {title} {'up' if after < before else 'down'}")
     await queue.changed()
     return await view(db, user, queue)

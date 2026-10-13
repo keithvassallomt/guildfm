@@ -13,8 +13,8 @@ import { useQueue } from "../live/useQueue";
 import { type SearchChanges, SongSearch } from "../search/SongSearch";
 import styles from "./Page.module.css";
 import q from "./QueuePage.module.css";
+import { type Act, Requests } from "./QueueRequests";
 
-type Act = (method: "POST" | "DELETE", path: string, body?: unknown, done?: string) => void;
 
 export function QueuePage() {
   const { can } = useAuth();
@@ -85,19 +85,7 @@ export function QueuePage() {
             </div>
           )}
           {queue && queue.waiting.length > 0 && (
-            <ol className={q.list}>
-              {queue.waiting.map((entry, index) => (
-                <Request
-                  key={entry.id}
-                  entry={entry}
-                  rank={index + 1}
-                  first={index === 0}
-                  last={index === queue.waiting.length - 1}
-                  curator={curator}
-                  act={act}
-                />
-              ))}
-            </ol>
+            <Requests entries={queue.waiting} curator={curator} act={act} />
           )}
         </section>
         <section className={`${styles.section} ${q.activity}`} aria-labelledby="activity">
@@ -247,109 +235,6 @@ function UpNext({ entry }: { entry: QueueEntry }) {
         <span className={q.lockedNote}>Locked in, already sent to the speakers</span>
       </div>
     </section>
-  );
-}
-
-type RequestProps = {
-  entry: QueueEntry;
-  rank: number;
-  first: boolean;
-  last: boolean;
-  curator: boolean;
-  act: Act;
-};
-
-function Request({ entry, rank, first, last, curator, act }: RequestProps) {
-  const title = entry.track.title;
-  const voteFor = (value: -1 | 1) =>
-    act("POST", `/queue/${entry.id}/vote`, { value: entry.my_vote === value ? 0 : value });
-  const scoreClass = entry.my_vote === 1 ? q.up : entry.my_vote === -1 ? q.down : "";
-
-  return (
-    <li className={q.request}>
-      <div className={q.requestTop}>
-        <span className={q.rank}>{rank}</span>
-        <Art url={entry.track.art_url} />
-        <div className={q.text}>
-          <span className={q.titleLine}>
-            <span className={q.title}>{title}</span>
-            {entry.track.explicit && (
-              <abbr title="Explicit" className={q.explicit}>
-                E
-              </abbr>
-            )}
-          </span>
-          <span className={q.meta}>{entry.track.artists}</span>
-        </div>
-        <div className={q.votes}>
-          <button
-            type="button"
-            aria-label={`Thumbs up for ${title}`}
-            aria-pressed={entry.my_vote === 1}
-            className={`${q.vote} ${entry.my_vote === 1 ? q.up : ""}`}
-            onClick={() => voteFor(1)}
-          >
-            <Icon name="thumbUp" size={20} filled={entry.my_vote === 1} />
-          </button>
-          <span className={`${q.score} ${scoreClass}`} aria-label={`Score ${entry.score}`}>
-            {entry.score > 0 ? `+${entry.score}` : entry.score}
-          </span>
-          <button
-            type="button"
-            aria-label={`Thumbs down for ${title}`}
-            aria-pressed={entry.my_vote === -1}
-            className={`${q.vote} ${entry.my_vote === -1 ? q.down : ""}`}
-            onClick={() => voteFor(-1)}
-          >
-            <Icon name="thumbDown" size={20} filled={entry.my_vote === -1} />
-          </button>
-        </div>
-      </div>
-      <div className={q.requestBottom}>
-        <span className={q.meta}>
-          Requested by {entry.mine ? "you" : entry.requested_by.display_name}
-          {entry.pinned && " · placed by a curator"}
-        </span>
-        {entry.played_at && (
-          <span className={q.recent}>
-            <Icon name="clock" size={12} strokeWidth={2.4} />
-            Played {ago(entry.played_at)}
-          </span>
-        )}
-        {curator && (
-          <>
-            <button
-              type="button"
-              aria-label={`Move ${title} up`}
-              disabled={first}
-              className={q.action}
-              onClick={() => act("POST", `/queue/${entry.id}/move`, { direction: "up" })}
-            >
-              <Icon name="arrowUp" size={18} />
-            </button>
-            <button
-              type="button"
-              aria-label={`Move ${title} down`}
-              disabled={last}
-              className={q.action}
-              onClick={() => act("POST", `/queue/${entry.id}/move`, { direction: "down" })}
-            >
-              <Icon name="arrowDown" size={18} />
-            </button>
-          </>
-        )}
-        {(entry.mine || curator) && (
-          <button
-            type="button"
-            aria-label={`Remove ${title}`}
-            className={q.action}
-            onClick={() => act("DELETE", `/queue/${entry.id}`, undefined, `Removed ${title}`)}
-          >
-            <Icon name="close" size={18} />
-          </button>
-        )}
-      </div>
-    </li>
   );
 }
 

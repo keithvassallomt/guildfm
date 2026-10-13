@@ -90,6 +90,7 @@ Goal: the core of GuildFM: requests, votes, and the music following them.
 - [x] Live updates: queue, now playing and the activity feed, on every phone at once
 - [x] Queue screen wired up, including the activity feed
 - [x] Search and request straight from the Queue screen, keeping the Search page (added after trying the queue out)
+- [x] Request actions tucked into a tray that slides out, and drag to reorder for curators (added after trying the queue out)
 - [x] Tests for ordering, the request cap, duplicates and the downvote threshold
 
 Done when: two phones vote on the queue, both see the order change live, and the speakers play the winning track next.

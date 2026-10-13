@@ -382,3 +382,75 @@
   border-color: var(--accent);
   color: var(--muted);
 }
+
+/* Curators drag requests about: press and hold on a phone. */
+.draggable {
+  cursor: grab;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.dragging {
+  position: relative;
+  z-index: 2;
+  cursor: grabbing;
+  border-color: var(--accent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* A request's actions, tucked behind an arrow. Opening slides them out to the left. */
+.tray {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.trayItems {
+  display: flex;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease;
+}
+
+.trayOpen .trayItems {
+  max-width: 140px;
+  opacity: 1;
+}
+
+.trayToggle {
+  width: var(--touch);
+  height: var(--touch);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trayToggle:hover {
+  color: var(--text);
+}
+
+.trayToggle svg {
+  transition: transform 0.22s ease;
+}
+
+.trayOpen .trayToggle svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trayItems,
+  .trayToggle svg {
+    transition: none;
+  }
+}
