@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from guildfm.config import Settings
 from guildfm.db import MIGRATIONS
 from guildfm.main import create_app
+from tests.fakes import FakeSpeakers
 
 
 def test_health(client: TestClient) -> None:
@@ -33,7 +34,7 @@ def test_serves_built_front_end(settings: Settings) -> None:
     (settings.web_dist / "assets" / "app.js").write_text("console.log('hi')")
     (settings.web_dist.parent / "secret.txt").write_text("nope")
 
-    with TestClient(create_app(settings)) as client:
+    with TestClient(create_app(settings, FakeSpeakers())) as client:
         assert client.get("/assets/app.js").text == "console.log('hi')"
         # Client-side routes fall back to index.html.
         assert client.get("/search").text == "<html>GuildFM</html>"
@@ -41,3 +42,10 @@ def test_serves_built_front_end(settings: Settings) -> None:
         assert client.get("/api/nope").status_code == 404
         # Paths can't escape the build folder.
         assert "nope" not in client.get("/..%2Fsecret.txt").text
+
+
+def test_media_is_served_without_signing_in(client: TestClient, settings: Settings) -> None:
+    (settings.data_dir / "media" / "chime.mp3").write_bytes(b"ID3 fake mp3")
+    response = client.get("/media/chime.mp3")
+    assert response.status_code == 200
+    assert response.content == b"ID3 fake mp3"

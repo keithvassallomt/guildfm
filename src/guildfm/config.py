@@ -22,8 +22,18 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
+
+    # Comma-separated speaker addresses. Empty means find them on the network.
+    sonos_hosts: str = ""
+    # How Spotify is linked in this Sonos household; read from tracks the Sonos app queued.
+    sonos_spotify_sid: int = 9
+    sonos_spotify_sn: int = 1
     data_dir: Path = ROOT / "data"
     web_dist: Path = ROOT / "web" / "dist"
+
+    @property
+    def sonos_host_list(self) -> list[str]:
+        return [host.strip() for host in self.sonos_hosts.split(",") if host.strip()]
 
     @property
     def database_url(self) -> str:

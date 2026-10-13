@@ -10,7 +10,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 0: Feasibility and design
 - [x] Stage 1: Foundations
 - [x] Stage 2: Accounts and roles
-- [ ] Stage 3: Sonos control
+- [x] Stage 3: Sonos control
 - [ ] Stage 4: Spotify catalogue
 - [ ] Stage 5: Queue and voting
 - [ ] Stage 6: Playback rules and settings
@@ -56,15 +56,15 @@ Done when: a user, a curator and an admin each see the right tabs and controls, 
 
 ## Stage 3: Sonos control
 Goal: GuildFM controls the office speakers directly over the network.
-- [ ] Discover speakers and the group, keep the room list fresh, show connection status
-- [ ] Play, pause, skip and stop
-- [ ] Volume for the whole office and for each room
-- [ ] Queue a Spotify track on the speakers (the method proven in Stage 0)
-- [ ] Listen for speaker events: now playing, position, track ended
-- [ ] Detect outside control (Sonos or Spotify app) and switch GuildFM to the overridden state
-- [ ] Handle the Arc being switched to the TV: it drops out, the other rooms carry on
-- [ ] Test an MP3 placed in the Sonos queue between two tracks (the one untested piece)
-- [ ] Admin controls screen wired up: status, transport buttons, volumes
+- [x] Discover speakers and the group, keep the room list fresh, show connection status
+- [x] Play, pause, skip and stop
+- [x] Volume for the whole office and for each room
+- [x] Queue a Spotify track on the speakers (the method proven in Stage 0)
+- [x] Follow the speakers, read every second: now playing, position, track ended
+- [x] Detect outside control (Sonos or Spotify app) and switch GuildFM to the overridden state
+- [x] Handle the Arc being switched to the TV: it drops out, the other rooms carry on (tested against the fake system only; not tried on the real Arc)
+- [x] Test an MP3 placed in the Sonos queue between two tracks (the one untested piece): works, with no gap either side
+- [x] Admin controls screen wired up: status, transport buttons, volumes
 
 Done when: an admin can run the office music from their phone, and taking over from the Sonos app puts GuildFM into the overridden state.
 

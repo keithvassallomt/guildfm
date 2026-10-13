@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
 from guildfm.main import create_app
+from tests.fakes import FakeSpeakers
 from tests.helpers import ADMIN, PASSWORD, register, sign_in
 
 
@@ -25,8 +26,13 @@ def settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def client(settings: Settings) -> Iterator[TestClient]:
-    with TestClient(create_app(settings)) as client:
+def speakers() -> FakeSpeakers:
+    return FakeSpeakers()
+
+
+@pytest.fixture
+def client(settings: Settings, speakers: FakeSpeakers) -> Iterator[TestClient]:
+    with TestClient(create_app(settings, speakers)) as client:
         yield client
 
 

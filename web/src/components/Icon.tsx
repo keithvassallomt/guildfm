@@ -34,6 +34,20 @@ const paths = {
   back: <path d="M15 18l-6-6 6-6" />,
   chevronRight: <path d="M9 6l6 6-6 6" />,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  play: <path d="M8 4.5v15l12-7.5z" fill="currentColor" stroke="none" />,
+  pause: (
+    <>
+      <rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
+      <rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  skip: (
+    <>
+      <path d="M5 5l10 7-10 7z" fill="currentColor" />
+      <path d="M19 5v14" />
+    </>
+  ),
+  stop: <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;

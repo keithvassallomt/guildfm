@@ -26,6 +26,35 @@ export type Me = User & { permissions: Permission[] };
 
 export type TemporaryPassword = { user: User; temporary_password: string };
 
+export type PlaybackStatus = "offline" | "stopped" | "playing" | "paused" | "idle" | "overridden";
+
+export type Room = {
+  uid: string;
+  name: string;
+  model: string;
+  volume: number;
+  in_group: boolean;
+  on_tv: boolean;
+};
+
+export type PlaybackState = {
+  status: PlaybackStatus;
+  error: string | null;
+  coordinator: string | null;
+  track: {
+    title: string;
+    artist: string;
+    album: string;
+    art_url: string | null;
+    duration: number;
+    position: number;
+    /** Whether GuildFM put this track on, rather than someone else. */
+    ours: boolean;
+  } | null;
+  group_volume: number | null;
+  rooms: Room[];
+};
+
 export class ApiError extends Error {
   status: number;
 
@@ -35,7 +64,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** Calls the GuildFM API and returns its JSON, or throws an ApiError with a readable message. */
 export async function api<T>(method: Method, path: string, body?: unknown): Promise<T> {
