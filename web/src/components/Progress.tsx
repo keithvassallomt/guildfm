@@ -17,13 +17,14 @@ function positionAt(anchor: Anchor, now: number): number {
 
 type Props = {
   track: Track;
-  playing: boolean;
   /** When the state holding `track` arrived, from performance.now(). */
   receivedAt: number;
 };
 
-/** How far into the song the speakers are: a bar that glides along, and the times. */
-export function Progress({ track, playing, receivedAt }: Props) {
+/** How far into the song the speakers are: a bar that glides along, and the times. It moves
+ * whenever the speakers are playing, whether or not GuildFM put the song on. */
+export function Progress({ track, receivedAt }: Props) {
+  const playing = track.playing;
   const fill = useRef<HTMLDivElement>(null);
   const anchor = useRef<Anchor | null>(null);
   const [seconds, setSeconds] = useState(() => Math.floor(track.position));

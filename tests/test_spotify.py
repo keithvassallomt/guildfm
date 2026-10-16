@@ -44,6 +44,15 @@ def test_search_pages_past_spotifys_limit_of_ten(client: TestClient, people) -> 
     assert len(set(ids)) == 23
 
 
+def test_search_leaves_out_tracks_spotify_repeats(client: TestClient, people, spotify) -> None:
+    spotify.overlap = 2
+    sign_in(client, *people["user"])
+    tracks = client.get("/api/search", params={"q": "fleetwood"}).json()["tracks"]
+    ids = [t["id"] for t in tracks]
+    assert len(ids) == 18
+    assert len(set(ids)) == 18
+
+
 def test_search_by_artist(client: TestClient, people) -> None:
     sign_in(client, *people["user"])
     result = client.get("/api/search", params={"artist": "Kendrick Lamar"}).json()

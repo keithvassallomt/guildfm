@@ -190,7 +190,7 @@ function NowPlaying({ playback, receivedAt, entry }: NowProps) {
         </div>
       </div>
       {track.duration > 0 && (
-        <Progress track={track} playing={playback.status === "playing"} receivedAt={receivedAt} />
+        <Progress track={track} receivedAt={receivedAt} />
       )}
       {queued && entry && (
         <span className={q.requested}>{credit(entry)}</span>

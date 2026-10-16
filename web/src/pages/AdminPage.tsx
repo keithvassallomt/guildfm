@@ -144,7 +144,7 @@ function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receiv
         </div>
       </div>
       {track.duration > 0 && (
-        <Progress track={track} playing={state.status === "playing"} receivedAt={receivedAt} />
+        <Progress track={track} receivedAt={receivedAt} />
       )}
     </div>
   );

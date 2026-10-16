@@ -71,9 +71,15 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
       if (artist) wanted.set("artist", artist);
       const found = await api<SearchResult>("GET", `/search?${wanted}`);
       if (request !== latest.current) return; // a newer search has started
-      setResult((current) =>
-        append && current ? { ...found, tracks: [...current.tracks, ...found.tracks] } : found,
-      );
+      setResult((current) => {
+        if (!append || !current) return found;
+        // Spotify's pages can overlap; songs already showing aren't shown twice.
+        const shown = new Set(current.tracks.map((track) => track.id));
+        return {
+          ...found,
+          tracks: [...current.tracks, ...found.tracks.filter((track) => !shown.has(track.id))],
+        };
+      });
     } catch (caught) {
       if (request === latest.current) setError(errorText(caught));
     } finally {

@@ -51,6 +51,8 @@ export type PlaybackState = {
     position: number;
     /** Whether GuildFM put this track on, rather than someone else. */
     ours: boolean;
+    /** Whether the speakers are playing it, even while GuildFM itself is stopped. */
+    playing: boolean;
   } | null;
   /** What Previous does now, or null when it's unavailable (greyed out). */
   previous: "back" | "restart" | null;

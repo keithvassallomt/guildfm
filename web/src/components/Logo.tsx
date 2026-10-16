@@ -1,14 +1,12 @@
+import { LOGO_PATH, LOGO_TRANSFORM, LOGO_VIEWBOX } from "./logoPath";
 import styles from "./Logo.module.css";
 
-export function Logo() {
+/** The GuildFM logo: the building and its aerial over the name. It's filled with the current
+ * text colour, so setting `color` recolours it; it's the accent orange unless told otherwise. */
+export function Logo({ className = "" }: { className?: string }) {
   return (
-    <span className={styles.logo}>
-      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-        <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" />
-        <path d="M14 14L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx="14" cy="14" r="2.5" fill="currentColor" />
-      </svg>
-      <span className={styles.name}>GuildFM</span>
-    </span>
+    <svg className={`${styles.logo} ${className}`} viewBox={LOGO_VIEWBOX} role="img" aria-label="GuildFM">
+      <path transform={LOGO_TRANSFORM} fill="currentColor" d={LOGO_PATH} />
+    </svg>
   );
 }

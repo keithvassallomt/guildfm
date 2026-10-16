@@ -272,6 +272,9 @@ class PlaybackController:
                 "duration": track.duration,
                 "position": track.position,
                 "ours": track_key(track.uri) in {item.key for item in self._items},
+                # Whether the speakers are playing it, whoever put it on: GuildFM can be
+                # stopped while someone else's music plays.
+                "playing": snapshot.transport in ACTIVE,
             },
             "previous": self.previous_action,
             "group_volume": snapshot.group_volume if snapshot else None,

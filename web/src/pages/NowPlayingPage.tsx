@@ -200,7 +200,7 @@ function NowCard({
             </div>
           </div>
           {track.duration > 0 && (
-            <Progress track={track} playing={playback.status === "playing"} receivedAt={receivedAt} />
+            <Progress track={track} receivedAt={receivedAt} />
           )}
         </>
       ) : (

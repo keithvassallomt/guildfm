@@ -186,7 +186,11 @@ class SpotifyClient:
             )
 
         results = await asyncio.gather(*(page(number) for number in range(pages)))
-        tracks = [_track(item) for result in results for item in result["tracks"]["items"] if item]
+        # Spotify's pages overlap now and then, repeating a track. Each one appears once.
+        found = {
+            item["id"]: item for result in results for item in result["tracks"]["items"] if item
+        }
+        tracks = [_track(item) for item in found.values()]
         artists = [_artist(item) for item in results[0].get("artists", {}).get("items", []) if item]
         more = results[-1]["tracks"].get("next") is not None
         return tracks, artists, more

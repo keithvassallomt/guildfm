@@ -155,6 +155,9 @@ class FakeSpotify:
         self.not_ours = {spotify_id("editorial")}
         self.token_requests: list[str] = []
         self.refresh_fails = False
+        # Real Spotify's search pages overlap now and then: each page after the first starts
+        # this many tracks early, repeating the end of the page before.
+        self.overlap = 0
         self.busy = False
 
     @staticmethod
@@ -187,7 +190,8 @@ class FakeSpotify:
         ]
         offset, limit = int(params["offset"]), int(params["limit"])
         assert limit <= 10, "development-mode apps can't ask for more than 10"
-        page = matches[offset : offset + limit]
+        start = max(0, offset - self.overlap) if offset else 0
+        page = matches[start : start + limit]
         result = {
             "tracks": {"items": page, "next": "more" if offset + limit < len(matches) else None}
         }

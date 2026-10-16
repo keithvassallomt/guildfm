@@ -23,12 +23,8 @@
   color: var(--accent);
 }
 
-.title {
-  font-weight: 800;
-  font-size: 40px;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  color: var(--text);
+.logo {
+  width: 180px;
 }
 
 .heading {

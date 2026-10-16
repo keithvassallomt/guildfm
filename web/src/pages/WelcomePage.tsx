@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { errorText } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
+import { Logo } from "../components/Logo";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { FormError, TextField } from "../components/TextField";
 import styles from "./Gate.module.css";
@@ -33,12 +34,9 @@ export function WelcomePage() {
     <main className={styles.gate}>
       <div className={styles.panel}>
         <div className={styles.brand}>
-          <svg width="56" height="56" viewBox="0 0 28 28" aria-hidden="true">
-            <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="M14 14L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="14" cy="14" r="2.2" fill="currentColor" />
-          </svg>
-          <h1 className={styles.title}>GuildFM</h1>
+          <h1>
+            <Logo className={styles.logo} />
+          </h1>
           <p className={styles.tagline}>
             Pick what plays in the office. Request songs, vote on the queue, and hear your name
             on air.

@@ -74,9 +74,10 @@
     gap: 32px;
   }
 
+  /* Centred over the menu, which spans the sidebar's full width. */
   .brand {
-    display: block;
-    padding: 0 12px;
+    display: flex;
+    justify-content: center;
   }
 
   .links {

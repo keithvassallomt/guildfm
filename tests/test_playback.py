@@ -197,6 +197,7 @@ def test_everyone_signed_in_can_see_whats_playing(client: TestClient, people) ->
     state = client.get("/api/playback").json()
     assert state["status"] == "stopped"
     assert state["track"]["title"] == "Nobody's Business"
+    assert state["track"]["playing"] is True  # GuildFM is stopped, but the speakers aren't
 
 
 TRANSPORT = [
