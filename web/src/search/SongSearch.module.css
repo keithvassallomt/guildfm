@@ -271,3 +271,66 @@
 .added:empty {
   display: none;
 }
+
+/* Albums, when adding to a playlist */
+
+.albumRow {
+  width: 100%;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.albumRow:hover {
+  border-color: var(--line-strong);
+}
+
+.albumRow > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.back {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.back:hover {
+  border-color: var(--line-strong);
+}
+
+.albumTop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.albumArt {
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+
+.albumName {
+  font-size: 20px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.addAll {
+  align-self: flex-start;
+}

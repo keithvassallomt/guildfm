@@ -1,6 +1,7 @@
 """Searching Spotify for something to request."""
 
 import time
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -16,12 +17,13 @@ from guildfm.models import QueueEntry, User
 from guildfm.permissions import Permission
 from guildfm.prefs import get_pref
 from guildfm.queue import recent_plays
-from guildfm.spotify import SpotifyBusy, SpotifyError, remember
+from guildfm.spotify import SpotifyAlbum, SpotifyBusy, SpotifyError, remember
 
 router = APIRouter()
 Db = Annotated[AsyncSession, Depends(get_session)]
 Searcher = Annotated[User, require(Permission.ADD_TRACKS)]
 PER_PAGE = 20
+ALBUMS = 4  # albums suggested with the first page
 
 
 class FoundTrackOut(TrackOut):
@@ -35,9 +37,24 @@ class ArtistOut(BaseModel):
     art_url: str | None
 
 
+class AlbumOut(BaseModel):
+    id: str
+    name: str
+    artists: str
+    art_url: str | None
+    year: str | None
+    kind: str  # "album", "single" or "compilation"
+    tracks: int
+
+    @classmethod
+    def of(cls, album: SpotifyAlbum) -> AlbumOut:
+        return cls(**asdict(album))
+
+
 class SearchOut(BaseModel):
     tracks: list[FoundTrackOut]
     artists: list[ArtistOut]
+    albums: list[AlbumOut]  # on the first page, when asked for
     next_offset: int | None
 
 
@@ -49,8 +66,10 @@ async def search(
     q: Annotated[str, Query(max_length=200)] = "",
     artist: Annotated[str | None, Query(max_length=200)] = None,
     offset: Annotated[int, Query(ge=0, le=900)] = 0,
+    albums: bool = False,
 ) -> SearchOut:
-    """Tracks for `q`, optionally only by `artist`. Artists are suggested on the first page."""
+    """Tracks for `q`, optionally only by `artist`. Artists are suggested on the first page,
+    and albums too with `albums`, for adding to a playlist."""
     query = q.strip()
     if artist:
         query = f'artist:"{artist}" {query}'.strip()
@@ -58,12 +77,13 @@ async def search(
         raise HTTPException(422, "Type something to search for.")
 
     try:
-        tracks, artists, more = await request.app.state.spotify.search(query, offset)
+        found = await request.app.state.spotify.search(query, offset, albums=albums)
     except SpotifyBusy as error:
         raise HTTPException(503, str(error)) from None
     except SpotifyError as error:
         raise HTTPException(502, str(error)) from None
 
+    tracks = found.tracks
     await remember(db, tracks)
     if not await get_pref(db, "allow_explicit"):
         tracks = [track for track in tracks if not track.explicit]
@@ -86,7 +106,8 @@ async def search(
         ],
         artists=[
             ArtistOut(id=a.id, name=a.name, art_url=a.art_url)
-            for a in (artists[:4] if offset == 0 and not artist else [])
+            for a in (found.artists[:4] if offset == 0 and not artist else [])
         ],
-        next_offset=offset + PER_PAGE if more else None,
+        albums=[AlbumOut.of(album) for album in found.albums[:ALBUMS]],
+        next_offset=offset + PER_PAGE if found.more else None,
     )

@@ -15,8 +15,8 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 5: Queue and voting
 - [x] Stage 6: Playback rules and settings
 - [x] Stage 7: Playlists
-- [ ] Stage 8: Now Playing
-- [ ] Stage 9: Announcements
+- [x] Stage 8: Now Playing
+- [x] Stage 9: Announcements
 - [ ] Stage 10: AI radio
 - [ ] Stage 11: Hardening and handover
 
@@ -119,6 +119,7 @@ Goal: curators can build, import and play playlists, and the office's favourites
 - [x] Library screen, Playlists tab, wired up
 - [x] Shuffle per playlist (off by default, on for Best Voted), and the playing playlist's next 3 songs on the Queue screen with thumbs down to skip (decided before building)
 - [x] Admins have no request cap (decided before building)
+- [x] Albums (added from backlog.md after Stage 9): album results when adding songs to a playlist, showing the album's songs before adding all of them, and album links in the import box, which make a playlist named after the album
 
 Done when: a curator imports a Spotify playlist, plays it, and requests still jump ahead of it.
 
@@ -139,13 +140,13 @@ Done when: an admin lands on Now Playing and picks another playlist, a waiting r
 
 ## Stage 9: Announcements
 Goal: admins type an announcement and the office hears it, now or on schedule.
-- [ ] Text to speech with OpenAI, saved as MP3 and served to the speakers over the network
-- [ ] Voice preview in the browser, with built-in or typed phrases
-- [ ] Announcement model: text, rooms, now or scheduled, over the music or after the current song, repeats (once, daily, weekdays, chosen days, hourly) with an end date
-- [ ] Scheduler that respects Stop and the playback schedule
-- [ ] Delivery: overlay clip in each chosen room, or between songs
-- [ ] Announcements always take precedence over the DJ
-- [ ] Announcements and New announcement screens wired up: on/off switch, "Play now"
+- [x] Text to speech with OpenAI, saved as MP3 and served to the speakers over the network
+- [x] Voice preview in the browser, with built-in or typed phrases
+- [x] Announcement model: text, rooms, now or scheduled, over the music or after the current song, repeats (once, daily, weekdays, chosen days, hourly) with an end date
+- [x] Scheduler that respects Stop and the playback schedule
+- [x] Delivery: overlay clip in each chosen room, or between songs. Between songs, GuildFM pauses the music just before the song ends, plays the clip, then starts the next song, since a clip in the Sonos queue would play in every room (decided while building)
+- [x] Announcements always take precedence over the DJ (the DJ's lines queue behind them from Stage 10)
+- [x] Announcements and New announcement screens wired up: on/off switch, "Play now", editing and deleting
 
 Done when: a recurring announcement plays in two chosen rooms between songs, and doesn't play while GuildFM is stopped.
 

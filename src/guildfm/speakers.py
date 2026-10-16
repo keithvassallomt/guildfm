@@ -4,7 +4,10 @@ Everything here is synchronous and talks to the speakers directly; the playback 
 it in a worker thread, one call at a time.
 """
 
+import json
 import socket
+import ssl
+import urllib.request
 from dataclasses import dataclass, field
 from typing import Protocol
 from xml.sax.saxutils import escape
@@ -12,8 +15,15 @@ from xml.sax.saxutils import escape
 import soco
 from soco import SoCo
 from soco.exceptions import SoCoUPnPException
+from websockets.sync.client import connect
 
 QUEUE_URI = "x-rincon-queue:{uid}#0"
+
+# Overlay clips go over each speaker's local websocket, with the key the Sonos app itself uses.
+CLIP_PORT = 1443
+CLIP_PROTOCOL = "v1.api.smartspeaker.audio"
+CLIP_API_KEY = "123e4567-e89b-12d3-a456-426655440000"
+CLIP_TIMEOUT = 5
 
 
 class SpeakersUnavailable(Exception):
@@ -130,6 +140,7 @@ class SpeakerSystem(Protocol):
     def add_next(self, item: QueueItem) -> int: ...
     def remove(self, position: int) -> None: ...
     def play_position(self, position: int) -> None: ...
+    def play_clip(self, uid: str, url: str, volume: int) -> None: ...
     def own_address(self) -> str: ...
 
 
@@ -150,6 +161,7 @@ class SocoSystem:
         self._zones: list[SoCo] = []
         self._coordinator: SoCo | None = None
         self._models: dict[str, str] = {}
+        self._households: dict[str, str] = {}
 
     def _find(self) -> None:
         zones = [SoCo(host) for host in self._hosts] if self._hosts else soco.discover(timeout=3)
@@ -303,6 +315,51 @@ class SocoSystem:
 
     def play_position(self, position: int) -> None:
         self._guard(lambda: self._coordinator.play_from_queue(position - 1))
+
+    def play_clip(self, uid: str, url: str, volume: int) -> None:
+        """Play the MP3 at `url` in one room, over whatever it's playing: the music goes quiet
+        and comes back up afterwards. Each room takes its own call. Safe to run alongside other
+        speaker calls, so it doesn't go through `_guard`."""
+        zone = next((zone for zone in self._zones if zone.uid == uid), None)
+        if zone is None:
+            raise SpeakersUnavailable("That room isn't on the network any more.")
+        name = "A speaker"
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE  # each speaker signs its own certificate
+        try:
+            name = zone.player_name
+            if uid not in self._households:
+                info = f"http://{zone.ip_address}:1400/info"
+                with urllib.request.urlopen(info, timeout=CLIP_TIMEOUT) as response:
+                    self._households[uid] = json.load(response)["householdId"]
+            with connect(
+                f"wss://{zone.ip_address}:{CLIP_PORT}/websocket/api",
+                ssl=context,
+                subprotocols=[CLIP_PROTOCOL],
+                additional_headers={"X-Sonos-Api-Key": CLIP_API_KEY},
+                open_timeout=CLIP_TIMEOUT,
+            ) as websocket:
+                command = {
+                    "namespace": "audioClip:1",
+                    "command": "loadAudioClip",
+                    "playerId": uid,
+                    "householdId": self._households[uid],
+                }
+                clip = {
+                    "name": "GuildFM",
+                    "appId": "com.guildfm",
+                    "streamUrl": url,
+                    "volume": volume,
+                }
+                websocket.send(json.dumps([command, clip]))
+                reply = json.loads(websocket.recv(timeout=CLIP_TIMEOUT))
+        except Exception as error:  # SoCo, the network, the websocket or a garbled reply
+            raise SpeakersUnavailable(f"{name} isn't answering: {error}") from error
+        headers, body = (reply + [{}])[:2] if isinstance(reply, list) else (reply, {})
+        if headers.get("success") is False or body.get("_objectType") == "globalError":
+            reason = body.get("errorCode") or body.get("reason") or "no reason given"
+            raise SpeakersRefused(f"{name} wouldn't play it ({reason}).")
 
     def own_address(self) -> str:
         """This machine's address on the speakers' network, for links the speakers fetch."""

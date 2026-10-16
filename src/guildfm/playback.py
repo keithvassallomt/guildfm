@@ -80,6 +80,7 @@ class PlaybackController:
         self._lock = asyncio.Lock()
 
         self._snapshot: Snapshot | None = None
+        self._read_at = 0.0  # when `_snapshot` was read
         self._rooms: list[Room] = []
         self._error: str | None = None
         self._polls = 0
@@ -100,6 +101,8 @@ class PlaybackController:
         self.source: Source | None = None
         # Whether playback hours are open and when that next changes, kept up by the scheduler.
         self.hours: dict[str, Any] | None = None
+        # An announcement is playing, set by the announcer.
+        self.announcing = False
 
     # Remembering what's on the speakers, for after a restart
 
@@ -176,7 +179,7 @@ class PlaybackController:
             await self._publish()
             return
         self._error = None
-        self._snapshot = snapshot
+        self._snapshot, self._read_at = snapshot, self._clock()
         if snapshot.rooms:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
@@ -242,6 +245,18 @@ class PlaybackController:
         return max(0, track.duration - track.position)
 
     @property
+    def position(self) -> int:
+        """Where in GuildFM's queue the speakers are, 1-based."""
+        return self._position
+
+    def seconds_left(self) -> float | None:
+        """Like `time_left`, but counting on from when the speakers were last read."""
+        left = self.time_left
+        if left is None or self._snapshot.transport not in ACTIVE:
+            return left
+        return max(0.0, left - (self._clock() - self._read_at))
+
+    @property
     def status(self) -> Status:
         if self._error:
             return Status.OFFLINE
@@ -277,10 +292,16 @@ class PlaybackController:
                 "playing": snapshot.transport in ACTIVE,
             },
             "previous": self.previous_action,
+            "announcing": self.announcing,
             "group_volume": snapshot.group_volume if snapshot else None,
             "rooms": [asdict(room) for room in self._rooms],
             "hours": self.hours,
         }
+
+    async def publish(self) -> None:
+        """Broadcast the state now, such as when an announcement starts or ends."""
+        self._last_compared = None
+        await self._publish()
 
     async def _publish(self) -> None:
         """Broadcast the state when something other than the play position changed."""
@@ -344,6 +365,17 @@ class PlaybackController:
         self._settle()
         await self.poll()
 
+    async def resume_after_break(self, ended: int) -> None:
+        """Carry on after an announcement between songs: the song after the one at `ended`,
+        from its start, or the end of that one if nothing follows it."""
+        self._require_control()
+        if ended < len(self._items):
+            await self._call(self._speakers.play_position, ended + 1)
+        else:
+            await self._call(self._speakers.play)
+        self._settle()
+        await self.poll()
+
     async def stop(self) -> None:
         """Silence the speakers and stop driving them, whoever was playing."""
         if self._snapshot and self._snapshot.transport in ACTIVE:
@@ -383,6 +415,32 @@ class PlaybackController:
         self._remember()
         self._settle()
         await self.poll()
+
+    async def play_clip(self, uids: list[str] | None, url: str) -> list[str]:
+        """Play the MP3 at `url` over whatever is on, in the rooms with `uids`, or every room for
+        None, each at its own volume. Rooms on the TV are left out. Rooms go at the same time,
+        outside the lock, so polling carries on. Returns the names of the rooms it played in."""
+        rooms = [r for r in self._rooms if not r.on_tv and (uids is None or r.uid in uids)]
+        if not rooms:
+            raise SpeakersUnavailable("None of its rooms can play it: they're off or on the TV.")
+        results = await asyncio.gather(
+            *(asyncio.to_thread(self._speakers.play_clip, r.uid, url, r.volume) for r in rooms),
+            return_exceptions=True,
+        )
+        played = [room.name for room, result in zip(rooms, results, strict=True) if result is None]
+        for room, result in zip(rooms, results, strict=True):
+            if isinstance(result, Exception):
+                log.warning("Couldn't play a clip in %s: %s", room.name, result)
+        if not played:
+            failure = next(result for result in results if result is not None)
+            if isinstance(failure, SpeakersUnavailable | SpeakersRefused):
+                raise failure
+            raise SpeakersUnavailable(f"The speakers couldn't play it: {failure}")
+        return played
+
+    async def own_address(self) -> str:
+        """This machine's address on the speakers' network."""
+        return await self._call(self._speakers.own_address)
 
     async def set_group_volume(self, volume: int) -> None:
         await self._call(self._speakers.set_group_volume, volume)

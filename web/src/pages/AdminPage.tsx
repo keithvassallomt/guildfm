@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { useAuth } from "../auth/AuthProvider";
 import { api, errorText, type PlaybackState, type PlaybackStatus } from "../api";
 import { Icon } from "../components/Icon";
 import { Progress } from "../components/Progress";
@@ -12,6 +13,7 @@ import admin from "./AdminPage.module.css";
 import styles from "./Page.module.css";
 
 export function AdminPage() {
+  const { can } = useAuth();
   const { state, receivedAt, apply } = usePlayback();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +56,18 @@ export function AdminPage() {
               Manage
             </h2>
             <nav aria-labelledby="manage" className={admin.links}>
+              {can("announce") && (
+                <Link to="/admin/announcements" className={admin.link}>
+                  <Icon name="announce" />
+                  <span className={admin.linkText}>
+                    <span className={admin.linkTitle}>Announcements</span>
+                    <span className={admin.linkHint}>
+                      Say something on the speakers, now or on a schedule
+                    </span>
+                  </span>
+                  <Icon name="chevronRight" size={18} />
+                </Link>
+              )}
               <Link to="/admin/users" className={admin.link}>
                 <Icon name="users" />
                 <span className={admin.linkText}>
@@ -123,9 +137,11 @@ function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receiv
     return <p className={styles.muted}>Nothing on the speakers.</p>;
   }
 
-  const label = !track.ours
-    ? "On the speakers"
-    : state.status === "paused"
+  const label = state.announcing
+    ? "Announcement playing"
+    : !track.ours
+      ? "On the speakers"
+      : state.status === "paused"
       ? `Paused at ${clock(track.position)}`
       : "Now playing";
 

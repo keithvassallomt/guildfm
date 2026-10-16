@@ -8,8 +8,9 @@ from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
 from guildfm.main import create_app
+from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
-from tests.fakes import FakeSpeakers, FakeSpotify
+from tests.fakes import FakeOpenAI, FakeSpeakers, FakeSpotify
 from tests.helpers import ADMIN, PASSWORD, register, sign_in
 
 
@@ -55,8 +56,17 @@ def spotify() -> FakeSpotify:
 
 
 @pytest.fixture
+def openai() -> FakeOpenAI:
+    return FakeOpenAI()
+
+
+@pytest.fixture
 def start(
-    settings: Settings, speakers: FakeSpeakers, spotify: FakeSpotify, clock: Clock
+    settings: Settings,
+    speakers: FakeSpeakers,
+    spotify: FakeSpotify,
+    openai: FakeOpenAI,
+    clock: Clock,
 ) -> Callable[[], TestClient]:
     """Starts GuildFM, use it with `with`. Starting it again is a restart: same data, same
     speakers."""
@@ -69,7 +79,13 @@ def start(
             market="GB",
             http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
         )
-        return TestClient(create_app(settings, speakers, api, poll=False, now=clock))
+        speech = SpeechClient(
+            api_key="test",
+            model="gpt-4o-mini-tts",
+            media_dir=settings.data_dir / "media",
+            http=httpx2.AsyncClient(transport=httpx2.MockTransport(openai)),
+        )
+        return TestClient(create_app(settings, speakers, api, poll=False, now=clock, speech=speech))
 
     return start
 

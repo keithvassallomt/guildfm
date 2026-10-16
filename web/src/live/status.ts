@@ -40,6 +40,7 @@ export function opensAgain(hours: { next_change: string | null }): string {
 
 /** The status chip's words: "Closed" rather than "Stopped" outside playback hours. */
 export function chipLabel(state: PlaybackState): string {
+  if (state.announcing) return "Announcing";
   if (state.status === "stopped" && state.hours?.open === false) return "Closed";
   return statusLabels[state.status];
 }

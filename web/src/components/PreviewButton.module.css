@@ -1,0 +1,9 @@
+.button {
+  flex-shrink: 0;
+}
+
+.busy,
+.busy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

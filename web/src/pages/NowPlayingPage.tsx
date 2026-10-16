@@ -171,8 +171,10 @@ function NowCard({
   const queued = track?.ours && entry ? entry.track : null;
   const art = queued?.art_url ?? track?.art_url ?? null;
   const live = playback?.status === "playing" && !!track?.ours;
-  const label = !track?.ours
-    ? "On the speakers"
+  const label = playback?.announcing
+    ? "Announcement playing"
+    : !track?.ours
+      ? "On the speakers"
     : playback?.status === "paused"
       ? "Paused"
       : onAir

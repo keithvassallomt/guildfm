@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from guildfm import __version__, api
 from guildfm.accounts import seed_admin
+from guildfm.announcements import Announcer
 from guildfm.config import Settings, get_settings
 from guildfm.db import make_engine, upgrade_to_head
 from guildfm.live import LiveHub, live_socket
@@ -18,6 +19,7 @@ from guildfm.playback import PlaybackController
 from guildfm.queue import QueueEngine
 from guildfm.schedule import Scheduler
 from guildfm.speakers import SocoSystem, SpeakerSystem
+from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
 from guildfm.web import mount_web
 
@@ -30,9 +32,11 @@ def create_app(
     spotify: SpotifyClient | None = None,
     poll: bool = True,
     now: Callable[[], datetime] | None = None,
+    speech: SpeechClient | None = None,
 ) -> FastAPI:
-    """Build the app. Tests pass fakes, so nothing touches the office speakers or Spotify, turn
-    off `poll` so they decide when the speakers are read, and set `now` to pick the time."""
+    """Build the app. Tests pass fakes, so nothing touches the office speakers, Spotify or
+    OpenAI, turn off `poll` so they decide when the speakers are read and announcements are
+    checked, and set `now` to pick the time."""
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -52,12 +56,24 @@ def create_app(
             sn=settings.sonos_spotify_sn,
         )
         await app.state.queue.recover()
-        app.state.schedule = Scheduler(
-            app.state.sessionmaker, app.state.playback, **({"clock": now} if now else {})
-        )
+        clock = {"clock": now} if now else {}
+        app.state.schedule = Scheduler(app.state.sessionmaker, app.state.playback, **clock)
         await app.state.schedule.tick()
+        app.state.speech.prune()
+        app.state.announcer = Announcer(
+            app.state.sessionmaker,
+            app.state.playback,
+            app.state.speech,
+            app.state.live,
+            port=settings.port,
+            **clock,
+        )
 
-        loops = (app.state.playback.run(), app.state.schedule.run()) if poll else ()
+        loops = (
+            (app.state.playback.run(), app.state.schedule.run(), app.state.announcer.run())
+            if poll
+            else ()
+        )
         tasks = [asyncio.create_task(loop) for loop in loops]
         yield
         for task in tasks:
@@ -65,6 +81,7 @@ def create_app(
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         await app.state.spotify.close()
+        await app.state.speech.close()
         await engine.dispose()
 
     app = FastAPI(title="GuildFM", version=__version__, lifespan=lifespan)
@@ -80,6 +97,11 @@ def create_app(
         client_secret=settings.spotify_client_secret.get_secret_value(),
         redirect_uri=settings.spotify_redirect_uri,
         market=settings.spotify_market,
+    )
+    app.state.speech = speech or SpeechClient(
+        api_key=settings.openai_api_key.get_secret_value(),
+        model=settings.openai_tts_model,
+        media_dir=settings.data_dir / "media",
     )
     app.add_middleware(
         SessionMiddleware,

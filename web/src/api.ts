@@ -56,6 +56,8 @@ export type PlaybackState = {
   } | null;
   /** What Previous does now, or null when it's unavailable (greyed out). */
   previous: "back" | "restart" | null;
+  /** An announcement is playing. */
+  announcing: boolean;
   group_volume: number | null;
   rooms: Room[];
   /** Whether playback hours are open now, and when that next changes. */
@@ -86,6 +88,20 @@ export async function api<T>(method: Method, path: string, body?: unknown): Prom
   return data as T;
 }
 
+/** Asks the API for audio, such as a voice preview, and returns it as a Blob. */
+export async function apiAudio(path: string, body: unknown): Promise<Blob> {
+  const response = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(response.status, errorMessage(data));
+  }
+  return response.blob();
+}
+
 function errorMessage(data: unknown): string {
   const detail = (data as { detail?: unknown } | null)?.detail;
   if (typeof detail === "string") return detail;
@@ -113,6 +129,20 @@ export type SearchTrack = {
 };
 
 export type SearchArtist = { id: string; name: string; art_url: string | null };
+
+export type SearchAlbum = {
+  id: string;
+  name: string;
+  artists: string;
+  art_url: string | null;
+  year: string | null;
+  kind: "album" | "single" | "compilation";
+  /** How many songs Spotify lists on it. */
+  tracks: number;
+};
+
+/** An album's songs in order, leaving out any that can't play here or aren't allowed. */
+export type AlbumDetail = SearchAlbum & { items: SearchTrack[] };
 
 export type FoundTrack = SearchTrack & {
   /** Already in the queue, so it can't be requested again. */
@@ -163,6 +193,8 @@ export type QueueState = {
 export type SearchResult = {
   tracks: FoundTrack[];
   artists: SearchArtist[];
+  /** Only when adding to a playlist, on the first page. */
+  albums: SearchAlbum[];
   next_offset: number | null;
 };
 
@@ -255,4 +287,50 @@ export type History = {
 
 export type PlaylistDetail = Playlist & {
   items: (SearchTrack & { position: number; upvotes: number })[];
+};
+
+export type Day = keyof SettingsValues["schedule"];
+
+export type RoomRef = { uid: string; name: string };
+
+export type AnnounceMode = "over" | "after";
+
+export type Repeat = "once" | "daily" | "weekdays" | "days" | "hourly";
+
+export type Announcement = {
+  id: number;
+  text: string;
+  /** Null for every room. */
+  rooms: RoomRef[] | null;
+  mode: AnnounceMode;
+  start_date: string;
+  /** "13:55", in the office's time zone. */
+  at: string;
+  repeat: Repeat;
+  days: Day[];
+  ends_on: string | null;
+  active: boolean;
+  /** When it next plays (if it's on), or null when it never will. */
+  next_at: string | null;
+  /** Whether that's inside playback hours. */
+  in_hours: boolean;
+};
+
+export type AnnouncementLog = {
+  id: number;
+  text: string;
+  /** Room names, or null for every room. */
+  rooms: string[] | null;
+  played_at: string;
+  /** Why it didn't play, if it didn't. */
+  problem: string | null;
+};
+
+export type AnnouncementsState = {
+  /** Soonest first, then any that are off. */
+  scheduled: Announcement[];
+  /** Newest first. */
+  recent: AnnouncementLog[];
+  /** The announcement voice from settings. */
+  voice: string;
 };

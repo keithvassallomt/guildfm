@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from guildfm.api.playlists import spotify_playlist_id
+from guildfm.api.playlists import spotify_link
 from guildfm.playlists import best_voted, consider_for_best_voted, tracks_of
 from tests.fakes import FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, connect_spotify, read_speakers, register, sign_in
@@ -94,10 +94,18 @@ def test_playlists_are_for_curators(client: TestClient, people, method, path) ->
     [
         f"https://open.spotify.com/playlist/{spotify_id('classics')}?si=abc",
         f"spotify:playlist:{spotify_id('classics')}",
+        f"https://open.spotify.com/intl-en/playlist/{spotify_id('classics')}",
     ],
 )
 def test_playlist_links(link: str) -> None:
-    assert spotify_playlist_id(link) == spotify_id("classics")
+    assert spotify_link(link) == ("playlist", spotify_id("classics"))
+
+
+def test_album_links() -> None:
+    album = spotify_id("rumours")
+    assert spotify_link(f"https://open.spotify.com/album/{album}?si=x") == ("album", album)
+    assert spotify_link(f"spotify:album:{album}") == ("album", album)
+    assert spotify_link(f"https://open.spotify.com/track/{album}") is None
 
 
 def test_importing_a_playlist(client: TestClient) -> None:
@@ -128,6 +136,82 @@ def test_importing_problems(client: TestClient) -> None:
     assert client.post("/api/playlists/import", json={"link": "nope"}).status_code == 422
     missing = f"https://open.spotify.com/playlist/{spotify_id('missing')}"
     assert client.post("/api/playlists/import", json={"link": missing}).status_code == 404
+
+
+# Albums
+
+
+def titles(playlist: dict) -> list[str]:
+    return [item["title"] for item in playlist["items"]]
+
+
+def test_albums_turn_up_when_adding_to_a_playlist(client: TestClient, people) -> None:
+    sign_in(client, *people["curator"])
+    found = client.get("/api/search", params={"q": "fleetwood", "albums": "true"}).json()
+    assert [album["name"] for album in found["albums"]] == ["Rumours", "Tusk"]
+    assert found["albums"][0] == {
+        "id": spotify_id("rumours"),
+        "name": "Rumours",
+        "artists": "Fleetwood Mac",
+        "art_url": f"https://i.scdn.co/{spotify_id('rumours')}-300",
+        "year": "1977",
+        "kind": "album",
+        "tracks": 2,
+    }
+    # Requests are songs only, so the queue's search doesn't ask for albums.
+    assert client.get("/api/search", params={"q": "fleetwood"}).json()["albums"] == []
+
+
+def test_an_albums_songs(client: TestClient, people) -> None:
+    sign_in(client, *people["curator"])
+    album = client.get(f"/api/albums/{spotify_id('tusk')}").json()
+    assert album["name"] == "Tusk"
+    # In order, over several pages, leaving out the one that can't play here.
+    assert titles(album) == [f"Song {n}" for n in range(1, 21)]
+    assert album["items"][0]["album"] == "Tusk"
+    assert album["items"][0]["art_url"] == f"https://i.scdn.co/{spotify_id('tusk')}-300"
+    missing = client.get(f"/api/albums/{spotify_id('missing')}")
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "Spotify doesn't have that album."
+
+
+def test_adding_a_whole_album(client: TestClient, people) -> None:
+    sign_in(client, *people["curator"])
+    playlist = make(client, "Seventies", ["gyow"])
+    path = f"/api/playlists/{playlist['id']}/albums"
+    body = client.post(path, json={"album_id": spotify_id("rumours")}).json()
+    # A song that was already there stays where it was.
+    assert titles(body) == ["Go Your Own Way", "Dreams"]
+
+    again = client.post(path, json={"album_id": spotify_id("rumours")})
+    assert again.status_code == 409
+    assert again.json()["detail"] == "Every song on that album is already in the playlist."
+
+
+def test_explicit_album_songs_are_left_out_when_not_allowed(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
+    assert titles(client.get(f"/api/albums/{spotify_id('damn')}").json()) == ["HUMBLE."]
+    client.patch("/api/settings", json={"allow_explicit": False}).raise_for_status()
+    assert titles(client.get(f"/api/albums/{spotify_id('damn')}").json()) == []
+
+
+def test_importing_an_album(client: TestClient) -> None:
+    sign_in(client, *ADMIN)  # no Spotify account connected: albums don't need one
+    link = f"https://open.spotify.com/album/{spotify_id('rumours')}?si=x"
+    body = client.post("/api/playlists/import", json={"link": link}).json()
+    assert (body["name"], body["kind"]) == ("Rumours", "imported")
+    assert titles(body) == ["Dreams", "Go Your Own Way"]
+
+
+def test_albums_are_for_curators_and_not_for_best_voted(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    assert client.get(f"/api/albums/{spotify_id('rumours')}").status_code == 403
+    sign_in(client, *people["curator"])
+    best = client.get("/api/playlists").json()[0]
+    added = client.post(
+        f"/api/playlists/{best['id']}/albums", json={"album_id": spotify_id("rumours")}
+    )
+    assert added.status_code == 409
 
 
 # Playing

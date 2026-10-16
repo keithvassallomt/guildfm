@@ -7,6 +7,8 @@ import { Navigation } from "./components/Navigation";
 import { QuickControls } from "./components/QuickControls";
 import { LiveProvider } from "./live/LiveProvider";
 import { AdminPage } from "./pages/AdminPage";
+import { AnnouncementEditor } from "./pages/AnnouncementEditor";
+import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { ChoosePasswordPage } from "./pages/ChoosePasswordPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { NowPlayingPage } from "./pages/NowPlayingPage";
@@ -87,6 +89,30 @@ export function App() {
             element={
               <Allowed permission="manage_users">
                 <UsersPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="admin/announcements"
+            element={
+              <Allowed permission="announce">
+                <AnnouncementsPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="admin/announcements/new"
+            element={
+              <Allowed permission="announce">
+                <AnnouncementEditor />
+              </Allowed>
+            }
+          />
+          <Route
+            path="admin/announcements/:id"
+            element={
+              <Allowed permission="announce">
+                <AnnouncementEditor />
               </Allowed>
             }
           />

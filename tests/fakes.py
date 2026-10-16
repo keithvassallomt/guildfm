@@ -1,8 +1,18 @@
+import json
+from typing import NamedTuple
 from urllib.parse import parse_qsl
 
 import httpx2
 
-from guildfm.speakers import QUEUE_URI, QueueItem, Room, Snapshot, SpeakersUnavailable, Track
+from guildfm.speakers import (
+    QUEUE_URI,
+    QueueItem,
+    Room,
+    Snapshot,
+    SpeakersRefused,
+    SpeakersUnavailable,
+    Track,
+)
 
 COORDINATOR = "RINCON_LOUNGE"
 
@@ -13,6 +23,13 @@ def spotify_id(name: str) -> str:
 
 
 RADIO = "x-sonosapi-radio:sonos%3a3094?sid=303&flags=8232&sn=8"
+
+
+class PlayedClip(NamedTuple):
+    room: str
+    url: str
+    volume: int
+    music: str  # what the music was doing while it played: PLAYING, PAUSED_PLAYBACK...
 
 
 class FakeSpeakers:
@@ -35,6 +52,8 @@ class FakeSpeakers:
         }
         self.took_over: list[list[QueueItem]] = []
         self.track_position = 3  # seconds into the current queued track, out of 200
+        self.clips: list[PlayedClip] = []
+        self.refusing_clips: set[str] = set()  # rooms that turn overlay clips down
 
     # Things that happen in the office
 
@@ -134,8 +153,39 @@ class FakeSpeakers:
         self.track_position = 0
         self.transport = "PLAYING"
 
+    def play_clip(self, uid: str, url: str, volume: int) -> None:
+        self._check()
+        if uid in self.refusing_clips:
+            raise SpeakersRefused(f"{self.rooms[uid].name} wouldn't play it (ERROR_PLAYBACK).")
+        self.clips.append(PlayedClip(uid, url, volume, self.transport))
+
     def own_address(self) -> str:
         return "127.0.0.1"
+
+
+def mp3(seconds: float) -> bytes:
+    """A made-up MP3 lasting about `seconds`: an ID3 tag, then silent MPEG-1 Layer III frames
+    at 128 kbps and 44.1 kHz, 417 bytes and 1152 samples each."""
+    frame = b"\xff\xfb\x90\x00" + bytes(413)
+    return b"ID3\x03\x00\x00\x00\x00\x00\x00" + frame * round(seconds * 44100 / 1152)
+
+
+class FakeOpenAI:
+    """OpenAI's text to speech, as a transport for httpx2."""
+
+    def __init__(self) -> None:
+        self.requests: list[dict] = []
+        self.status = 200
+        self.seconds = 3.0  # how long each clip it makes lasts
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        assert request.url.path == "/v1/audio/speech"
+        self.requests.append(json.loads(request.content))
+        if self.status != 200:
+            return httpx2.Response(self.status, json={"error": {"message": "nope"}})
+        return httpx2.Response(
+            200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
+        )
 
 
 class FakeSpotify:
@@ -150,6 +200,15 @@ class FakeSpotify:
             self.track(f"fm{number}", f"Song {number}", "Fleetwood Mac", "Tusk")
             for number in range(1, 22)
         ]
+        # Albums: name, artist, release date and songs. Tusk's last song can't play here.
+        self.albums = {
+            spotify_id("rumours"): ("Rumours", "Fleetwood Mac", "1977-02-04", ["dreams", "gyow"]),
+            spotify_id("tusk"): (
+                "Tusk", "Fleetwood Mac", "1979-10-12", [f"fm{n}" for n in range(1, 22)]
+            ),
+            spotify_id("damn"): ("DAMN.", "Kendrick Lamar", "2017", ["humble"]),
+        }  # fmt: skip
+        self.unplayable = {spotify_id("fm21")}
         # Playlists the connected account owns, and one it doesn't (like Spotify's own).
         self.playlists = {spotify_id("classics"): ("Office Classics", ["dreams", "gyow", "fm1"])}
         self.not_ours = {spotify_id("editorial")}
@@ -176,6 +235,51 @@ class FakeSpotify:
             "explicit": explicit,
         }
 
+    @staticmethod
+    def images(item_id: str) -> list[dict]:
+        return [
+            {"url": f"https://i.scdn.co/{item_id}-{size}", "width": size} for size in (640, 300, 64)
+        ]
+
+    def _album_info(self, album_id: str) -> dict:
+        name, artist, released, songs = self.albums[album_id]
+        return {
+            "id": album_id,
+            "name": name,
+            "artists": [{"name": artist}],
+            "images": self.images(album_id),
+            "release_date": released,
+            "album_type": "album",
+            "total_tracks": len(songs),
+        }
+
+    # Real Spotify lists 50 of an album's songs with the album; fewer here, to need paging.
+    ALBUM_PAGE = 10
+
+    def _album_songs(self, album_id: str, offset: int, limit: int) -> dict:
+        by_id = {t["id"]: t for t in self.tracks}
+        songs = [by_id[spotify_id(name)] for name in self.albums[album_id][3]]
+        # Album listings leave the album off each song, and say whether it plays here.
+        items = [
+            {key: value for key, value in song.items() if key != "album"}
+            | {"is_playable": song["id"] not in self.unplayable}
+            for song in songs[offset : offset + limit]
+        ]
+        return {"items": items, "next": "more" if offset + limit < len(songs) else None}
+
+    def _album(self, path: str, params: dict) -> httpx2.Response:
+        parts = path.split("/")  # "", "v1", "albums", id, maybe "tracks"
+        album_id = parts[3]
+        if album_id not in self.albums:
+            return httpx2.Response(404)
+        if len(parts) > 4:
+            offset, limit = int(params["offset"]), int(params["limit"])
+            return httpx2.Response(200, json=self._album_songs(album_id, offset, limit))
+        body = self._album_info(album_id) | {
+            "tracks": self._album_songs(album_id, 0, self.ALBUM_PAGE)
+        }
+        return httpx2.Response(200, json=body)
+
     def _search(self, params) -> dict:
         query = params["q"].lower()
         artist = None
@@ -200,6 +304,14 @@ class FakeSpotify:
             result["artists"] = {
                 "items": [{"id": n.lower(), "name": n, "images": []} for n in names]
             }
+        if "album" in params["type"].split(","):
+            albums = [
+                self._album_info(album_id)
+                for album_id, (name, by, _, _) in self.albums.items()
+                if (artist is None or by.lower() == artist)
+                and all(w in f"{name} {by}".lower() for w in words)
+            ]
+            result["albums"] = {"items": albums[:limit]}
         return result
 
     def _playlist(self, path: str, params: dict) -> httpx2.Response:
@@ -242,6 +354,8 @@ class FakeSpotify:
             return httpx2.Response(429, headers={"Retry-After": "7"})
         if path.startswith("/v1/playlists/"):
             return self._playlist(path, dict(request.url.params))
+        if path.startswith("/v1/albums/"):
+            return self._album(path, dict(request.url.params))
         if path.startswith("/v1/tracks/"):
             found = [t for t in self.tracks if t["id"] == path.rsplit("/", 1)[-1]]
             return httpx2.Response(200, json=found[0]) if found else httpx2.Response(404)

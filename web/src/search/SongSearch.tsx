@@ -5,17 +5,19 @@ import {
   type FoundTrack,
   type PlaylistDetail,
   type QueueState,
+  type SearchAlbum,
   type SearchArtist,
   type SearchResult,
+  type SearchTrack,
 } from "../api";
 import { useMe } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { FormError } from "../components/TextField";
-import { ago } from "../live/status";
-import { clock } from "../live/usePlayback";
 import page from "../pages/Page.module.css";
+import { AlbumView, albumLine } from "./AlbumView";
 import search from "./SongSearch.module.css";
+import { TrackRow } from "./TrackRow";
 
 const TYPING_PAUSE_MS = 300;
 
@@ -36,13 +38,15 @@ type Props = {
 };
 
 /** Search Spotify and add songs: as requests (the Search page and Queue screen) or to a
- *  playlist (the playlist screen). */
+ *  playlist (the playlist screen), where whole albums can go in too. */
 export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props) {
   const [typed, setTyped] = useState(query);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<string | null>(null);
+  // An album opened from the results, when adding to a playlist.
+  const [album, setAlbum] = useState<SearchAlbum | null>(null);
   const latest = useRef(0);
   const input = useRef<HTMLInputElement>(null);
   const me = useMe();
@@ -53,6 +57,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
   const inPlaylist = new Set(addTo.to === "playlist" ? addTo.playlist.items.map((i) => i.id) : []);
   const isAdded = (track: FoundTrack) =>
     addTo.to === "queue" ? track.queued : inPlaylist.has(track.id);
+  const albums = addTo.to === "playlist";
 
   // In a dialog, the browser focuses the first button; the search box is what people want.
   useEffect(() => {
@@ -69,6 +74,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
       const wanted = new URLSearchParams({ offset: String(offset) });
       if (query.trim()) wanted.set("q", query.trim());
       if (artist) wanted.set("artist", artist);
+      if (albums) wanted.set("albums", "true");
       const found = await api<SearchResult>("GET", `/search?${wanted}`);
       if (request !== latest.current) return; // a newer search has started
       setResult((current) => {
@@ -96,6 +102,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
 
   // Search again whenever the query or artist changes.
   useEffect(() => {
+    setAlbum(null);
     if (!query.trim() && !artist) {
       latest.current++;
       setResult(null);
@@ -106,7 +113,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
     run(0, false);
   }, [query, artist]);
 
-  const add = async (track: FoundTrack) => {
+  const add = async (track: SearchTrack) => {
     setError(null);
     try {
       if (addTo.to === "queue") {
@@ -142,7 +149,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
       <div className={search.top}>
         <div className={search.box}>
           <label htmlFor="song-search" className="visually-hidden">
-            Search for songs and artists
+            {albums ? "Search for songs, artists and albums" : "Search for songs and artists"}
           </label>
           <Icon name="search" size={20} />
           <input
@@ -150,7 +157,9 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
             id="song-search"
             type="search"
             value={typed}
-            placeholder={artist ? `Search within ${artist}` : "Songs or artists"}
+            placeholder={
+              artist ? `Search within ${artist}` : albums ? "Songs, artists or albums" : "Songs or artists"
+            }
             autoComplete="off"
             spellCheck={false}
             enterKeyHint="search"
@@ -205,11 +214,27 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
       {!result && !loading && !error && (
         <section className={page.empty}>
           <h2 className={page.emptyTitle}>Find something to play</h2>
-          <p className={page.emptyText}>Search Spotify for a song or an artist.</p>
+          <p className={page.emptyText}>
+            {albums
+              ? "Search Spotify for a song, an artist or an album."
+              : "Search Spotify for a song or an artist."}
+          </p>
         </section>
       )}
 
-      {result && result.artists.length > 0 && (
+      {album && addTo.to === "playlist" && (
+        <AlbumView
+          album={album}
+          playlist={addTo.playlist}
+          onPlaylist={addTo.onPlaylist}
+          onAdd={add}
+          onBack={() => setAlbum(null)}
+          onAdded={setAdded}
+          onError={setError}
+        />
+      )}
+
+      {!album && result && result.artists.length > 0 && (
         <section aria-labelledby="found-artists" className={page.section}>
           <h2 id="found-artists" className={search.heading}>
             Artists
@@ -236,7 +261,40 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
         </section>
       )}
 
-      {result && (
+      {!album && result && result.albums.length > 0 && (
+        <section aria-labelledby="found-albums" className={page.section}>
+          <h2 id="found-albums" className={search.heading}>
+            Albums
+          </h2>
+          <ul className={search.results}>
+            {result.albums.map((found) => (
+              <li key={found.id}>
+                <button
+                  type="button"
+                  className={`${search.track} ${search.albumRow}`}
+                  onClick={() => {
+                    setAdded(null);
+                    setAlbum(found);
+                  }}
+                >
+                  {found.art_url ? (
+                    <img src={found.art_url} alt="" loading="lazy" className={search.art} />
+                  ) : (
+                    <span aria-hidden="true" className={search.art} />
+                  )}
+                  <span className={search.text}>
+                    <span className={search.title}>{found.name}</span>
+                    <span className={search.meta}>{albumLine(found)}</span>
+                  </span>
+                  <Icon name="chevronRight" size={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!album && result && (
         <section aria-labelledby="found-tracks" className={page.section}>
           <h2 id="found-tracks" className={search.heading}>
             Tracks
@@ -277,57 +335,5 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
         </section>
       )}
     </div>
-  );
-}
-
-type RowProps = {
-  track: FoundTrack;
-  added: boolean;
-  addedLabel: string;
-  capped: boolean;
-  onAdd: (track: FoundTrack) => void;
-};
-
-function TrackRow({ track, added, addedLabel, capped, onAdd }: RowProps) {
-  return (
-    <li className={search.track}>
-      {track.art_url ? (
-        <img src={track.art_url} alt="" loading="lazy" className={search.art} />
-      ) : (
-        <span aria-hidden="true" className={search.art} />
-      )}
-      <span className={search.text}>
-        <span className={search.titleLine}>
-          <span className={search.title}>{track.title}</span>
-          {track.explicit && (
-            <abbr title="Explicit" className={search.explicit}>
-              E
-            </abbr>
-          )}
-        </span>
-        <span className={search.meta}>
-          {track.artists} · {clock(track.duration)}
-        </span>
-        {track.played_at && (
-          <span className={search.recent}>
-            <Icon name="clock" size={12} strokeWidth={2.4} />
-            Played {ago(track.played_at)}
-          </span>
-        )}
-      </span>
-      {added ? (
-        <span className={search.queued}>{addedLabel}</span>
-      ) : (
-        <Button
-          disabled={capped}
-          aria-label={capped ? `Add ${track.title}, request limit reached` : `Add ${track.title}`}
-          onClick={() => onAdd(track)}
-          className={search.add}
-        >
-          <Icon name="plus" size={16} strokeWidth={2.6} />
-          Add
-        </Button>
-      )}
-    </li>
   );
 }

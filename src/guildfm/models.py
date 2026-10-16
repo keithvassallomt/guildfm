@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -101,6 +101,7 @@ class Playlist(Base):
     kind: Mapped[PlaylistKind] = mapped_column(
         Enum(PlaylistKind, native_enum=False, length=16, values_callable=enum_values)
     )
+    # The Spotify playlist or album it was imported from.
     spotify_id: Mapped[str | None] = mapped_column(String(64), default=None)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
@@ -211,3 +212,58 @@ class Play(Base):
     track: Mapped[Track] = relationship(lazy="joined")
     requester: Mapped[User | None] = relationship(lazy="joined")
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
+
+
+class AnnounceMode(StrEnum):
+    OVER = "over"  # over the music, which goes quiet and comes back up
+    AFTER = "after"  # between songs, once the current one finishes
+
+
+class Repeat(StrEnum):
+    ONCE = "once"
+    DAILY = "daily"
+    WEEKDAYS = "weekdays"
+    DAYS = "days"  # the chosen days of the week
+    HOURLY = "hourly"  # every hour, at the same minutes past, in playback hours
+
+
+class Announcement(Base):
+    """An announcement an admin scheduled, once or on repeat. One played straight away isn't
+    kept here, only in the log of what played."""
+
+    __tablename__ = "announcements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    text: Mapped[str] = mapped_column(String(600))
+    # The rooms it plays in, as [{"uid": ..., "name": ...}], or None for every room.
+    rooms: Mapped[list[dict[str, str]] | None] = mapped_column(JSON, default=None)
+    mode: Mapped[AnnounceMode] = mapped_column(
+        Enum(AnnounceMode, native_enum=False, length=16, values_callable=enum_values)
+    )
+    # When it first plays, in the office's time zone.
+    start_date: Mapped[date]
+    at: Mapped[str] = mapped_column(String(5))  # "13:55"
+    repeat: Mapped[Repeat] = mapped_column(
+        Enum(Repeat, native_enum=False, length=16, values_callable=enum_values)
+    )
+    days: Mapped[list[str]] = mapped_column(JSON, default=list)  # "mon" to "sun", for DAYS
+    ends_on: Mapped[date | None] = mapped_column(default=None)  # the last day it plays
+    active: Mapped[bool] = mapped_column(default=True)
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    created_at: Mapped[float]
+    # Times up to this one, in seconds since the epoch, have been dealt with: played, or let go.
+    handled_until: Mapped[float]
+
+
+class AnnouncementPlay(Base):
+    """An announcement that played, or was due and didn't, for "Recently played"."""
+
+    __tablename__ = "announcement_plays"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    text: Mapped[str] = mapped_column(String(600))
+    rooms: Mapped[list[str] | None] = mapped_column(JSON, default=None)  # names; None is all
+    played_at: Mapped[float] = mapped_column(index=True)
+    problem: Mapped[str | None] = mapped_column(String(300), default=None)  # why it didn't play

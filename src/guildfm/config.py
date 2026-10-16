@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ROOT / ".env", extra="ignore")
 
     openai_api_key: SecretStr
+    # OpenAI's text to speech model, for announcements and the DJ.
+    openai_tts_model: str = "gpt-4o-mini-tts"
     spotify_client_id: str
     spotify_client_secret: SecretStr
     spotify_redirect_uri: str = "http://127.0.0.1:8000/auth/spotify/callback"

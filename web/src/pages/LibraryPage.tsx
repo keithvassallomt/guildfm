@@ -222,16 +222,17 @@ function ImportPlaylist({ open, onClose }: { open: boolean; onClose: () => void 
     <Dialog open={open} onClose={onClose} title="Import from Spotify">
       <form className={lib.form} onSubmit={submit}>
         <TextField
-          label="Spotify playlist link"
+          label="Spotify playlist or album link"
           name="link"
           required
           autoComplete="off"
-          placeholder="https://open.spotify.com/playlist/..."
-          hint="In Spotify: the playlist's ⋯ menu, then Share, then Copy link to playlist."
+          placeholder="https://open.spotify.com/..."
+          hint="In Spotify: the playlist's or album's ⋯ menu, then Share, then Copy link."
         />
         <p className={styles.muted}>
-          Only playlists the connected Spotify account owns or collaborates on can be imported.
-          For anyone else's, copy it into one of that account's playlists in Spotify first.
+          Any album can be imported, as a playlist named after it. Playlists can only be imported
+          if the connected Spotify account owns or collaborates on them. For anyone else's, copy
+          it into one of that account's playlists in Spotify first.
         </p>
         <FormError message={error} />
         <div className={lib.formButtons}>

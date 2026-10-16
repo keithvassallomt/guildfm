@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from guildfm.api import (
     account,
+    announcements,
     health,
     now,
     playback,
@@ -24,3 +25,4 @@ router.include_router(spotify.router)
 router.include_router(settings.router)
 router.include_router(playlists.router)
 router.include_router(now.router)
+router.include_router(announcements.router)

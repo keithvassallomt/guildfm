@@ -68,6 +68,25 @@ class SpotifyArtist:
     art_url: str | None
 
 
+@dataclass(frozen=True)
+class SpotifyAlbum:
+    id: str
+    name: str
+    artists: str
+    art_url: str | None
+    year: str | None
+    kind: str  # "album", "single" or "compilation"
+    tracks: int
+
+
+@dataclass(frozen=True)
+class SearchResults:
+    tracks: list[SpotifyTrack]
+    artists: list[SpotifyArtist]  # with the first page only
+    albums: list[SpotifyAlbum]  # with the first page, when asked for
+    more: bool  # there are more tracks
+
+
 def _image(images: list[dict[str, Any]]) -> str | None:
     """Spotify lists artwork largest first, usually 640, 300 and 64 px. 300 suits GuildFM."""
     if not images:
@@ -89,6 +108,18 @@ def _track(item: dict[str, Any]) -> SpotifyTrack:
 
 def _artist(item: dict[str, Any]) -> SpotifyArtist:
     return SpotifyArtist(id=item["id"], name=item["name"], art_url=_image(item.get("images") or []))
+
+
+def _album(item: dict[str, Any]) -> SpotifyAlbum:
+    return SpotifyAlbum(
+        id=item["id"],
+        name=item["name"],
+        artists=", ".join(artist["name"] for artist in item["artists"]),
+        art_url=_image(item.get("images") or []),
+        year=(item.get("release_date") or "")[:4] or None,
+        kind=item.get("album_type") or "album",
+        tracks=item.get("total_tracks") or 0,
+    )
 
 
 class SpotifyClient:
@@ -151,7 +182,7 @@ class SpotifyClient:
                 self._app_token = None  # expired early; get a new one and try once more
                 continue
             if response.status_code == 404 or (
-                response.status_code == 400 and path.startswith("/tracks/")
+                response.status_code == 400 and path.startswith(("/tracks/", "/albums/"))
             ):
                 raise SpotifyNotFound("Spotify doesn't have that.")
             if response.status_code == 403:
@@ -167,10 +198,12 @@ class SpotifyClient:
     # The catalogue
 
     async def search(
-        self, query: str, offset: int = 0, pages: int = 2
-    ) -> tuple[list[SpotifyTrack], list[SpotifyArtist], bool]:
+        self, query: str, offset: int = 0, pages: int = 2, albums: bool = False
+    ) -> SearchResults:
         """Tracks matching `query` from `offset`, `pages` lots of 10 at a time, asked for in
-        parallel because Spotify caps each request at 10. Artists come with the first page."""
+        parallel because Spotify caps each request at 10. Artists come with the first page, and
+        albums too when `albums` is set."""
+        extra = "artist,album" if albums else "artist"
 
         async def page(number: int) -> dict[str, Any]:
             first = offset == 0 and number == 0
@@ -178,7 +211,7 @@ class SpotifyClient:
                 "/search",
                 {
                     "q": query,
-                    "type": "track,artist" if first else "track",
+                    "type": f"track,{extra}" if first else "track",
                     "limit": PAGE,
                     "offset": offset + number * PAGE,
                     "market": self._market,
@@ -190,10 +223,13 @@ class SpotifyClient:
         found = {
             item["id"]: item for result in results for item in result["tracks"]["items"] if item
         }
-        tracks = [_track(item) for item in found.values()]
-        artists = [_artist(item) for item in results[0].get("artists", {}).get("items", []) if item]
-        more = results[-1]["tracks"].get("next") is not None
-        return tracks, artists, more
+        first = results[0]
+        return SearchResults(
+            tracks=[_track(item) for item in found.values()],
+            artists=[_artist(item) for item in first.get("artists", {}).get("items", []) if item],
+            albums=[_album(item) for item in first.get("albums", {}).get("items", []) if item],
+            more=results[-1]["tracks"].get("next") is not None,
+        )
 
     async def track(self, track_id: str) -> SpotifyTrack | None:
         """One track by id, or None if Spotify doesn't have it."""
@@ -201,6 +237,31 @@ class SpotifyClient:
             return _track(await self._get(f"/tracks/{track_id}", {"market": self._market}))
         except SpotifyNotFound:
             return None
+
+    async def album(self, album_id: str) -> tuple[SpotifyAlbum, list[SpotifyTrack]]:
+        """An album and its songs in order, leaving out any that can't play here. Catalogue
+        data, so unlike a playlist it needs no connected account."""
+        try:
+            data = await self._get(f"/albums/{album_id}", {"market": self._market})
+            album = _album(data)
+            page, items = data["tracks"], []
+            while True:
+                items += page["items"]
+                if not page.get("next") or len(items) >= IMPORT_LIMIT:
+                    break
+                page = await self._get(
+                    f"/albums/{album_id}/tracks",
+                    {"limit": IMPORT_PAGE, "offset": len(items), "market": self._market},
+                )
+        except SpotifyNotFound:
+            raise SpotifyNotFound("Spotify doesn't have that album.") from None
+        tracks = [
+            # Album listings leave the album off each song, so it comes from the album.
+            _track({**item, "album": {"name": album.name, "images": data.get("images")}})
+            for item in items[:IMPORT_LIMIT]
+            if item and item.get("id") and item.get("is_playable", True)
+        ]
+        return album, tracks
 
     async def playlist(self, db: AsyncSession, playlist_id: str) -> tuple[str, list[SpotifyTrack]]:
         """A playlist's name and tracks, read with the connected account. Spotify only allows

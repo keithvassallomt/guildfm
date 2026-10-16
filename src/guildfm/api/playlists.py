@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.api.schemas import TrackOut
+from guildfm.api.search import AlbumOut
 from guildfm.auth import require
 from guildfm.db import get_session
 from guildfm.models import Playlist, PlaylistKind, PlaylistTrack, Track, User
@@ -18,7 +19,7 @@ from guildfm.permissions import Permission
 from guildfm.playlists import add_track, current_source, thumb_down, tracks_of
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine
-from guildfm.spotify import SpotifyError, SpotifyNotFound, remember
+from guildfm.spotify import SpotifyError, SpotifyNotFound, SpotifyTrack, remember
 
 router = APIRouter()
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -27,14 +28,15 @@ Editor = Annotated[User, require(Permission.MANAGE_PLAYLISTS)]
 Player = Annotated[User, require(Permission.SWITCH_SOURCE)]
 Voter = Annotated[User, require(Permission.VOTE)]
 
-_SPOTIFY_PLAYLIST = re.compile(
-    r"(?:spotify:playlist:|open\.spotify\.com/(?:intl-[a-z-]+/)?playlist/)([A-Za-z0-9]{22})"
+_SPOTIFY_LINK = re.compile(
+    r"(?:spotify:|open\.spotify\.com/(?:intl-[a-z-]+/)?)(playlist|album)[:/]([A-Za-z0-9]{22})"
 )
 
 
-def spotify_playlist_id(link: str) -> str | None:
-    match = _SPOTIFY_PLAYLIST.search(link)
-    return match.group(1) if match else None
+def spotify_link(link: str) -> tuple[str, str] | None:
+    """("playlist" or "album", its id) from a Spotify link or URI."""
+    match = _SPOTIFY_LINK.search(link)
+    return (match.group(1), match.group(2)) if match else None
 
 
 class PlaylistOut(BaseModel):
@@ -54,6 +56,10 @@ class PlaylistTrackOut(TrackOut):
 
 class PlaylistDetailOut(PlaylistOut):
     items: list[PlaylistTrackOut]
+
+
+class AlbumDetailOut(AlbumOut):
+    items: list[TrackOut]  # in order, leaving out any that can't play here or aren't allowed
 
 
 def engine(request: Request) -> QueueEngine:
@@ -93,6 +99,22 @@ async def _playlist(db: AsyncSession, playlist_id: int) -> Playlist:
     if playlist is None:
         raise HTTPException(404, "That playlist doesn't exist any more.")
     return playlist
+
+
+async def _album(
+    db: AsyncSession, request: Request, album_id: str
+) -> tuple[AlbumOut, list[SpotifyTrack]]:
+    """An album and the songs on it GuildFM can play: explicit ones only if they're allowed."""
+    try:
+        album, tracks = await request.app.state.spotify.album(album_id)
+    except SpotifyNotFound as error:
+        raise HTTPException(404, str(error)) from None
+    except SpotifyError as error:
+        raise HTTPException(502, str(error)) from None
+    await remember(db, tracks)
+    if not await get_pref(db, "allow_explicit"):
+        tracks = [track for track in tracks if not track.explicit]
+    return AlbumOut.of(album), tracks
 
 
 async def _track(db: AsyncSession, request: Request, track_id: str) -> Track:
@@ -141,16 +163,23 @@ class ImportIn(BaseModel):
 
 @router.post("/playlists/import", status_code=201)
 async def import_playlist(body: ImportIn, user: Editor, request: Request, db: Db):
-    spotify_id = spotify_playlist_id(body.link)
-    if spotify_id is None:
-        raise HTTPException(422, "That isn't a Spotify playlist link.")
-    try:
-        name, tracks = await request.app.state.spotify.playlist(db, spotify_id)
-    except SpotifyNotFound as error:
-        raise HTTPException(404, str(error)) from None
-    except SpotifyError as error:
-        raise HTTPException(409, str(error)) from None
-    await remember(db, tracks)
+    """A playlist from a Spotify playlist or album link. An album becomes a playlist named after
+    it, in track order."""
+    found = spotify_link(body.link)
+    if found is None:
+        raise HTTPException(422, "That isn't a Spotify playlist or album link.")
+    kind, spotify_id = found
+    if kind == "album":
+        album, tracks = await _album(db, request, spotify_id)
+        name = album.name
+    else:
+        try:
+            name, tracks = await request.app.state.spotify.playlist(db, spotify_id)
+        except SpotifyNotFound as error:
+            raise HTTPException(404, str(error)) from None
+        except SpotifyError as error:
+            raise HTTPException(409, str(error)) from None
+        await remember(db, tracks)
     playlist = Playlist(
         name=name[:100] or "Imported playlist",
         kind=PlaylistKind.IMPORTED,
@@ -216,6 +245,34 @@ async def add(
     await db.commit()
     await engine(request).changed()
     return await _detail(db, playlist)
+
+
+class AlbumIn(BaseModel):
+    album_id: str = Field(pattern=r"^[A-Za-z0-9]{22}$")
+
+
+@router.post("/playlists/{playlist_id}/albums")
+async def add_album(
+    playlist_id: int, body: AlbumIn, _: Editor, request: Request, db: Db
+) -> PlaylistDetailOut:
+    """Every song on an album, in order, after what's there. Songs already in it stay put."""
+    playlist = await _playlist(db, playlist_id)
+    if playlist.kind == PlaylistKind.BEST_VOTED:
+        raise HTTPException(409, "Best Voted fills itself from the votes.")
+    _, tracks = await _album(db, request, body.album_id)
+    added = [await add_track(db, playlist, track.id) for track in tracks]
+    if not any(added):
+        raise HTTPException(409, "Every song on that album is already in the playlist.")
+    await db.commit()
+    await engine(request).changed()
+    return await _detail(db, playlist)
+
+
+@router.get("/albums/{album_id}")
+async def album(album_id: str, _: Editor, request: Request, db: Db) -> AlbumDetailOut:
+    """An album's songs, to look over before adding them to a playlist."""
+    found, tracks = await _album(db, request, album_id)
+    return AlbumDetailOut(**found.model_dump(), items=[TrackOut.of(track) for track in tracks])
 
 
 @router.delete("/playlists/{playlist_id}/tracks/{track_id}")

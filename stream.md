@@ -88,6 +88,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 
 ## Playlists
 - Curators and admins can create playlists in GuildFM, or import them from Spotify by pasting a playlist link.
+- Whole albums can go into a playlist too. When adding songs to a playlist, albums show up in the search alongside songs and artists; opening one lists its songs, to add all of them or just some. Pasting an album link into the import box makes a playlist named after the album, in track order. Songs that can't play in the UK are left out, and so are explicit ones when they aren't allowed.
 - Curators and admins can play any playlist. A playing playlist fills the gaps: requests always play first.
 - Switching to another playlist takes effect after the current song. A playlist that's switched away from keeps its place, and carries on from there when it's put back on; once it plays to the end, it starts afresh.
 - Each playlist has a Shuffle switch: off by default, on by default for Best Voted.
@@ -104,12 +105,16 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Announcements are audio only, played on the speakers. Only admins can create them.
 - The admin types the announcement as text, and it is read out by text-to-speech (OpenAI) in the announcement voice from settings.
 - When an announcement is created, there will be options:
-    - Which speakers to broadcast to (all, or specific speakers).
+    - Which speakers to broadcast to (all, or specific speakers). Rooms playing the TV are left out.
     - Whether to play the announcement immediately or schedule it for a later time.
     - Whether the announcement plays over the current track or waits until the current track is finished.
-    - A schedule: one-off, or at specific intervals with recurrence patterns.
+    - A schedule: just once, every day, weekdays, chosen days or every hour (at the same minutes past), from a start date and time, with an optional end date.
+- The admin can preview the announcement in the browser before it goes out.
+- Over the music, the music goes quiet while the announcement plays, then comes back up. Between songs, GuildFM pauses the music just before the current song ends, plays the announcement, then starts the next song. If the music is paused or has run out, it plays straight away.
+- Scheduled announcements have an on/off switch, can be edited or deleted, and have "Play now", which plays one straight away over the music without changing its schedule.
 - Announcements always take precedence over the DJ.
-- Announcements don't play while playback is stopped or outside the playback schedule.
+- Announcements don't play while playback is stopped or outside the playback schedule. A paused GuildFM still plays them. "Play now" works whenever GuildFM is playing or paused, even outside playback hours.
+- One that comes due while GuildFM can't play it is let go, not saved for later, and shows as missed under "Recently played". Repeating announcements keep to playback hours without that note, so "every day" means every day GuildFM is open.
 
 ## AI Radio
 - Admins and curators can create AI radio stations, and start them.
@@ -162,7 +167,7 @@ Findings from feasibility testing on 13 October 2026, on the office network.
 - **Speakers**: six Sonos speakers, all on S2 firmware, normally grouped as one: Downstairs (Arc), Upstairs Lounge (One), Entrance (One), Kitchen (One SL), Pod (One SL), Donut Shop (One).
 - **Playing tracks** (tested, works): Spotify is linked in the Sonos app. GuildFM controls the speakers directly over the local network and adds Spotify tracks to the Sonos queue, and the speakers stream them from Spotify themselves.
 - **Announcements and DJ over music** (tested, works): each speaker plays an MP3 served by GuildFM as an overlay clip, lowering the music and restoring it afterwards.
-- **Clips between tracks** (not yet tested): an MP3 placed in the Sonos queue between two tracks. Same mechanism as playing tracks.
+- **Clips between tracks**: not used. An MP3 in the Sonos queue would play in every room in the group, not just the chosen ones, so between songs GuildFM pauses the music and plays an overlay clip instead.
 - **Search**: needs a Spotify developer app (free). The Spotify account that owns it needs Premium.
 - **Playlist import**: Spotify only lets a development-mode app read playlists that the Spotify account connected to GuildFM owns or collaborates on. Spotify's own editorial playlists and other people's playlists can't be imported directly. This is accepted: the workaround is to copy the playlist into one of the connected account's own playlists in the Spotify app, then import the copy.
 - **Outside control**: GuildFM listens to the speakers' change events over the local network, so it can tell when someone else changes the music.

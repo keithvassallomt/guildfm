@@ -8,6 +8,7 @@ import { SpotifyConnection } from "../components/SpotifyConnection";
 import { Stepper } from "../components/Stepper";
 import { FormError, TextField } from "../components/TextField";
 import { Toggle } from "../components/Toggle";
+import { VoicePreview } from "../components/VoicePreview";
 import { opensAgain } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import styles from "./Page.module.css";
@@ -231,11 +232,9 @@ export function SettingsPage() {
                     </option>
                   ))}
                 </select>
-                <span className={styles.muted}>
-                  Marin and Cedar sound the most natural. Previews come with announcements in
-                  stage 9.
-                </span>
+                <span className={styles.muted}>Marin and Cedar sound the most natural.</span>
               </label>
+              <VoicePreview voice={values.announcement_voice} />
             </Section>
 
             <SpotifyConnection />
