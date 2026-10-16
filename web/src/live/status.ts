@@ -41,6 +41,8 @@ export function opensAgain(hours: { next_change: string | null }): string {
 /** The status chip's words: "Closed" rather than "Stopped" outside playback hours. */
 export function chipLabel(state: PlaybackState): string {
   if (state.announcing) return "Announcing";
+  if (state.dj_talking) return "DJ talking";
+  if (state.jingle) return "Jingle";
   if (state.status === "stopped" && state.hours?.open === false) return "Closed";
   return statusLabels[state.status];
 }
@@ -48,7 +50,9 @@ export function chipLabel(state: PlaybackState): string {
 /** Who a queued song is from: "Requested by Priya", "Requested by you", or "From Fridays". */
 export function credit(entry: QueueEntry): string {
   if (entry.requested_by) {
-    return `Requested by ${entry.mine ? "you" : entry.requested_by.display_name}`;
+    const who = entry.mine ? "you" : entry.requested_by.display_name;
+    return `Requested by ${who}${entry.album ? " · whole album" : ""}`;
   }
+  if (entry.station) return `On ${entry.station}`;
   return entry.playlist ? `From ${entry.playlist}` : "From a playlist";
 }

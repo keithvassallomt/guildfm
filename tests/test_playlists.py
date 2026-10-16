@@ -50,6 +50,11 @@ def test_making_a_playlist(client: TestClient, people) -> None:
     playlist = make(client, "Friday Afternoon", ["dreams", "gyow"])
     assert playlist["made_by"] == "Curator"
     assert playlist["shuffle"] is False
+    # Album art for its tile, each album once.
+    assert playlist["covers"] == [
+        f"https://i.scdn.co/{spotify_id('dreams')}-300",
+        f"https://i.scdn.co/{spotify_id('gyow')}-300",
+    ]
     assert [item["title"] for item in playlist["items"]] == ["Dreams", "Go Your Own Way"]
 
     again = client.post(
@@ -274,16 +279,21 @@ def test_thumbs_down_are_counted_and_can_be_taken_back(client: TestClient) -> No
     assert (first["down"], first["my_down"]) == (0, False)
 
 
-def test_when_the_playlist_runs_out_the_music_stops(client: TestClient, speakers) -> None:
+def test_when_the_playlist_runs_out_ai_picks_takes_over(client, speakers, openai) -> None:
+    openai.picks = [{"title": "Dreams", "artist": "Fleetwood Mac", "note": "A classic"}]
     sign_in(client, *ADMIN)
     playlist = make(client, "Short", ["fm1", "fm2"])
     client.post(f"/api/playlists/{playlist['id']}/play").raise_for_status()
     client.post("/api/playback/play").raise_for_status()
     song_ends(client, speakers)
     assert playing(client) == "Song 2"
-    song_ends(client, speakers)
-    assert queue(client)["source"] is None
-    assert client.get("/api/playback").json()["status"] == "idle"
+    speakers.track_position = 190
+    read_speakers(client)  # Song 2 is the playlist's last: AI picks goes on
+    assert queue(client)["source"]["name"] == "AI picks"
+    client.portal.call(client.app.state.radio.settle)
+    speakers.song_ends()
+    read_speakers(client)
+    assert playing(client) == "Dreams"
 
 
 def test_or_starts_over_when_set_to(client: TestClient, speakers) -> None:

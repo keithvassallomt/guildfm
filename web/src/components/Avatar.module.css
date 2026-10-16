@@ -18,3 +18,13 @@
   color: var(--on-accent);
   font-weight: 800;
 }
+
+.photo {
+  object-fit: cover;
+}
+
+.inline {
+  display: inline-flex;
+  margin-right: 5px;
+  vertical-align: -0.25em;
+}

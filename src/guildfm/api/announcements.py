@@ -18,9 +18,9 @@ from guildfm.auth import require
 from guildfm.db import get_session
 from guildfm.models import Announcement, AnnouncementPlay, AnnounceMode, Repeat, User
 from guildfm.permissions import Permission
-from guildfm.prefs import DAYS, VOICES, get_pref
+from guildfm.prefs import DAYS, get_pref
 from guildfm.schedule import is_open
-from guildfm.speech import MAX_TEXT, SpeechError
+from guildfm.speech import MAX_TEXT, SpeechError, Voice
 
 router = APIRouter(prefix="/announcements")
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -67,7 +67,7 @@ class ActiveIn(BaseModel):
 
 class PreviewIn(BaseModel):
     text: Text
-    voice: Literal[VOICES] | None = None  # the announcement voice from settings if left out
+    voice: Voice | None = None  # the announcement voice from settings if left out
 
 
 class AnnouncementOut(BaseModel):

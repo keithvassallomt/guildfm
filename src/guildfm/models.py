@@ -5,6 +5,10 @@ from typing import Any
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+AVATARS = "avatars"  # the folder for people's photos, inside the media folder
+JINGLES = "jingles"  # the folder for jingles, inside the media folder
+COVERS = "covers"  # the folder for stations' covers, inside the media folder
+
 
 class Base(DeclarativeBase):
     """Base class for every table. Alembic reads its metadata to generate migrations."""
@@ -34,10 +38,16 @@ class User(Base):
         default=Role.USER,
     )
     announce_requests: Mapped[bool] = mapped_column(default=True)
+    # Their photo's file name in the media folder's avatars, if they've added one.
+    avatar: Mapped[str | None] = mapped_column(String(64), default=None)
     must_change_password: Mapped[bool] = mapped_column(default=False)
     # Part of every session cookie. Bumping it signs the user out everywhere.
     session_version: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    @property
+    def avatar_url(self) -> str | None:
+        return f"/media/{AVATARS}/{self.avatar}" if self.avatar else None
 
 
 class Track(Base):
@@ -130,22 +140,120 @@ class PlaylistTrack(Base):
     track: Mapped[Track] = relationship(lazy="joined")
 
 
+class StationKind(StrEnum):
+    CUSTOM = "custom"
+    AI_PICKS = "ai_picks"  # the one GuildFM keeps itself: songs that fit what's been playing
+
+
+class TalkUnit(StrEnum):
+    TRACKS = "tracks"
+    MINUTES = "minutes"
+
+
+class DJStyle(StrEnum):
+    ANNOUNCE = "announce"  # what was playing and what's next
+    COMMENTARY = "commentary"  # trivia, the weather, the odd story
+
+
+class JingleKind(StrEnum):
+    STATION = "station"  # GuildFM's own, for any AI station
+    SHOW = "show"  # one station's own
+
+
+class Station(Base):
+    """An AI radio station: the AI picks its songs from a description, and an optional DJ talks
+    between them."""
+
+    __tablename__ = "stations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[StationKind] = mapped_column(
+        Enum(StationKind, native_enum=False, length=16, values_callable=enum_values),
+        default=StationKind.CUSTOM,
+    )
+    description: Mapped[str] = mapped_column(String(600))
+    global_awareness: Mapped[bool] = mapped_column(default=False)
+    dj: Mapped[bool] = mapped_column(default=False)
+    dj_name: Mapped[str] = mapped_column(String(40), default="")
+    personality: Mapped[str] = mapped_column(String(600), default="")
+    # An OpenAI voice ("marin"), or an ElevenLabs one ("elevenlabs:" and its id).
+    voice: Mapped[str] = mapped_column(String(64), default="marin")
+    talk_every: Mapped[int] = mapped_column(default=3)
+    talk_unit: Mapped[TalkUnit] = mapped_column(
+        Enum(TalkUnit, native_enum=False, length=16, values_callable=enum_values),
+        default=TalkUnit.TRACKS,
+    )
+    style: Mapped[DJStyle] = mapped_column(
+        Enum(DJStyle, native_enum=False, length=16, values_callable=enum_values),
+        default=DJStyle.COMMENTARY,
+    )
+    announce_requests: Mapped[bool] = mapped_column(default=True)
+    jingles: Mapped[bool] = mapped_column(default=True)  # plays idents between songs
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    created_at: Mapped[float]
+    # Track ids it picked lately, oldest first, so it doesn't repeat itself.
+    picked: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Its cover's file name in the media folder's covers, once OpenAI has painted one.
+    art: Mapped[str | None] = mapped_column(String(64), default=None)
+
+    creator: Mapped[User | None] = relationship(lazy="joined")
+
+    @property
+    def art_url(self) -> str | None:
+        return f"/media/{COVERS}/{self.art}" if self.art else None
+
+
+class Jingle(Base):
+    """A short ident played between songs on AI stations: GuildFM's own, or one station's.
+    Deleting the station deletes its jingles."""
+
+    __tablename__ = "jingles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[JingleKind] = mapped_column(
+        Enum(JingleKind, native_enum=False, length=16, values_callable=enum_values)
+    )
+    # The station a show ident belongs to; None for a station ident.
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), default=None
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    file: Mapped[str] = mapped_column(String(64))  # its file name in the media folder's jingles
+    seconds: Mapped[float]
+    created_at: Mapped[float]
+
+    @property
+    def url(self) -> str:
+        return f"/media/{JINGLES}/{self.file}"
+
+
 class SourceState(Base):
-    """The playlist filling the gaps between requests, and how far through it GuildFM is.
+    """What fills the gaps between requests: a playlist and how far through it GuildFM is, or a
+    station and the songs it has picked so far. A row with neither means "requests only" was
+    chosen; no row at all means nothing was, so the "when the queue runs out" setting decides.
     There's at most one row, with id 1."""
 
     __tablename__ = "playback_source"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    playlist_id: Mapped[int] = mapped_column(ForeignKey("playlists.id", ondelete="CASCADE"))
-    # This time round's order of track ids: shuffled, or as listed.
-    order: Mapped[list[str]] = mapped_column(JSON)
+    playlist_id: Mapped[int | None] = mapped_column(
+        ForeignKey("playlists.id", ondelete="CASCADE"), default=None
+    )
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), default=None
+    )
+    # This time round's order of track ids: shuffled, or as listed. For a station, its picks.
+    order: Mapped[list[str]] = mapped_column(JSON, default=list)
     cursor: Mapped[int] = mapped_column(default=0)
     # Tracks thumbed down enough to skip this time round, and who thumbed them down.
     skipped: Mapped[list[str]] = mapped_column(JSON, default=list)
     downvotes: Mapped[dict[str, list[int]]] = mapped_column(JSON, default=dict)
 
-    playlist: Mapped[Playlist] = relationship(lazy="joined")
+    playlist: Mapped[Playlist | None] = relationship(lazy="joined")
+    station: Mapped[Station | None] = relationship(lazy="joined")
 
 
 class QueueEntry(Base):
@@ -164,6 +272,9 @@ class QueueEntry(Base):
     playlist_id: Mapped[int | None] = mapped_column(
         ForeignKey("playlists.id", ondelete="SET NULL"), default=None
     )
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="SET NULL"), default=None
+    )
     added_at: Mapped[float]
     state: Mapped[EntryState] = mapped_column(
         Enum(EntryState, native_enum=False, length=16, values_callable=enum_values),
@@ -171,10 +282,14 @@ class QueueEntry(Base):
     )
     # Set when a curator moves the entry; from then on votes don't move it.
     pinned_position: Mapped[int | None] = mapped_column(default=None)
+    # The Spotify album, for a song a curator or admin queued with the rest of its album. Those
+    # don't count towards their request cap.
+    album_id: Mapped[str | None] = mapped_column(String(22), default=None)
 
     track: Mapped[Track] = relationship(lazy="joined")
     requester: Mapped[User | None] = relationship(lazy="joined")
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
+    station: Mapped[Station | None] = relationship(lazy="joined")
 
 
 class Vote(Base):
@@ -201,9 +316,12 @@ class Play(Base):
     requested_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
-    # The playlist it came from, when it wasn't a request.
+    # The playlist or station it came from, when it wasn't a request.
     playlist_id: Mapped[int | None] = mapped_column(
         ForeignKey("playlists.id", ondelete="SET NULL"), default=None, index=True
+    )
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="SET NULL"), default=None, index=True
     )
     played_at: Mapped[float] = mapped_column(index=True)
     upvotes: Mapped[int] = mapped_column(default=0)
@@ -212,6 +330,7 @@ class Play(Base):
     track: Mapped[Track] = relationship(lazy="joined")
     requester: Mapped[User | None] = relationship(lazy="joined")
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
+    station: Mapped[Station | None] = relationship(lazy="joined")
 
 
 class AnnounceMode(StrEnum):

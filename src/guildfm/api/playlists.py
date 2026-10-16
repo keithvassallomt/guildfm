@@ -16,7 +16,7 @@ from guildfm.auth import require
 from guildfm.db import get_session
 from guildfm.models import Playlist, PlaylistKind, PlaylistTrack, Track, User
 from guildfm.permissions import Permission
-from guildfm.playlists import add_track, current_source, thumb_down, tracks_of
+from guildfm.playlists import add_track, covers, current_source, thumb_down, tracks_of
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine
 from guildfm.spotify import SpotifyError, SpotifyNotFound, SpotifyTrack, remember
@@ -45,6 +45,7 @@ class PlaylistOut(BaseModel):
     kind: PlaylistKind
     shuffle: bool
     tracks: int
+    covers: list[str]  # album art from its first few songs
     made_by: str | None
     playing: bool
 
@@ -79,6 +80,7 @@ async def _out(db: AsyncSession, playlist: Playlist) -> PlaylistOut:
         kind=playlist.kind,
         shuffle=playlist.shuffle,
         tracks=count or 0,
+        covers=await covers(db, playlist.id),
         made_by=playlist.creator.display_name if playlist.creator else None,
         playing=bool(source and source.playlist_id == playlist.id),
     )
@@ -101,7 +103,7 @@ async def _playlist(db: AsyncSession, playlist_id: int) -> Playlist:
     return playlist
 
 
-async def _album(
+async def album_songs(
     db: AsyncSession, request: Request, album_id: str
 ) -> tuple[AlbumOut, list[SpotifyTrack]]:
     """An album and the songs on it GuildFM can play: explicit ones only if they're allowed."""
@@ -170,7 +172,7 @@ async def import_playlist(body: ImportIn, user: Editor, request: Request, db: Db
         raise HTTPException(422, "That isn't a Spotify playlist or album link.")
     kind, spotify_id = found
     if kind == "album":
-        album, tracks = await _album(db, request, spotify_id)
+        album, tracks = await album_songs(db, request, spotify_id)
         name = album.name
     else:
         try:
@@ -259,7 +261,7 @@ async def add_album(
     playlist = await _playlist(db, playlist_id)
     if playlist.kind == PlaylistKind.BEST_VOTED:
         raise HTTPException(409, "Best Voted fills itself from the votes.")
-    _, tracks = await _album(db, request, body.album_id)
+    _, tracks = await album_songs(db, request, body.album_id)
     added = [await add_track(db, playlist, track.id) for track in tracks]
     if not any(added):
         raise HTTPException(409, "Every song on that album is already in the playlist.")
@@ -271,7 +273,7 @@ async def add_album(
 @router.get("/albums/{album_id}")
 async def album(album_id: str, _: Editor, request: Request, db: Db) -> AlbumDetailOut:
     """An album's songs, to look over before adding them to a playlist."""
-    found, tracks = await _album(db, request, album_id)
+    found, tracks = await album_songs(db, request, album_id)
     return AlbumDetailOut(**found.model_dump(), items=[TrackOut.of(track) for track in tracks])
 
 
@@ -306,13 +308,13 @@ async def play(playlist_id: int, user: Player, request: Request, db: Db) -> Play
 
 @router.delete("/source", status_code=204)
 async def stop(user: Player, request: Request, db: Db) -> None:
-    """Requests only: after the current song, nothing fills the gaps between requests."""
+    """Requests only: after the current song, nothing fills the gaps between requests, and
+    nothing takes over when the queue runs out."""
     source = await current_source(db)
-    if source is None:
-        return
-    name = source.playlist.name
+    name = source and (source.playlist or source.station).name
     if await engine(request).switch(None):
-        engine(request).note(f"{user.display_name} took {name} off")
+        what = f"took {name} off" if name else "chose requests only"
+        engine(request).note(f"{user.display_name} {what}")
 
 
 class ThumbIn(BaseModel):
@@ -322,10 +324,10 @@ class ThumbIn(BaseModel):
 
 @router.post("/source/vote")
 async def thumb(body: ThumbIn, user: Voter, request: Request, db: Db) -> dict:
-    """A thumbs down on one of the playing playlist's upcoming songs."""
+    """A thumbs down on one of the playlist's or station's upcoming songs."""
     async with engine(request).lock:
         if await current_source(db) is None:
-            raise HTTPException(409, "No playlist is playing.")
+            raise HTTPException(409, "Nothing is filling the gaps between requests.")
         threshold = await get_pref(db, "downvote_threshold")
         skipped = await thumb_down(db, body.track_id, user.id, body.down, threshold)
     if skipped:

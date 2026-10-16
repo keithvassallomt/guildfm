@@ -116,3 +116,15 @@
   font-size: 14px;
   color: var(--accent);
 }
+
+.photo {
+  margin-top: -8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.photo p[role="alert"] {
+  flex-basis: 100%;
+}

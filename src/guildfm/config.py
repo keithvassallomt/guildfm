@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr
     # OpenAI's text to speech model, for announcements and the DJ.
     openai_tts_model: str = "gpt-4o-mini-tts"
+    # OpenAI's model for picking songs, writing the DJ's lines and reading the music news, and
+    # how hard it thinks. Leave the effort empty for a model that doesn't take one.
+    openai_model: str = "gpt-6-astra"
+    openai_effort: str = "low"
+    # OpenAI's image model, for stations' covers, and how carefully it paints.
+    openai_image_model: str = "gpt-image-2.5-flare"
+    openai_image_quality: str = "medium"
+    # ElevenLabs, for the account's own voices alongside OpenAI's. Optional: without a key, only
+    # OpenAI's voices are offered. The model has to understand audio tags such as [laughs].
+    elevenlabs_api_key: SecretStr = SecretStr("")
+    elevenlabs_model: str = "eleven_v4"
     spotify_client_id: str
     spotify_client_secret: SecretStr
     spotify_redirect_uri: str = "http://127.0.0.1:8000/auth/spotify/callback"

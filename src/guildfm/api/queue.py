@@ -10,7 +10,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from guildfm.api.schemas import TrackOut
+from guildfm.api.playlists import AlbumIn, album_songs
+from guildfm.api.schemas import PersonOut, TrackOut
 from guildfm.auth import ActiveUser, require
 from guildfm.db import get_session
 from guildfm.models import EntryState, QueueEntry, Role, Track, User, Vote
@@ -28,17 +29,13 @@ Voter = Annotated[User, require(Permission.VOTE)]
 Curator = Annotated[User, require(Permission.MANAGE_QUEUE)]
 
 
-class PersonOut(BaseModel):
-    id: int
-    display_name: str
-
-
 class EntryOut(BaseModel):
     id: int
     state: EntryState
     track: TrackOut
-    requested_by: PersonOut | None  # None for songs from the playing playlist
+    requested_by: PersonOut | None  # None for songs from the playlist or station
     playlist: str | None  # the playlist a song came from, if it did
+    station: str | None  # the station a song came from, if it did
     requested_at: datetime
     up: int
     down: int
@@ -47,6 +44,7 @@ class EntryOut(BaseModel):
     mine: bool
     pinned: bool  # placed by a curator, so votes don't move it
     played_at: datetime | None  # when it last played before this request, if recently
+    album: str | None  # the album's name, for a song queued with the rest of its album
 
 
 class ActivityOut(BaseModel):
@@ -61,7 +59,8 @@ class UpcomingOut(BaseModel):
 
 
 class SourceOut(BaseModel):
-    playlist_id: int
+    kind: Literal["playlist", "station"]
+    id: int
     name: str
     upcoming: list[UpcomingOut]
     skip_at: int  # thumbs down needed to skip a song
@@ -71,7 +70,7 @@ class QueueOut(BaseModel):
     playing: EntryOut | None
     next: EntryOut | None
     waiting: list[EntryOut]
-    source: SourceOut | None  # the playlist filling the gaps between requests
+    source: SourceOut | None  # the playlist or station filling the gaps between requests
     activity: list[ActivityOut]
     mine: int  # how many requests the viewer has in the queue
     request_cap: int
@@ -102,10 +101,9 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
             id=entry.id,
             state=entry.state,
             track=TrackOut.of(entry.track),
-            requested_by=PersonOut(id=entry.requester.id, display_name=entry.requester.display_name)
-            if entry.requester
-            else None,
+            requested_by=PersonOut.of(entry.requester),
             playlist=entry.playlist.name if entry.playlist else None,
+            station=entry.station.name if entry.station else None,
             requested_at=_when(entry.added_at),
             up=tally.up,
             down=tally.down,
@@ -114,6 +112,7 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
             mine=entry.requested_by == viewer.id,
             pinned=entry.pinned_position is not None,
             played_at=_when(before[-1]) if before else None,
+            album=entry.track.album if entry.album_id else None,
         )
 
     by_state = {state: [e for e in entries if e.state == state] for state in EntryState}
@@ -123,8 +122,9 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
         upcoming = await upcoming_songs(db, {entry.track_id for entry in entries})
         found = {t.id: t for t in await db.scalars(select(Track).where(Track.id.in_(upcoming)))}
         source_out = SourceOut(
-            playlist_id=source.playlist_id,
-            name=source.playlist.name,
+            kind="playlist" if source.playlist else "station",
+            id=source.playlist_id or source.station_id,
+            name=(source.playlist or source.station).name,
             upcoming=[
                 UpcomingOut(
                     track=TrackOut.of(found[track_id]),
@@ -142,7 +142,7 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
         waiting=[out(entry) for entry in in_order(by_state[EntryState.WAITING], scores)],
         source=source_out,
         activity=[ActivityOut(text=a["text"], at=_when(a["at"])) for a in queue.activity],
-        mine=sum(entry.requested_by == viewer.id for entry in entries),
+        mine=sum(entry.requested_by == viewer.id and not entry.album_id for entry in entries),
         request_cap=await get_pref(db, "request_cap"),
     )
 
@@ -185,8 +185,11 @@ async def add(body: RequestIn, user: Requester, request: Request, db: Db) -> Que
         if await db.scalar(select(QueueEntry.id).where(QueueEntry.track_id == track.id)):
             raise HTTPException(409, "That song is already in the queue.")
         cap = await get_pref(db, "request_cap")
+        # Songs queued with the rest of their album don't count.
         mine = await db.scalar(
-            select(func.count()).select_from(QueueEntry).where(QueueEntry.requested_by == user.id)
+            select(func.count())
+            .select_from(QueueEntry)
+            .where(QueueEntry.requested_by == user.id, QueueEntry.album_id.is_(None))
         )
         # Admins have no cap.
         if mine >= cap and user.role != Role.ADMIN:
@@ -206,6 +209,48 @@ async def add(body: RequestIn, user: Requester, request: Request, db: Db) -> Que
     await queue.keep_fed()
     await request.app.state.schedule.try_start()
     return await view(db, user, queue)
+
+
+class AlbumQueuedOut(BaseModel):
+    queue: QueueOut
+    added: int  # songs added; any already in the queue are left where they are
+
+
+@router.post("/albums", status_code=201)
+async def add_album(body: AlbumIn, user: Curator, request: Request, db: Db) -> AlbumQueuedOut:
+    """Every song on an album, in order, as the curator's requests. They don't count towards
+    the request cap, and votes move them like any other request."""
+    queue = engine(request)
+    album, tracks = await album_songs(db, request, body.album_id)
+    if not tracks:
+        raise HTTPException(409, "None of that album's songs can play here.")
+    async with queue.lock:
+        queued = set(await db.scalars(select(QueueEntry.track_id)))
+        adding = [track for track in tracks if track.id not in queued]
+        if not adding:
+            raise HTTPException(409, "Every song on that album is already in the queue.")
+        now = time.time()
+        for number, track in enumerate(adding):
+            # A moment apart, so with equal votes they play in the album's order.
+            db.add(
+                QueueEntry(
+                    track_id=track.id,
+                    requested_by=user.id,
+                    added_at=now + number / 1000,
+                    album_id=body.album_id,
+                )
+            )
+        try:
+            await db.commit()
+        except IntegrityError:
+            raise HTTPException(409, "One of those songs was added just now. Try again.") from None
+
+    songs = f"{len(adding)} {'song' if len(adding) == 1 else 'songs'}"
+    queue.note(f"{user.display_name} queued {album.name} by {album.artists} ({songs})")
+    await queue.changed()
+    await queue.keep_fed()
+    await request.app.state.schedule.try_start()
+    return AlbumQueuedOut(queue=await view(db, user, queue), added=len(adding))
 
 
 class VoteIn(BaseModel):

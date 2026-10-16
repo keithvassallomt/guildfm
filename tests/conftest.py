@@ -6,11 +6,13 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from guildfm.ai import AIClient
+from guildfm.awareness import Awareness
 from guildfm.config import Settings
 from guildfm.main import create_app
 from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
-from tests.fakes import FakeOpenAI, FakeSpeakers, FakeSpotify
+from tests.fakes import FakeElevenLabs, FakeOpenAI, FakeSpeakers, FakeSpotify, FakeWeather
 from tests.helpers import ADMIN, PASSWORD, register, sign_in
 
 
@@ -61,11 +63,28 @@ def openai() -> FakeOpenAI:
 
 
 @pytest.fixture
+def weather() -> FakeWeather:
+    return FakeWeather()
+
+
+@pytest.fixture
+def elevenlabs() -> FakeElevenLabs:
+    return FakeElevenLabs()
+
+
+def fake(service) -> httpx2.AsyncClient:
+    """An HTTP client that talks to a fake service instead of the internet."""
+    return httpx2.AsyncClient(transport=httpx2.MockTransport(service))
+
+
+@pytest.fixture
 def start(
     settings: Settings,
     speakers: FakeSpeakers,
     spotify: FakeSpotify,
     openai: FakeOpenAI,
+    weather: FakeWeather,
+    elevenlabs: FakeElevenLabs,
     clock: Clock,
 ) -> Callable[[], TestClient]:
     """Starts GuildFM, use it with `with`. Starting it again is a restart: same data, same
@@ -79,13 +98,32 @@ def start(
             market="GB",
             http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
         )
+
+        def voices(request: httpx2.Request) -> httpx2.Response:
+            if request.url.host == "api.elevenlabs.io":
+                return elevenlabs(request)
+            return openai(request)
+
         speech = SpeechClient(
             api_key="test",
             model="gpt-4o-mini-tts",
             media_dir=settings.data_dir / "media",
-            http=httpx2.AsyncClient(transport=httpx2.MockTransport(openai)),
+            http=fake(voices),
+            eleven_key="eleven-test",
         )
-        return TestClient(create_app(settings, speakers, api, poll=False, now=clock, speech=speech))
+        ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
+        awareness = Awareness(ai, http=fake(weather))
+        app = create_app(
+            settings,
+            speakers,
+            api,
+            poll=False,
+            now=clock,
+            speech=speech,
+            ai=ai,
+            awareness=awareness,
+        )
+        return TestClient(app)
 
     return start
 

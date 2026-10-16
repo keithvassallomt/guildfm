@@ -1,0 +1,229 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.waiting {
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.waiting svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.keySong,
+.keyJingle,
+.keyBetween,
+.keyOver {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.keySong {
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+}
+
+.keyJingle {
+  background: var(--warn);
+}
+
+.keyBetween {
+  background: var(--accent);
+}
+
+.keyOver {
+  background: var(--down);
+}
+
+.run {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.song {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.time {
+  width: 44px;
+  flex-shrink: 0;
+  padding-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.songCard {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.songTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.art {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+
+.songText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--faint);
+}
+
+/* A line between songs sits on its own, lined up with the song cards. */
+.betweenRow {
+  padding-left: 54px;
+}
+
+.line {
+  padding: 10px 12px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.between {
+  background: var(--accent-tint);
+  border: 1px solid rgba(255, 138, 61, 0.35);
+}
+
+.over {
+  background: var(--down-soft);
+  border: 1px solid rgba(141, 180, 255, 0.35);
+}
+
+.jingle {
+  background: var(--warn-soft);
+  border: 1px solid rgba(245, 196, 81, 0.35);
+}
+
+.jingle .lineLabel {
+  color: var(--warn);
+}
+
+.jingleTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.jingleName {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.jingleName .meta {
+  font-weight: 400;
+}
+
+.lineLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.between .lineLabel {
+  color: var(--accent);
+}
+
+.over .lineLabel {
+  color: var(--down);
+}
+
+.script {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.lineFoot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.again {
+  align-self: center;
+}

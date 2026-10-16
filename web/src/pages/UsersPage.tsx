@@ -129,7 +129,7 @@ function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
   return (
     <li className={`${users.row} ${open ? users.open : ""}`}>
       <div className={users.summary}>
-        <Avatar name={name} />
+        <Avatar name={name} url={user.avatar_url} />
         <span className={users.who}>
           <span className={users.name}>{name}</span>
           <span className={users.handle}>

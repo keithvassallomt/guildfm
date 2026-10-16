@@ -1,0 +1,266 @@
+"""AI stations for curators: making and editing them, putting one on, and hearing the DJ."""
+
+import time
+from datetime import UTC, datetime
+from typing import Annotated, Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field, StringConstraints, model_validator
+from pydantic_core import PydanticCustomError
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from guildfm.ai import AIError
+from guildfm.api.jingles import JingleOut, media
+from guildfm.api.schemas import TrackOut
+from guildfm.auth import require
+from guildfm.db import get_session
+from guildfm.dj import voice_instructions
+from guildfm.jingles import forget
+from guildfm.models import DJStyle, Jingle, Play, Station, StationKind, TalkUnit, User
+from guildfm.permissions import Permission
+from guildfm.playlists import current_source
+from guildfm.prefs import get_pref, set_pref
+from guildfm.rehearsal import rehearse
+from guildfm.speech import MAX_TEXT, SpeechError, Voice
+
+router = APIRouter(prefix="/stations")
+Db = Annotated[AsyncSession, Depends(get_session)]
+Viewer = Annotated[User, require(Permission.SWITCH_SOURCE)]
+Maker = Annotated[User, require(Permission.CREATE_STATIONS)]
+Player = Annotated[User, require(Permission.SWITCH_SOURCE)]
+
+
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+Brief = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
+DJName = Annotated[str, StringConstraints(strip_whitespace=True, max_length=40)]
+Personality = Annotated[str, StringConstraints(strip_whitespace=True, max_length=600)]
+Words = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_TEXT)]
+
+
+class StationIn(BaseModel):
+    name: Name
+    description: Brief
+    global_awareness: bool = False
+    dj: bool = False
+    dj_name: DJName = ""
+    personality: Personality = ""
+    voice: Voice = "marin"
+    talk_every: int = Field(3, ge=1, le=120)
+    talk_unit: TalkUnit = TalkUnit.TRACKS
+    style: DJStyle = DJStyle.COMMENTARY
+    announce_requests: bool = True
+    jingles: bool = True
+
+    @model_validator(mode="after")
+    def dj_has_a_name(self) -> StationIn:
+        if self.dj and not self.dj_name:
+            raise PydanticCustomError("dj_name", "Give the DJ a name.")
+        return self
+
+
+class StationOut(BaseModel):
+    id: int
+    name: str
+    kind: StationKind
+    description: str
+    global_awareness: bool
+    dj: bool
+    dj_name: str
+    personality: str
+    voice: str
+    talk_every: int
+    talk_unit: TalkUnit
+    style: DJStyle
+    announce_requests: bool
+    jingles: bool
+    art_url: str | None  # its cover, once OpenAI has painted one
+    made_by: str | None
+    playing: bool  # the station filling the gaps between requests
+    last_played_at: datetime | None
+
+
+class HourIn(StationIn):
+    # For a saved station, so its recent picks are left out as they would be for real.
+    station_id: int | None = None
+
+
+class LineOut(BaseModel):
+    where: Literal["over_intro", "between"]  # over the start of the song, or before it
+    script: str
+
+
+class SlotOut(BaseModel):
+    track: TrackOut
+    note: str  # why the AI picked it
+    starts_at: datetime
+    line: LineOut | None  # what the DJ says before this song or over its start
+    jingle: JingleOut | None  # played in the pause before this song
+
+
+class HourOut(BaseModel):
+    slots: list[SlotOut]
+    minutes: int  # how long the songs add up to
+
+
+class PreviewIn(BaseModel):
+    text: Words
+    voice: Voice
+    dj_name: DJName = ""
+    personality: Personality = ""
+
+
+async def _out(db: AsyncSession, station: Station) -> StationOut:
+    source = await current_source(db)
+    last = await db.scalar(select(func.max(Play.played_at)).where(Play.station_id == station.id))
+    return StationOut(
+        id=station.id,
+        name=station.name,
+        kind=station.kind,
+        description=station.description,
+        global_awareness=station.global_awareness,
+        dj=station.dj,
+        dj_name=station.dj_name,
+        personality=station.personality,
+        voice=station.voice,
+        talk_every=station.talk_every,
+        talk_unit=station.talk_unit,
+        style=station.style,
+        announce_requests=station.announce_requests,
+        jingles=station.jingles,
+        art_url=station.art_url,
+        made_by=station.creator.display_name if station.creator else None,
+        playing=bool(source and source.station_id == station.id),
+        last_played_at=datetime.fromtimestamp(last, UTC) if last else None,
+    )
+
+
+async def _station(db: AsyncSession, station_id: int, editing: bool = False) -> Station:
+    station = await db.get(Station, station_id)
+    if station is None:
+        raise HTTPException(404, "That station doesn't exist any more.")
+    if editing and station.kind == StationKind.AI_PICKS:
+        raise HTTPException(409, "AI picks looks after itself.")
+    return station
+
+
+def _apply(station: Station, body: StationIn) -> None:
+    for field, value in body.model_dump().items():
+        setattr(station, field, value)
+
+
+@router.get("")
+async def stations(_: Viewer, db: Db) -> list[StationOut]:
+    """Stations by name, then AI picks."""
+    rows = (await db.scalars(select(Station))).unique().all()
+    ordered = sorted(rows, key=lambda s: (s.kind == StationKind.AI_PICKS, s.name.lower()))
+    return [await _out(db, station) for station in ordered]
+
+
+@router.post("", status_code=201)
+async def create(body: StationIn, user: Maker, request: Request, db: Db) -> StationOut:
+    """A new station. Its cover is painted in the background, in half a minute or so."""
+    station = Station(created_by=user.id, created_at=time.time())
+    _apply(station, body)
+    db.add(station)
+    await db.commit()
+    request.app.state.covers.paint_later(station.id)
+    return await _out(db, station)
+
+
+@router.post("/preview")
+async def preview(body: PreviewIn, _: Maker, request: Request) -> FileResponse:
+    """The DJ saying `text`, delivered in its personality, for the browser to play."""
+    personality = body.personality or "friendly and upbeat"
+    instructions = voice_instructions(body.dj_name or "the DJ", personality)
+    try:
+        clip = await request.app.state.speech.say(body.text, body.voice, instructions)
+    except SpeechError as error:
+        raise HTTPException(502, str(error)) from None
+    return FileResponse(clip.path, media_type="audio/mpeg")
+
+
+@router.post("/preview-hour")
+async def preview_hour(body: HourIn, _: Maker, request: Request) -> HourOut:
+    """An hour of the station as the editor has it, saved or not: the songs and the DJ's
+    lines. Takes about a minute, and nothing is kept."""
+    state = request.app.state
+    try:
+        slots = await rehearse(
+            state.sessionmaker, state.radio, state.ai, state.awareness, body, body.station_id
+        )
+    except AIError as error:
+        raise HTTPException(502, str(error)) from None
+    if not slots:
+        raise HTTPException(502, "None of the AI's picks could be found on Spotify. Try again.")
+    seconds = sum(slot.track.duration_ms for slot in slots) / 1000
+    return HourOut(
+        slots=[
+            SlotOut(
+                track=TrackOut.of(slot.track),
+                note=slot.note,
+                starts_at=slot.starts_at,
+                line=LineOut(where=slot.line.where, script=slot.line.script) if slot.line else None,
+                jingle=JingleOut.of(slot.jingle) if slot.jingle else None,
+            )
+            for slot in slots
+        ],
+        minutes=round(seconds / 60),
+    )
+
+
+@router.get("/{station_id}")
+async def station(station_id: int, _: Viewer, db: Db) -> StationOut:
+    return await _out(db, await _station(db, station_id))
+
+
+@router.put("/{station_id}")
+async def change(station_id: int, body: StationIn, _: Maker, request: Request, db: Db):
+    station = await _station(db, station_id, editing=True)
+    before = (station.name, station.description)
+    _apply(station, body)
+    await db.commit()
+    # A new name or description gets a new cover.
+    if (station.name, station.description) != before:
+        request.app.state.covers.paint_later(station.id)
+    await request.app.state.queue.changed()
+    return await _out(db, station)
+
+
+@router.delete("/{station_id}", status_code=204)
+async def delete(station_id: int, _: Maker, request: Request, db: Db) -> Response:
+    station = await _station(db, station_id, editing=True)
+    if await get_pref(db, "default_station") == station.id:
+        await set_pref(db, "default_station", None)
+    # Its show idents go with it: the database deletes the rows, and this the files.
+    for jingle in await db.scalars(select(Jingle).where(Jingle.station_id == station.id)):
+        forget(media(request), jingle)
+    request.app.state.covers.forget(station)
+    await db.delete(station)
+    await db.commit()
+    await request.app.state.queue.changed()
+    return Response(status_code=204)
+
+
+@router.post("/{station_id}/cover")
+async def repaint(station_id: int, _: Maker, request: Request, db: Db) -> StationOut:
+    """Another cover for the station, painted while you wait: half a minute or so."""
+    await _station(db, station_id)
+    try:
+        await request.app.state.covers.paint(station_id)
+    except AIError as error:
+        raise HTTPException(502, f"{error} No new cover this time.") from None
+    db.expire_all()
+    return await _out(db, await _station(db, station_id))
+
+
+@router.post("/{station_id}/play")
+async def play(station_id: int, user: Player, request: Request, db: Db) -> StationOut:
+    """Make the station fill the gaps between requests, from the next song on. Its first songs
+    take a moment to pick."""
+    station = await _station(db, station_id)
+    if await request.app.state.queue.switch(station):
+        request.app.state.queue.note(f"{user.display_name} put {station.name} on")
+    await request.app.state.schedule.try_start()
+    return await _out(db, station)

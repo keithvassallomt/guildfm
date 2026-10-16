@@ -10,7 +10,7 @@ import {
   type SearchResult,
   type SearchTrack,
 } from "../api";
-import { useMe } from "../auth/AuthProvider";
+import { useAuth, useMe } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { FormError } from "../components/TextField";
@@ -37,19 +37,20 @@ type Props = {
   autoFocus?: boolean;
 };
 
-/** Search Spotify and add songs: as requests (the Search page and Queue screen) or to a
- *  playlist (the playlist screen), where whole albums can go in too. */
+/** Search Spotify and add songs: as requests (the Queue screen) or to a playlist (the playlist
+ *  screen). Whole albums can go into a playlist, and into the queue for curators and admins. */
 export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props) {
   const [typed, setTyped] = useState(query);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<string | null>(null);
-  // An album opened from the results, when adding to a playlist.
+  // An album opened from the results.
   const [album, setAlbum] = useState<SearchAlbum | null>(null);
   const latest = useRef(0);
   const input = useRef<HTMLInputElement>(null);
   const me = useMe();
+  const { can } = useAuth();
   const queue = addTo.to === "queue" ? addTo.queue : null;
   // Admins have no request cap.
   const unlimited = me.role === "admin";
@@ -57,7 +58,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
   const inPlaylist = new Set(addTo.to === "playlist" ? addTo.playlist.items.map((i) => i.id) : []);
   const isAdded = (track: FoundTrack) =>
     addTo.to === "queue" ? track.queued : inPlaylist.has(track.id);
-  const albums = addTo.to === "playlist";
+  const albums = addTo.to === "playlist" || can("manage_queue");
 
   // In a dialog, the browser focuses the first button; the search box is what people want.
   useEffect(() => {
@@ -222,11 +223,11 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
         </section>
       )}
 
-      {album && addTo.to === "playlist" && (
+      {album && (
         <AlbumView
           album={album}
-          playlist={addTo.playlist}
-          onPlaylist={addTo.onPlaylist}
+          addTo={addTo}
+          capped={capped}
           onAdd={add}
           onBack={() => setAlbum(null)}
           onAdded={setAdded}

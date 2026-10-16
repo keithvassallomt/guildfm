@@ -10,7 +10,7 @@ takeover or closing time. Scheduled ones also keep to playback hours. One that c
 GuildFM can't play it is let go, and shows in the log as missed.
 
 Everything spoken goes through one line, and announcements always go first, so the DJ's lines
-(stage 10) wait for them.
+and jingles (stage 10) wait for them.
 """
 
 import asyncio
@@ -122,6 +122,12 @@ class Spoken:
     rooms: list[dict[str, str]] | None  # [{"uid", "name"}], or None for every room
     mode: AnnounceMode
     dj: bool = False  # the DJ's lines wait for any announcement, and aren't logged
+    # The song a DJ line introduces. Over the music, it waits for that song to start; between
+    # songs, it plays before it. Once that song has been and gone, the line is dropped.
+    for_key: str | None = None
+    # A jingle only ever plays in the pause before its song, never over music, so it's dropped
+    # once that song has started.
+    jingle: bool = False
 
 
 class Announcer:
@@ -293,17 +299,40 @@ class Announcer:
             items, self._pending = self._pending, []
             await self._record([(spoken, problem) for spoken in items])
             return
+        current, upcoming = controller.current_key, controller.upcoming_keys
+        self._pending = [
+            s
+            for s in self._pending
+            if (s.for_key in (None, current) or s.for_key in upcoming)
+            and not (s.jingle and s.for_key == current)
+        ]
         # Announcements first; the DJ waits until there are none left.
         group = [spoken for spoken in self._pending if not spoken.dj] or list(self._pending)
         playing = controller.status == Status.PLAYING
         left = controller.seconds_left()
-        now = [s for s in group if s.mode == AnnounceMode.OVER or not playing or left is None]
-        if now:
-            self._take(now)
-            await self._play(now)
-        elif left is not None and left <= BREAK_AHEAD:
-            self._take(group)
-            await self._between_songs(group)
+
+        def now(spoken: Spoken) -> bool:
+            if spoken.jingle:
+                return False  # only ever between songs
+            if spoken.for_key is not None and spoken.for_key == current:
+                return True  # its song is on: over the start of it
+            if spoken.mode == AnnounceMode.OVER:
+                return spoken.for_key is None
+            return not playing or left is None  # no song ending to wait for
+
+        ready = [spoken for spoken in group if now(spoken)]
+        # A jingle waits for the music to be playing towards the end of a song.
+        between = [
+            spoken
+            for spoken in group
+            if spoken.mode == AnnounceMode.AFTER and (playing or not spoken.jingle)
+        ]
+        if ready:
+            self._take(ready)
+            await self._play(ready)
+        elif between and left is not None and left <= BREAK_AHEAD:
+            self._take(between)
+            await self._between_songs(between)
 
     async def _play(self, items: list[Spoken]) -> None:
         """Play each clip in its rooms, one after another."""
@@ -314,10 +343,12 @@ class Announcer:
         except (SpeakersUnavailable, SpeakersRefused) as error:
             await self._record([(spoken, str(error)) for spoken in items])
             return
-        controller.announcing = True
-        await controller.publish()
         try:
             for spoken in items:
+                controller.announcing = not spoken.dj
+                controller.dj_talking = spoken.dj and not spoken.jingle
+                controller.jingle = spoken.jingle
+                await controller.publish()
                 url = f"http://{address}:{self._port}/media/{spoken.clip.media_path}"
                 uids = [room["uid"] for room in spoken.rooms] if spoken.rooms else None
                 try:
@@ -328,7 +359,7 @@ class Announcer:
                 await self.sleep(spoken.clip.seconds + GAP_SECONDS)
                 results.append((spoken, None))
         finally:
-            controller.announcing = False
+            controller.announcing = controller.dj_talking = controller.jingle = False
             await controller.publish()
             await self._record(results)
 

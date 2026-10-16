@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import {
   type AlbumDetail,
+  type AlbumQueued,
   api,
   errorText,
   type PlaylistDetail,
+  type QueueState,
   type SearchAlbum,
   type SearchTrack,
 } from "../api";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import page from "../pages/Page.module.css";
+import type { AddTo } from "./SongSearch";
 import search from "./SongSearch.module.css";
 import { TrackRow } from "./TrackRow";
 
@@ -21,24 +24,33 @@ export function albumLine(album: SearchAlbum): string {
   return [kind, album.artists, album.year, songs(album.tracks)].filter(Boolean).join(" · ");
 }
 
-function addAllLabel(missing: number, total: number): string {
-  if (missing === 0) return "All in the playlist";
-  if (missing === total) return missing === 1 ? "Add the song" : `Add all ${songs(missing)}`;
-  return missing === 1 ? "Add the other song" : `Add the other ${songs(missing)}`;
+function addAllLabel(missing: number, total: number, queue: boolean): string {
+  const verb = queue ? "Queue" : "Add";
+  if (missing === 0) return queue ? "All in the queue" : "All in the playlist";
+  if (missing === total) return missing === 1 ? `${verb} the song` : `${verb} all ${songs(missing)}`;
+  return missing === 1 ? `${verb} the other song` : `${verb} the other ${songs(missing)}`;
+}
+
+/** The songs in the queue: playing, next and waiting. */
+function queued(queue: QueueState | null): string[] {
+  if (!queue) return [];
+  return [queue.playing, queue.next, ...queue.waiting].flatMap((entry) => (entry ? [entry.track.id] : []));
 }
 
 type Props = {
   album: SearchAlbum;
-  playlist: PlaylistDetail;
-  onPlaylist: (playlist: PlaylistDetail) => void;
+  addTo: AddTo;
+  /** Out of requests, so single songs can't be requested; the whole album still can. */
+  capped: boolean;
   onAdd: (track: SearchTrack) => void;
   onBack: () => void;
   onAdded: (message: string | null) => void;
   onError: (message: string | null) => void;
 };
 
-/** An album's songs, to look over before adding all of them, or some, to a playlist. */
-export function AlbumView({ album, playlist, onPlaylist, onAdd, onBack, onAdded, onError }: Props) {
+/** An album's songs, to look over before adding all of them, or some: to a playlist, or to the
+ *  queue for curators and admins. */
+export function AlbumView({ album, addTo, capped, onAdd, onBack, onAdded, onError }: Props) {
   const [detail, setDetail] = useState<AlbumDetail | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -53,20 +65,28 @@ export function AlbumView({ album, playlist, onPlaylist, onAdd, onBack, onAdded,
     };
   }, [album.id, onError]);
 
-  const inPlaylist = new Set(playlist.items.map((item) => item.id));
-  const missing = detail?.items.filter((track) => !inPlaylist.has(track.id)).length ?? 0;
+  const toQueue = addTo.to === "queue";
+  const there = new Set(toQueue ? queued(addTo.queue) : addTo.playlist.items.map((i) => i.id));
+  const missing = detail?.items.filter((track) => !there.has(track.id)).length ?? 0;
   const minutes = Math.round((detail?.items ?? []).reduce((sum, t) => sum + t.duration, 0) / 60);
 
   const addAll = async () => {
     setBusy(true);
     onError(null);
     try {
-      const updated = await api<PlaylistDetail>("POST", `/playlists/${playlist.id}/albums`, {
-        album_id: album.id,
-      });
-      const added = updated.items.length - playlist.items.length;
-      onPlaylist(updated);
-      onAdded(`Added ${songs(added)} from ${album.name} to ${playlist.name}.`);
+      if (addTo.to === "queue") {
+        const done = await api<AlbumQueued>("POST", "/queue/albums", { album_id: album.id });
+        addTo.onQueue(done.queue);
+        onAdded(`Queued ${songs(done.added)} from ${album.name}, in order.`);
+      } else {
+        const { playlist } = addTo;
+        const updated = await api<PlaylistDetail>("POST", `/playlists/${playlist.id}/albums`, {
+          album_id: album.id,
+        });
+        const added = updated.items.length - playlist.items.length;
+        addTo.onPlaylist(updated);
+        onAdded(`Added ${songs(added)} from ${album.name} to ${playlist.name}.`);
+      }
     } catch (caught) {
       onAdded(null);
       onError(errorText(caught));
@@ -110,16 +130,22 @@ export function AlbumView({ album, playlist, onPlaylist, onAdd, onBack, onAdded,
         <>
           <Button disabled={busy || missing === 0} onClick={addAll} className={search.addAll}>
             {missing > 0 && <Icon name="plus" size={16} strokeWidth={2.6} />}
-            {busy ? "Adding..." : addAllLabel(missing, detail.items.length)}
+            {busy ? "Adding..." : addAllLabel(missing, detail.items.length, toQueue)}
           </Button>
+          {toQueue && missing > 0 && (
+            <p className={page.muted}>
+              They go in as your requests, in the album's order, without counting towards your
+              limit. Votes can still move them, and the DJ names you on the first one.
+            </p>
+          )}
           <ul className={search.results}>
             {detail.items.map((track) => (
               <TrackRow
                 key={track.id}
                 track={track}
-                added={inPlaylist.has(track.id)}
-                addedLabel="In playlist"
-                capped={false}
+                added={there.has(track.id)}
+                addedLabel={toQueue ? "In queue" : "In playlist"}
+                capped={toQueue && capped}
                 onAdd={onAdd}
               />
             ))}

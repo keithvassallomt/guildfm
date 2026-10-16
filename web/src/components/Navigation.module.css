@@ -107,4 +107,30 @@
     background: var(--accent-tint);
     color: var(--accent);
   }
+
+  /* Pages under a tab, such as Admin's, indented beneath it. */
+  .under,
+  .under:hover {
+    min-height: 38px;
+    margin-left: 34px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .under:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .underActive,
+  .underActive:hover {
+    background: var(--accent-tint);
+    color: var(--accent);
+  }
 }

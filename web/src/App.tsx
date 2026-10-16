@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { Navigate, Outlet, Route, Routes, useLocation, useParams, useSearchParams } from "react-router";
 import type { Permission } from "./api";
 import styles from "./App.module.css";
 import { useAuth } from "./auth/AuthProvider";
@@ -10,21 +10,23 @@ import { AdminPage } from "./pages/AdminPage";
 import { AnnouncementEditor } from "./pages/AnnouncementEditor";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { ChoosePasswordPage } from "./pages/ChoosePasswordPage";
-import { LibraryPage } from "./pages/LibraryPage";
+import { JinglesPage } from "./pages/JinglesPage";
 import { NowPlayingPage } from "./pages/NowPlayingPage";
 import { PlaylistPage } from "./pages/PlaylistPage";
+import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { QueuePage } from "./pages/QueuePage";
-import { SearchPage } from "./pages/SearchPage";
+import { RadioPage } from "./pages/RadioPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { StationEditor } from "./pages/StationEditor";
 import { UsersPage } from "./pages/UsersPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
 function Shell() {
   const { can } = useAuth();
   const { pathname } = useLocation();
-  // Admins get quick controls everywhere but Now Playing and Admin, which have the controls.
-  const quick = can("control_playback") && pathname !== "/" && pathname !== "/admin";
+  // Admins get quick controls everywhere but Now Playing, which has the controls.
+  const quick = can("control_playback") && pathname !== "/";
 
   return (
     <div
@@ -38,6 +40,17 @@ function Shell() {
       {quick && <QuickControls />}
     </div>
   );
+}
+
+/** Where the Library's pages went when it split into Playlists and Radio. */
+function OldLibrary() {
+  const [params] = useSearchParams();
+  return <Navigate to={params.get("tab") === "stations" ? "/radio" : "/playlists"} replace />;
+}
+
+function OldLibraryItem({ to }: { to: "playlists" | "radio" }) {
+  const { id } = useParams();
+  return <Navigate to={`/${to}/${id}`} replace />;
 }
 
 /** Sends people without the permission back to Now Playing. The server enforces it too. */
@@ -59,23 +72,53 @@ export function App() {
         <Route element={<Shell />}>
           <Route index element={<NowPlayingPage />} />
           <Route path="queue" element={<QueuePage />} />
-          <Route path="search" element={<SearchPage />} />
           <Route
-            path="library"
+            path="playlists"
             element={
               <Allowed permission="switch_source">
-                <LibraryPage />
+                <PlaylistsPage />
               </Allowed>
             }
           />
           <Route
-            path="library/playlists/:id"
+            path="playlists/:id"
             element={
               <Allowed permission="switch_source">
                 <PlaylistPage />
               </Allowed>
             }
           />
+          <Route
+            path="radio"
+            element={
+              <Allowed permission="switch_source">
+                <RadioPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="radio/new"
+            element={
+              <Allowed permission="create_stations">
+                <StationEditor />
+              </Allowed>
+            }
+          />
+          <Route
+            path="radio/:id"
+            element={
+              <Allowed permission="create_stations">
+                <StationEditor />
+              </Allowed>
+            }
+          />
+          {/* Old addresses: the Search page is the Queue's "Request a song" now, and the
+              Library split into Playlists and Radio. */}
+          <Route path="search" element={<Navigate to="/queue" replace />} />
+          <Route path="library" element={<OldLibrary />} />
+          <Route path="library/playlists/:id" element={<OldLibraryItem to="playlists" />} />
+          <Route path="library/stations/new" element={<Navigate to="/radio/new" replace />} />
+          <Route path="library/stations/:id" element={<OldLibraryItem to="radio" />} />
           <Route
             path="admin"
             element={
@@ -113,6 +156,14 @@ export function App() {
             element={
               <Allowed permission="announce">
                 <AnnouncementEditor />
+              </Allowed>
+            }
+          />
+          <Route
+            path="admin/jingles"
+            element={
+              <Allowed permission="change_settings">
+                <JinglesPage />
               </Allowed>
             }
           />

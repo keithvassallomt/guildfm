@@ -101,8 +101,10 @@ class PlaybackController:
         self.source: Source | None = None
         # Whether playback hours are open and when that next changes, kept up by the scheduler.
         self.hours: dict[str, Any] | None = None
-        # An announcement is playing, set by the announcer.
+        # An announcement, the DJ or a jingle is on the speakers. Set by the announcer.
         self.announcing = False
+        self.dj_talking = False
+        self.jingle = False
 
     # Remembering what's on the speakers, for after a restart
 
@@ -293,6 +295,8 @@ class PlaybackController:
             },
             "previous": self.previous_action,
             "announcing": self.announcing,
+            "dj_talking": self.dj_talking,
+            "jingle": self.jingle,
             "group_volume": snapshot.group_volume if snapshot else None,
             "rooms": [asdict(room) for room in self._rooms],
             "hours": self.hours,

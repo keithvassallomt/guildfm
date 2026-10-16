@@ -24,6 +24,7 @@ DEFAULTS: dict[str, Any] = {
     "best_voted_min_upvotes": 5,  # a track needs more than this many to join Best Voted
     "best_voted_size": 50,
     "queue_runs_out": "ai_pick",
+    "default_station": None,  # a station id, for queue_runs_out "default_station"
     "schedule": {
         day: {"on": day not in ("sat", "sun"), "start": "08:00", "end": "18:00"} for day in DAYS
     },

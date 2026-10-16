@@ -1,10 +1,13 @@
-import { type FormEvent, useState } from "react";
-import { errorText } from "../api";
+import { type FormEvent, useRef, useState } from "react";
+import type { Area } from "react-easy-crop";
+import { api, apiUpload, errorText, type Me } from "../api";
 import { useAuth, useMe } from "../auth/AuthProvider";
 import { useQueue } from "../live/useQueue";
 import { Avatar } from "../components/Avatar";
 import { Button, ButtonLink } from "../components/Button";
 import { RoleBadge } from "../components/RoleBadge";
+import { PhotoCropper } from "../components/PhotoCropper";
+import { croppedPhoto, openPhoto } from "../components/photo";
 import { FormError, TextField } from "../components/TextField";
 import { Toggle } from "../components/Toggle";
 import styles from "./Page.module.css";
@@ -12,11 +15,18 @@ import profile from "./ProfilePage.module.css";
 
 export function ProfilePage() {
   const me = useMe();
-  const { updateProfile, signOut } = useAuth();
+  const { updateProfile, signOut, refresh } = useAuth();
   const [name, setName] = useState(me.display_name);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const photos = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  // The photo being cropped, before it's sent.
+  const [cropping, setCropping] = useState<File | null>(null);
+  const [cropError, setCropError] = useState<string | null>(null);
 
   const shownName = name.trim() || me.display_name;
   const nameChanged = name.trim() !== me.display_name;
@@ -35,6 +45,49 @@ export function ProfilePage() {
     }
   };
 
+  /** Opens the chosen photo for cropping, once it's clear this browser can show it. */
+  const choosePhoto = async (file: File | undefined) => {
+    if (photos.current) photos.current.value = "";
+    if (!file) return;
+    setPhotoError(null);
+    setCropError(null);
+    try {
+      (await openPhoto(file)).close();
+      setCropping(file);
+    } catch (caught) {
+      setPhotoError(caught instanceof Error ? caught.message : errorText(caught));
+    }
+  };
+
+  /** Shrinks the chosen part of the photo to a small square here, then sends it. */
+  const savePhoto = async (area: Area) => {
+    if (!cropping) return;
+    setPhotoBusy(true);
+    setCropError(null);
+    try {
+      await apiUpload<Me>("/me/avatar", await croppedPhoto(cropping, area));
+      await refresh();
+      setCropping(null);
+    } catch (caught) {
+      // A failed fetch is a TypeError; anything else here has a message fit to show.
+      setCropError(
+        caught instanceof Error && !(caught instanceof TypeError) ? caught.message : errorText(caught),
+      );
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    setPhotoError(null);
+    try {
+      await api<Me>("DELETE", "/me/avatar");
+      await refresh();
+    } catch (caught) {
+      setPhotoError(errorText(caught));
+    }
+  };
+
   const setAnnounce = async (announce: boolean) => {
     setError(null);
     try {
@@ -47,7 +100,7 @@ export function ProfilePage() {
   return (
     <div className={styles.page}>
       <header className={profile.identity}>
-        <Avatar name={shownName} size={64} strong />
+        <Avatar name={shownName} url={me.avatar_url} size={64} strong />
         <div className={profile.who}>
           <h1 className={styles.title}>{me.display_name}</h1>
           <div className={profile.handle}>
@@ -56,6 +109,33 @@ export function ProfilePage() {
           </div>
         </div>
       </header>
+
+      <div className={profile.photo}>
+        <input
+          ref={photos}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(event) => choosePhoto(event.target.files?.[0])}
+        />
+        <Button variant="secondary" disabled={photoBusy} onClick={() => photos.current?.click()}>
+          {photoBusy ? "Adding..." : me.avatar_url ? "Change photo" : "Add a photo"}
+        </Button>
+        {me.avatar_url && (
+          <Button variant="ghost" disabled={photoBusy} onClick={removePhoto}>
+            Remove photo
+          </Button>
+        )}
+        <span className={styles.muted}>Shown beside your requests and in the play history.</span>
+        <FormError message={photoError} />
+      </div>
+      <PhotoCropper
+        file={cropping}
+        busy={photoBusy}
+        error={cropError}
+        onCancel={() => setCropping(null)}
+        onCrop={savePhoto}
+      />
 
       <div className={styles.columns}>
         <section className={styles.card} aria-labelledby="on-air">
@@ -165,8 +245,8 @@ function YourRequests() {
       <p className={styles.muted}>
         {queue.mine} of {queue.request_cap} requests in use.
       </p>
-      <ButtonLink to="/search" variant="secondary">
-        Find a song
+      <ButtonLink to="/queue" variant="secondary">
+        Request a song
       </ButtonLink>
     </div>
   );

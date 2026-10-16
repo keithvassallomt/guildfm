@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.accounts import create_user, find_user, reset_password, temporary_password
+from guildfm.api.account import forget_avatar
 from guildfm.api.schemas import NewUserIn, RoleIn, TemporaryPasswordOut, UserOut
 from guildfm.auth import require
 from guildfm.db import get_session
@@ -73,6 +74,7 @@ async def reset(user_id: int, admin: Admin, db: Db, request: Request) -> Tempora
 @router.delete("/{user_id}", status_code=204)
 async def delete(user_id: int, admin: Admin, db: Db, request: Request) -> None:
     user = await someone_else(user_id, admin, db)
+    forget_avatar(request, user)
     await db.delete(user)
     await db.commit()
     await request.app.state.live.sign_out_user(user_id)

@@ -9,9 +9,9 @@ import { Toggle } from "../components/Toggle";
 import { useLiveEvent } from "../live/LiveProvider";
 import { clock } from "../live/usePlayback";
 import { type SearchChanges, SongSearch } from "../search/SongSearch";
-import { describe, usePlaylistPlayer } from "./LibraryPage";
-import lib from "./LibraryPage.module.css";
+import lib from "./Library.module.css";
 import styles from "./Page.module.css";
+import { describe, usePlaylistPlayer } from "./PlaylistsPage";
 
 export function PlaylistPage() {
   const { id } = useParams();
@@ -53,7 +53,7 @@ export function PlaylistPage() {
     <div className={`${styles.page} ${styles.narrow}`}>
       <header className={styles.header}>
         <div className={styles.headerStart}>
-          <Link to="/library" aria-label="Back to Library" className={styles.iconLink}>
+          <Link to="/playlists" aria-label="Back to Playlists" className={styles.iconLink}>
             <Icon name="back" />
           </Link>
           <h1 className={styles.title}>{playlist?.name ?? "Playlist"}</h1>
@@ -181,7 +181,7 @@ export function PlaylistPage() {
                 onClick={async () => {
                   try {
                     await api("DELETE", `/playlists/${playlist.id}`);
-                    navigate("/library");
+                    navigate("/playlists");
                   } catch (caught) {
                     setError(errorText(caught));
                     setDialog(null);

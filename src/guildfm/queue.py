@@ -9,25 +9,28 @@ import asyncio
 import logging
 import time
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from guildfm.live import LiveHub
-from guildfm.models import EntryState, Play, Playlist, QueueEntry, Vote
+from guildfm.models import EntryState, Play, Playlist, QueueEntry, SourceState, Station, Vote
 from guildfm.playback import PlaybackController, Status
 from guildfm.playlists import (
     best_voted,
+    choose_requests_only,
     consider_for_best_voted,
     current_source,
     give_back,
     play_playlist,
-    stop_playlist,
+    play_station,
+    requests_only,
     take_next,
 )
 from guildfm.prefs import get_pref
+from guildfm.radio import Radio, ai_picks
 from guildfm.speakers import QueueItem, SpeakersRefused, SpeakersUnavailable, spotify_item
 from guildfm.speakers import spotify_track_id as track_id_in
 
@@ -35,6 +38,10 @@ log = logging.getLogger(__name__)
 
 LEAD_SECONDS = 30  # how long before a song ends the next request goes to the speakers
 ACTIVITY_KEPT = 30
+
+# What fills the gaps between requests: a playlist, a station, or nothing ("requests only").
+Choice = Playlist | Station | None
+LinedUp = Callable[[int, str], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -101,11 +108,13 @@ class QueueEngine:
         *,
         sid: int,
         sn: int,
+        radio: Radio | None = None,
         clock: Callable[[], float] = time.time,
     ) -> None:
         self._sessions = sessionmaker
         self._controller = controller
         self._hub = hub
+        self._radio = radio
         self._sid = sid
         self._sn = sn
         self._clock = clock
@@ -113,6 +122,9 @@ class QueueEngine:
         # interleave. The API takes it too.
         self.lock = asyncio.Lock()
         self.activity: deque[dict] = deque(maxlen=ACTIVITY_KEPT)
+        # Told the entry and its track key when the next song is handed to the speakers ahead
+        # of time, so the DJ can get a line ready.
+        self.on_lined_up: list[LinedUp] = []
 
         controller.on_track_change.append(self._track_changed)
         controller.on_poll.append(self.keep_fed)
@@ -135,6 +147,7 @@ class QueueEngine:
         playing, lined_up = self._controller.current_key, self._controller.upcoming_keys
         async with self._sessions() as db:
             await best_voted(db)
+            await ai_picks(db)
             entries = await db.scalars(
                 select(QueueEntry).where(QueueEntry.state != EntryState.WAITING)
             )
@@ -157,7 +170,7 @@ class QueueEngine:
         waiting, the playing playlist's next song. Placed requests move up a place."""
         entries, _ = await waiting(db)
         if not entries:
-            return await self._from_playlist(db)
+            return await self._from_source(db)
         head = entries[0]
         head.state = EntryState.NEXT
         head.pinned_position = None
@@ -167,26 +180,49 @@ class QueueEngine:
         await db.commit()
         return head
 
-    async def _from_playlist(self, db: AsyncSession) -> QueueEntry | None:
-        """The playing playlist's next song, as a locked-in queue entry with no requester."""
+    async def _from_source(self, db: AsyncSession) -> QueueEntry | None:
+        """The next song from the playlist or station filling the gaps, as a locked-in queue
+        entry with no requester. With nothing filling them, and "requests only" not chosen, the
+        queue has run out, and the settings say which station takes over."""
         source = await current_source(db)
         if source is None:
-            return None
-        playlist_id = source.playlist_id
+            if await requests_only(db):
+                return None
+            source = await self._run_out(db)
+        playlist_id, station_id = source.playlist_id, source.station_id
         queued = set(await db.scalars(select(QueueEntry.track_id)))
         restart = await get_pref(db, "queue_runs_out") == "restart_playlist"
         track_id = await take_next(db, queued, restart=restart)
+        if station_id and self._radio:
+            await self._radio.top_up()
         if track_id is None:
+            if playlist_id and await current_source(db) is None:
+                await self._run_out(db)  # the playlist played to the end
             return None
         entry = QueueEntry(
             track_id=track_id,
             playlist_id=playlist_id,
+            station_id=station_id,
             added_at=self._clock(),
             state=EntryState.NEXT,
         )
         db.add(entry)
         await db.commit()
         return await db.get(QueueEntry, entry.id)
+
+    async def _run_out(self, db: AsyncSession) -> SourceState:
+        """Nothing is left to fill the gaps: put the default station on, if that's the setting
+        and there is one, otherwise AI picks. It needs a moment to pick its first songs."""
+        station = None
+        if await get_pref(db, "queue_runs_out") == "default_station":
+            default = await get_pref(db, "default_station")
+            station = default and await db.get(Station, default)
+        station = station or await ai_picks(db)
+        source = await play_station(db, station)
+        self.note(f"The queue ran out, so {station.name} is on")
+        if self._radio:
+            await self._radio.top_up()
+        return source
 
     async def _unlock(self, entry_id: int) -> None:
         async with self._sessions() as db:
@@ -223,6 +259,8 @@ class QueueEngine:
                 await controller.play_now(item)
             else:
                 await controller.queue_next(item)
+                for callback in self.on_lined_up:
+                    await callback(entry_id, item.key)
         except SpeakersUnavailable, SpeakersRefused:
             log.warning("Couldn't hand the next request to the speakers", exc_info=True)
             await self._unlock(entry_id)
@@ -269,14 +307,20 @@ class QueueEngine:
                 entry.state = state
                 await db.commit()
 
-    async def switch(self, playlist: Playlist | None) -> bool:
-        """Make `playlist` fill the gaps between requests from the next song on, or nothing
-        ("requests only") for None. A playlist song already lined up on the speakers comes back
-        off them, so the switch still comes straight after the current song. False when that
-        was the source already."""
+    async def switch(self, choice: Choice) -> bool:
+        """Make a playlist or station fill the gaps between requests from the next song on, or
+        nothing ("requests only") for None. A song from the old source already lined up on the
+        speakers comes back off them, so the switch still comes straight after the current
+        song. False when that was the source already."""
         async with self._sessions() as db:
             source = await current_source(db)
-            if (source and source.playlist_id) == (playlist and playlist.id):
+            if choice is None:
+                same = await requests_only(db)
+            elif isinstance(choice, Playlist):
+                same = bool(source and source.playlist_id == choice.id)
+            else:
+                same = bool(source and source.station_id == choice.id)
+            if same:
                 return False
             lined_up = await in_state(db, EntryState.NEXT)
         stale = lined_up if lined_up and lined_up.requested_by is None else None
@@ -295,11 +339,15 @@ class QueueEngine:
                 if entry and entry.state == EntryState.NEXT:
                     await give_back(db, entry.track_id)
                     await db.delete(entry)
-            if playlist is None:
-                await stop_playlist(db)
+            if choice is None:
+                await choose_requests_only(db)
+            elif isinstance(choice, Playlist):
+                await play_playlist(db, await db.get(Playlist, choice.id))
             else:
-                await play_playlist(db, await db.get(Playlist, playlist.id))
+                await play_station(db, await db.get(Station, choice.id))
         await self.changed()
+        if self._radio:
+            await self._radio.top_up()
         # Lines up the new source's song in place of the one taken off, or starts it if the
         # music had run out.
         await self.keep_fed()
@@ -333,6 +381,7 @@ class QueueEngine:
                         track_id=entry.track_id,
                         requested_by=entry.requested_by,
                         playlist_id=entry.playlist_id,
+                        station_id=entry.station_id,
                         played_at=self._clock(),
                         upvotes=tally.up,
                         downvotes=tally.down,
@@ -354,6 +403,8 @@ class QueueEngine:
                         self.note(f"{entry.track.title} made it into Best Voted")
                 elif entry.playlist:
                     self.note(f"Now playing {entry.track.title} from {entry.playlist.name}")
+                elif entry.station:
+                    self.note(f"Now playing {entry.track.title} on {entry.station.name}")
             await db.commit()
         if finished or started:
             await self.changed()

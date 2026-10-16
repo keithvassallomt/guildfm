@@ -13,7 +13,6 @@ def test_settings_start_at_the_defaults(client: TestClient) -> None:
     assert body["values"]["request_cap"] == 5
     assert body["values"]["schedule"]["mon"] == {"on": True, "start": "08:00", "end": "18:00"}
     assert body["values"]["schedule"]["sat"]["on"] is False
-    assert "cedar" in body["voices"]
     assert "Europe/London" in body["timezones"]
 
 

@@ -3,12 +3,13 @@ import { api, errorText, type PlaybackState, type QueueEntry, type QueueState } 
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
 import { PlaybackBanner } from "../components/PlaybackBanner";
 import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
-import { ago, chipLabel, credit, statusTones } from "../live/status";
+import { ago, chipLabel, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
 import { type SearchChanges, SongSearch } from "../search/SongSearch";
@@ -193,7 +194,9 @@ function NowPlaying({ playback, receivedAt, entry }: NowProps) {
         <Progress track={track} receivedAt={receivedAt} />
       )}
       {queued && entry && (
-        <span className={q.requested}>{credit(entry)}</span>
+        <span className={q.requested}>
+          <Credit entry={entry} size={18} />
+        </span>
       )}
     </section>
   );
@@ -211,7 +214,7 @@ function UpNext({ entry }: { entry: QueueEntry }) {
         <div className={q.text}>
           <span className={q.title}>{entry.track.title}</span>
           <span className={q.meta}>
-            {entry.track.artists} · {credit(entry)}
+            {entry.track.artists} · <Credit entry={entry} />
           </span>
         </div>
         <span className={q.lockedNote}>Locked in, already sent to the speakers</span>

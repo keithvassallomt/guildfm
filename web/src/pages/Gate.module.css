@@ -25,6 +25,7 @@
 
 .logo {
   width: 180px;
+  margin-inline: auto;
 }
 
 .heading {

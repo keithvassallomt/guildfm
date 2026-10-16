@@ -1,4 +1,6 @@
+import base64
 import json
+import re
 from typing import NamedTuple
 from urllib.parse import parse_qsl
 
@@ -171,14 +173,57 @@ def mp3(seconds: float) -> bytes:
 
 
 class FakeOpenAI:
-    """OpenAI's text to speech, as a transport for httpx2."""
+    """OpenAI's text to speech and text models, as a transport for httpx2."""
 
     def __init__(self) -> None:
-        self.requests: list[dict] = []
+        self.requests: list[dict] = []  # text to speech
         self.status = 200
         self.seconds = 3.0  # how long each clip it makes lasts
+        self.asked: list[dict] = []  # the text model
+        self.picks: list[dict] = []  # songs it suggests for a station
+        self.line = {"mode": "between", "script": "That was lovely. Here's another."}
+        self.news = "Nothing notable in music news this week."
+        self.down = False  # the text model fails
+        self.images: list[dict] = []  # covers it's asked to paint
+        self.images_down = False  # the image model fails
+
+    def asked_for(self, name: str) -> list[dict]:
+        """Requests for answers in the named format, such as "picks" or "dj_line"."""
+        return [b for b in self.asked if b.get("text", {}).get("format", {}).get("name") == name]
+
+    def _answer(self, body: dict) -> httpx2.Response:
+        self.asked.append(body)
+        if self.down:
+            return httpx2.Response(500, json={"error": {"message": "nope"}})
+        name = body.get("text", {}).get("format", {}).get("name")
+        if name == "picks":
+            text = json.dumps({"songs": self.picks})
+        elif name == "dj_line":
+            text = json.dumps(self.line)
+        else:
+            text = self.news
+        output = [
+            {"type": "reasoning", "summary": []},
+            {"type": "message", "content": [{"type": "output_text", "text": text}]},
+        ]
+        return httpx2.Response(200, json={"status": "completed", "output": output})
+
+    def painted(self, number: int) -> bytes:
+        """The made-up WebP it sends for the `number`th cover, from 1."""
+        return b"RIFF\x00\x00\x00\x00WEBP" + f"cover {number}".encode()
+
+    def _image(self, body: dict) -> httpx2.Response:
+        self.images.append(body)
+        if self.images_down:
+            return httpx2.Response(500, json={"error": {"message": "nope"}})
+        picture = base64.b64encode(self.painted(len(self.images))).decode()
+        return httpx2.Response(200, json={"data": [{"b64_json": picture}]})
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        if request.url.path == "/v1/responses":
+            return self._answer(json.loads(request.content))
+        if request.url.path == "/v1/images/generations":
+            return self._image(json.loads(request.content))
         assert request.url.path == "/v1/audio/speech"
         self.requests.append(json.loads(request.content))
         if self.status != 200:
@@ -186,6 +231,62 @@ class FakeOpenAI:
         return httpx2.Response(
             200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
         )
+
+
+class FakeElevenLabs:
+    """ElevenLabs' voices and text to speech, as a transport for httpx2."""
+
+    def __init__(self) -> None:
+        self.voices = [
+            {"voice_id": "guildbert01", "name": "Guildbert", "category": "generated"},
+            {"voice_id": "aurora02", "name": "aurora", "category": "cloned"},
+        ]
+        self.requests: list[dict] = []  # text to speech: the voice, model and text
+        self.status = 200
+        self.detail: dict | None = None  # sent with an error status
+        self.seconds = 4.0
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        assert request.headers["xi-api-key"] == "eleven-test"
+        if request.url.path == "/v2/voices":
+            assert request.url.params["voice_type"] == "personal"
+            return httpx2.Response(200, json={"voices": self.voices, "has_more": False})
+        voice = request.url.path.removeprefix("/v1/text-to-speech/")
+        self.requests.append({"voice": voice, **json.loads(request.content)})
+        if self.status != 200:
+            return httpx2.Response(self.status, json={"detail": self.detail or {}})
+        return httpx2.Response(
+            200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
+        )
+
+
+class FakeWeather:
+    """Open-Meteo's place search and forecast, as a transport for httpx2."""
+
+    def __init__(self) -> None:
+        self.code = 61  # light rain
+        self.temperature = 9.4
+        self.asked = 0
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.asked += 1
+        if request.url.host == "geocoding-api.open-meteo.com":
+            places = [
+                {"name": "Carlisle", "admin1": "Pennsylvania", "country_code": "US",
+                 "latitude": 40.2, "longitude": -77.2},
+                {"name": "Carlisle", "admin1": "England", "admin2": "Cumbria",
+                 "country_code": "GB", "latitude": 54.9, "longitude": -2.9},
+            ]  # fmt: skip
+            return httpx2.Response(200, json={"results": places})
+        assert request.url.params["latitude"] == "54.9", "should be the Carlisle in Cumbria"
+        current = {
+            "temperature_2m": self.temperature,
+            "apparent_temperature": self.temperature - 2,
+            "weather_code": self.code,
+            "wind_speed_10m": 14.0,
+            "is_day": 1,
+        }
+        return httpx2.Response(200, json={"current": current})
 
 
 class FakeSpotify:
@@ -281,15 +382,15 @@ class FakeSpotify:
         return httpx2.Response(200, json=body)
 
     def _search(self, params) -> dict:
-        query = params["q"].lower()
-        artist = None
-        if query.startswith('artist:"'):
-            artist, _, query = query[len('artist:"') :].partition('"')
-        words = query.split()
+        # Field filters like artist:"Fleetwood Mac" and track:"Dreams", then loose words.
+        fields = dict(re.findall(r'(\w+):"([^"]*)"', params["q"].lower()))
+        words = re.sub(r'\w+:"[^"]*"', "", params["q"].lower()).split()
+        artist, title = fields.get("artist"), fields.get("track")
         matches = [
             t
             for t in self.tracks
             if (artist is None or t["artists"][0]["name"].lower() == artist)
+            and (title is None or t["name"].lower() == title)
             and all(w in f"{t['name']} {t['artists'][0]['name']}".lower() for w in words)
         ]
         offset, limit = int(params["offset"]), int(params["limit"])

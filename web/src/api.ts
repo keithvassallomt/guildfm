@@ -21,7 +21,12 @@ export type User = {
   role: Role;
   announce_requests: boolean;
   must_change_password: boolean;
+  /** Their photo, if they've added one. */
+  avatar_url: string | null;
 };
+
+/** Someone, as shown beside their requests. */
+export type Person = { id: number; display_name: string; avatar_url: string | null };
 
 export type Me = User & { permissions: Permission[] };
 
@@ -58,6 +63,10 @@ export type PlaybackState = {
   previous: "back" | "restart" | null;
   /** An announcement is playing. */
   announcing: boolean;
+  /** The station's DJ is talking. */
+  dj_talking: boolean;
+  /** A station is playing a jingle. */
+  jingle: boolean;
   group_volume: number | null;
   rooms: Room[];
   /** Whether playback hours are open now, and when that next changes. */
@@ -100,6 +109,18 @@ export async function apiAudio(path: string, body: unknown): Promise<Blob> {
     throw new ApiError(response.status, errorMessage(data));
   }
   return response.blob();
+}
+
+/** Sends a file, such as a photo, as the request body, and returns the JSON answer. */
+export async function apiUpload<T>(path: string, file: Blob, method: "PUT" | "POST" = "PUT"): Promise<T> {
+  const response = await fetch(`/api${path}`, {
+    method,
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new ApiError(response.status, errorMessage(data));
+  return data as T;
 }
 
 function errorMessage(data: unknown): string {
@@ -155,10 +176,12 @@ export type QueueEntry = {
   id: number;
   state: "waiting" | "next" | "playing";
   track: SearchTrack;
-  /** Null for songs from the playing playlist. */
-  requested_by: { id: number; display_name: string } | null;
+  /** Null for songs from the playlist or station. */
+  requested_by: Person | null;
   /** The playlist a song came from, if it did. */
   playlist: string | null;
+  /** The station a song came from, if it did. */
+  station: string | null;
   requested_at: string;
   up: number;
   down: number;
@@ -169,10 +192,16 @@ export type QueueEntry = {
   pinned: boolean;
   /** When it last played before this request, if recently. */
   played_at: string | null;
+  /** The album's name, for a song a curator or admin queued with the rest of its album. */
+  album: string | null;
 };
 
+/** A whole album queued by a curator or admin, and how many of its songs went in. */
+export type AlbumQueued = { queue: QueueState; added: number };
+
 export type QueueSource = {
-  playlist_id: number;
+  kind: "playlist" | "station";
+  id: number;
   name: string;
   upcoming: { track: SearchTrack; down: number; my_down: boolean }[];
   /** Thumbs down needed to skip one of the upcoming songs. */
@@ -183,7 +212,7 @@ export type QueueState = {
   playing: QueueEntry | null;
   next: QueueEntry | null;
   waiting: QueueEntry[];
-  /** The playlist filling the gaps between requests. */
+  /** The playlist or station filling the gaps between requests. */
   source: QueueSource | null;
   activity: { text: string; at: string }[];
   mine: number;
@@ -218,6 +247,8 @@ export type SettingsValues = {
   best_voted_min_upvotes: number;
   best_voted_size: number;
   queue_runs_out: "restart_playlist" | "default_station" | "ai_pick";
+  /** A station id, for queue_runs_out "default_station". */
+  default_station: number | null;
   schedule: Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", Hours>;
   timezone: string;
   weather_location: string;
@@ -226,9 +257,10 @@ export type SettingsValues = {
 
 export type SettingsState = {
   values: SettingsValues;
-  voices: string[];
   timezones: string[];
   hours: { open: boolean; next_change: string | null };
+  /** For the default station. AI picks is the fallback anyway, so it isn't listed. */
+  stations: { id: number; name: string }[];
 };
 
 export type Playlist = {
@@ -237,6 +269,8 @@ export type Playlist = {
   kind: "custom" | "imported" | "best_voted";
   shuffle: boolean;
   tracks: number;
+  /** Album art from its first few songs. */
+  covers: string[];
   made_by: string | null;
   playing: boolean;
 };
@@ -259,21 +293,42 @@ export type PlaylistTile = {
 
 export type SourceKind = "queue" | "library" | "radio";
 
+/** A station as a source on the Now Playing screen. */
+export type StationTile = {
+  id: number;
+  name: string;
+  kind: StationKind;
+  description: string;
+  /** Null without a DJ. */
+  dj_name: string | null;
+  global_awareness: boolean;
+  /** Its cover, once OpenAI has painted one. */
+  art_url: string | null;
+  last_played_at: string | null;
+  /** The station filling the gaps between requests. */
+  filling: boolean;
+  /** The current song came from it. */
+  on_air: boolean;
+};
+
 export type NowState = {
   /** Where the current song came from, if GuildFM put it on. */
   on_air: SourceKind | null;
-  /** Nothing fills the gaps between requests. */
+  /** Someone chose to have nothing fill the gaps between requests. */
   requests_only: boolean;
   /** Last played first. */
   playlists: PlaylistTile[];
+  /** Last played first. */
+  stations: StationTile[];
 };
 
 export type Play = {
   id: number;
   track: SearchTrack;
   played_at: string;
-  requested_by: { id: number; display_name: string } | null;
+  requested_by: Person | null;
   playlist: string | null;
+  station: string | null;
   upvotes: number;
   downvotes: number;
 };
@@ -333,4 +388,72 @@ export type AnnouncementsState = {
   recent: AnnouncementLog[];
   /** The announcement voice from settings. */
   voice: string;
+};
+
+export type StationKind = "custom" | "ai_picks";
+
+/** OpenAI's voices, as in prefs.py, for while the full list loads. Marin and Cedar sound the
+ * most natural. */
+export const VOICES = [
+  "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage",
+  "shimmer", "verse",
+] as const;
+
+export type StationFields = {
+  name: string;
+  description: string;
+  global_awareness: boolean;
+  dj: boolean;
+  dj_name: string;
+  personality: string;
+  voice: string;
+  talk_every: number;
+  talk_unit: "tracks" | "minutes";
+  style: "announce" | "commentary";
+  announce_requests: boolean;
+  /** Plays idents between songs. */
+  jingles: boolean;
+};
+
+export type Station = StationFields & {
+  id: number;
+  kind: StationKind;
+  /** Its cover, once OpenAI has painted one. */
+  art_url: string | null;
+  made_by: string | null;
+  /** The station filling the gaps between requests. */
+  playing: boolean;
+  last_played_at: string | null;
+};
+
+/** A song in a station's previewed hour, with what the DJ says before it or over its start. */
+export type HourSlot = {
+  track: SearchTrack;
+  /** Why the AI picked it. */
+  note: string;
+  starts_at: string;
+  line: { where: "over_intro" | "between"; script: string } | null;
+  /** Played in the pause before this song. */
+  jingle: Jingle | null;
+};
+
+export type Hour = { slots: HourSlot[]; minutes: number };
+
+/** A short ident played between songs: GuildFM's own (station), or one station's (show). */
+export type Jingle = {
+  id: number;
+  kind: "station" | "show";
+  station_id: number | null;
+  name: string;
+  seconds: number;
+  /** For the browser to play. */
+  url: string;
+};
+
+/** The voices GuildFM can speak in. An ElevenLabs voice's id starts "elevenlabs:". */
+export type Voices = {
+  openai: string[];
+  elevenlabs: { id: string; name: string }[];
+  /** Whether there's an ElevenLabs key in .env. */
+  elevenlabs_ready: boolean;
 };

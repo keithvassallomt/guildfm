@@ -1,5 +1,5 @@
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import {
   type AnnounceMode,
   type Announcement,
@@ -54,10 +54,10 @@ type Form = {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Starts as "now"; scheduling suggests the next hour today. */
-function blank(): Form {
+function blank(text = ""): Form {
   const next = new Date(Date.now() + 60 * 60 * 1000);
   return {
-    text: "",
+    text,
     rooms: [],
     now: true,
     mode: "after",
@@ -95,8 +95,11 @@ export function AnnouncementEditor() {
   const { id } = useParams();
   const editing = id !== undefined;
   const navigate = useNavigate();
+  const location = useLocation();
   const { state: playback } = usePlayback();
-  const [form, setForm] = useState<Form | null>(editing ? null : blank);
+  // Now Playing's quick announcement can send its words along.
+  const typed = (location.state as { text?: string } | null)?.text ?? "";
+  const [form, setForm] = useState<Form | null>(editing ? null : () => blank(typed));
   const [voice, setVoice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

@@ -135,6 +135,7 @@ Goal: everyone lands on a screen that shows what's playing and where it came fro
 - [x] On air is animated (equaliser, glow, needle), and holds still for people who turn motion off
 - [x] The Radio band shows an empty state until Stage 10
 - [x] Now Playing is the landing screen and the first tab; Queue stays its own tab; on phones Profile moves to an avatar in the header; quick controls are hidden on Now Playing
+- [x] UI tidy-up from backlog.md, after Stage 10: Search folded into the Queue's "Request a song"; Playlists and Radio as their own tabs; Admin's pages under it in the sidebar; playback controls, room volumes and a quick announcement on Now Playing only; photos for people; cover art in the playlists list
 
 Done when: an admin lands on Now Playing and picks another playlist, a waiting request still plays first, the needle moves to the new playlist when it takes over, and a curator can skip but can't change the volume.
 
@@ -152,14 +153,21 @@ Done when: a recurring announcement plays in two chosen rooms between songs, and
 
 ## Stage 10: AI radio
 Goal: curators create stations with an AI DJ that picks songs and talks between them.
-- [ ] Station model and the New AI station screen: name, description, global awareness, DJ name, personality, voice, how often, style, announce requests
-- [ ] Song picking: the AI suggests tracks from the description and recent plays, GuildFM finds them on Spotify, avoiding repeats
-- [ ] Global awareness: time of day, weather for the configured location (Open-Meteo), and music news through OpenAI web search
-- [ ] DJ scripts: track intros, commentary and request shout-outs (respecting each user's opt-out)
-- [ ] DJ voice: text to speech in the chosen voice, delivered in the DJ's personality, with previews
-- [ ] DJ timing: every N tracks or minutes, the AI choosing between over the intro and between songs, always after any announcement
-- [ ] Start or switch station (curators and admins), default station, and both AI options for when the queue runs out
-- [ ] Library screen, AI stations tab, wired up
+- [x] Station model and the New AI station screen: name, description, global awareness, DJ name, personality, voice, how often, style, announce requests
+- [x] Song picking: the AI suggests tracks from the description and recent plays, GuildFM finds them on Spotify, avoiding repeats
+- [x] Global awareness: time of day, weather for the configured location (Open-Meteo), and music news through OpenAI web search
+- [x] DJ scripts: track intros, commentary and request shout-outs (respecting each user's opt-out)
+- [x] DJ voice: text to speech in the chosen voice, delivered in the DJ's personality, with previews
+- [x] DJ timing: every N tracks or minutes, the AI choosing between over the intro and between songs, always after any announcement
+- [x] Start or switch station (curators and admins), default station, and both AI options for when the queue runs out. "Let the AI pick" is a built-in AI picks station that follows what's been playing, and "Requests only" chosen on Now Playing means nothing takes over (decided while building)
+- [x] Library screen, AI stations tab, wired up, and the Radio band on Now Playing
+- [x] The DJ can comment on requests, knowing how often a song, its artist and its requester have come up lately, and a station never plays a song a request played recently (added after building the stage)
+- [x] Preview an hour of a station from its editor, saved or not: the songs, and what the DJ says and where, with each line playable in the DJ's voice (added after building the stage)
+- [x] Cropping profile photos from backlog.md: choose the part to use in a round frame, with drag and zoom, before it's sent (react-easy-crop) (added after building the stage)
+- [x] Whole albums in the queue from backlog.md, for curators and admins: albums in their request search, queued in order as their requests without counting towards the cap, and one DJ shout-out per album (added after building the stage)
+- [x] Station covers from backlog.md: OpenAI paints each station a cover from its name and description, shown on Now Playing, the Radio page and the station editor (with "Paint another"); a new name or description gets a new one, and stations without one get theirs at startup. Now Playing's tiles stay the same width whatever their captions (added after building the stage)
+- [x] ElevenLabs voices from backlog.md: the account's own voices alongside OpenAI's, grouped apart in the station editor and settings, for the DJ and announcements. On an ElevenLabs voice the DJ can use tags such as [laughs]; tags are taken out for OpenAI's voices (added after building the stage)
+- [x] Jingles from backlog.md: GuildFM's station idents (Admin, Jingles) and each station's show idents (its editor), played in the pause between songs where the AI marks them, never twice in a row, each station with a switch, and shown in the hour preview (added after building the stage)
 
 Done when: a station with a DJ plays for an hour, announces a request by name, and mentions the Carlisle weather.
 

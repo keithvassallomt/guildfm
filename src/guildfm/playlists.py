@@ -1,8 +1,10 @@
-"""Playlists, the Best Voted playlist GuildFM keeps itself, and the playlist playing as the source.
+"""Playlists, the Best Voted playlist GuildFM keeps itself, and the source.
 
-The source fills the gaps between requests. Each time round it has its own order (shuffled, or
-as listed); songs thumbed down enough are skipped for that time round only. A playlist that's
-switched away from keeps its place, and carries on from there when it's put back on.
+The source fills the gaps between requests: a playlist or an AI station. A playlist has its own
+order each time round (shuffled, or as listed), and one that's switched away from keeps its
+place, carrying on from there when it's put back on. A station's order is the songs it has
+picked so far, topped up as they play (see radio.py). Either way, songs thumbed down enough are
+skipped, for that time round only.
 """
 
 import random
@@ -11,10 +13,20 @@ import time
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from guildfm.models import Playlist, PlaylistKind, PlaylistTrack, SourceState
+from guildfm.models import (
+    Play,
+    Playlist,
+    PlaylistKind,
+    PlaylistTrack,
+    SourceState,
+    Station,
+    Track,
+)
+from guildfm.prefs import get_pref
 
 BEST_VOTED = "Best Voted"
 UPCOMING = 3  # how many of the source's next songs the Queue screen shows
+COVERS = 4  # album covers shown on a playlist's tile
 
 
 async def best_voted(db: AsyncSession) -> Playlist:
@@ -36,6 +48,23 @@ async def tracks_of(db: AsyncSession, playlist_id: int) -> list[PlaylistTrack]:
         .order_by(PlaylistTrack.position)
     )
     return list(rows.unique().all())
+
+
+async def covers(db: AsyncSession, playlist_id: int, count: int = COVERS) -> list[str]:
+    """Album art from the playlist's first few songs, each album once, for its tile."""
+    rows = await db.scalars(
+        select(Track.art_url)
+        .join(PlaylistTrack, PlaylistTrack.track_id == Track.id)
+        .where(PlaylistTrack.playlist_id == playlist_id, Track.art_url.is_not(None))
+        .order_by(PlaylistTrack.position)
+    )
+    found: list[str] = []
+    for url in rows:
+        if url not in found:
+            found.append(url)
+            if len(found) == count:
+                break
+    return found
 
 
 async def add_track(db: AsyncSession, playlist: Playlist, track_id: str, upvotes: int = 0) -> bool:
@@ -103,7 +132,7 @@ def _order(track_ids: list[str], shuffle: bool) -> list[str]:
 async def _set_aside(db: AsyncSession) -> None:
     """Keep the playing playlist's place, so putting it back on carries on from there."""
     source = await current_source(db)
-    if source:
+    if source and source.playlist:
         source.playlist.resume = {
             "order": source.order,
             "cursor": source.cursor,
@@ -138,6 +167,7 @@ async def play_playlist(db: AsyncSession, playlist: Playlist) -> SourceState:
         SourceState(
             id=1,
             playlist_id=playlist.id,
+            station_id=None,
             order=order,
             cursor=cursor,
             skipped=skipped,
@@ -148,12 +178,31 @@ async def play_playlist(db: AsyncSession, playlist: Playlist) -> SourceState:
     return source
 
 
-async def stop_playlist(db: AsyncSession) -> None:
-    source = await current_source(db)
-    if source:
-        await _set_aside(db)
-        await db.delete(source)
-        await db.commit()
+def _empty(playlist_id: int | None = None, station_id: int | None = None) -> SourceState:
+    return SourceState(
+        id=1,
+        playlist_id=playlist_id,
+        station_id=station_id,
+        order=[],
+        cursor=0,
+        skipped=[],
+        downvotes={},
+    )
+
+
+async def play_station(db: AsyncSession, station: Station) -> SourceState:
+    """Make `station` the source. It has nothing picked yet; radio.py tops it up."""
+    await _set_aside(db)
+    source = await db.merge(_empty(station_id=station.id))
+    await db.commit()
+    return source
+
+
+async def choose_requests_only(db: AsyncSession) -> None:
+    """Nothing fills the gaps between requests, until someone picks a playlist or station."""
+    await _set_aside(db)
+    await db.merge(_empty())
+    await db.commit()
 
 
 async def give_back(db: AsyncSession, track_id: str) -> None:
@@ -164,18 +213,51 @@ async def give_back(db: AsyncSession, track_id: str) -> None:
 
 
 async def current_source(db: AsyncSession) -> SourceState | None:
-    return await db.get(SourceState, 1)
+    """The playlist or station filling the gaps between requests, if any."""
+    source = await db.get(SourceState, 1)
+    return source if source and (source.playlist_id or source.station_id) else None
+
+
+async def requests_only(db: AsyncSession) -> bool:
+    """Whether someone chose to have nothing fill the gaps between requests."""
+    source = await db.get(SourceState, 1)
+    return source is not None and not (source.playlist_id or source.station_id)
+
+
+async def _still_in(db: AsyncSession, source: SourceState) -> set[str] | None:
+    """The songs still in a playing playlist, as songs can be taken out of it while it plays.
+    None for a station, whose picks are all still in."""
+    if source.playlist_id is None:
+        return None
+    return {entry.track_id for entry in await tracks_of(db, source.playlist_id)}
+
+
+async def _played_lately(db: AsyncSession, source: SourceState) -> set[str]:
+    """For a station, songs played within the "recently played" time. A request can play a
+    song the station picked a while ago, and the station shouldn't play it again straight
+    after. A playlist keeps its own order, so it's empty for one."""
+    if source.station_id is None:
+        return set()
+    since = time.time() - await get_pref(db, "recently_played_hours") * 3600
+    return set(await db.scalars(select(Play.track_id).where(Play.played_at >= since)))
+
+
+def _playable(track_id: str, still_in: set[str] | None, played: set[str]) -> bool:
+    return (still_in is None or track_id in still_in) and track_id not in played
 
 
 async def upcoming(db: AsyncSession, queued: set[str], count: int = UPCOMING) -> list[str]:
-    """The source's next `count` songs, leaving out skipped ones and any already queued."""
+    """The source's next `count` songs, leaving out skipped ones, any already queued, and
+    for a station, any played lately."""
     source = await current_source(db)
     if source is None:
         return []
-    still_in = {entry.track_id for entry in await tracks_of(db, source.playlist_id)}
+    still_in = await _still_in(db, source)
+    played = await _played_lately(db, source)
     found = []
     for track_id in source.order[source.cursor :]:
-        if track_id in still_in and track_id not in source.skipped and track_id not in queued:
+        playable = _playable(track_id, still_in, played)
+        if playable and track_id not in source.skipped and track_id not in queued:
             found.append(track_id)
             if len(found) == count:
                 break
@@ -183,19 +265,25 @@ async def upcoming(db: AsyncSession, queued: set[str], count: int = UPCOMING) ->
 
 
 async def take_next(db: AsyncSession, queued: set[str], *, restart: bool) -> str | None:
-    """The source's next song, moving past it. At the end, start the playlist over if
-    `restart`, otherwise stop playing it. None when there's nothing to take."""
+    """The source's next song, moving past it. At the end of a playlist, start it over if
+    `restart`, otherwise stop playing it. A station that's run out of picks stays on, waiting
+    for more. None when there's nothing to take."""
     source = await current_source(db)
     if source is None:
         return None
+    played = await _played_lately(db, source)
     for attempt in range(2):
-        still_in = {entry.track_id for entry in await tracks_of(db, source.playlist_id)}
+        still_in = await _still_in(db, source)
         while source.cursor < len(source.order):
             track_id = source.order[source.cursor]
             source.cursor += 1
-            if track_id in still_in and track_id not in source.skipped and track_id not in queued:
+            playable = _playable(track_id, still_in, played)
+            if playable and track_id not in source.skipped and track_id not in queued:
                 await db.commit()
                 return track_id
+        if still_in is None:
+            await db.commit()
+            return None
         if attempt == 0 and restart and still_in:
             source.order = _order(
                 [entry.track_id for entry in await tracks_of(db, source.playlist_id)],

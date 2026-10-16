@@ -8,17 +8,21 @@ import {
   type PlaylistTile,
   type QueueEntry,
   type SourceKind,
+  type StationTile,
 } from "../api";
 import { useAuth } from "../auth/AuthProvider";
+import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
+import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
 import { PlaybackBanner } from "../components/PlaybackBanner";
 import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
 import { useWide } from "../components/useWide";
+import { RoomVolumes } from "../components/RoomVolumes";
 import { VolumeSlider } from "../components/VolumeSlider";
-import { chipLabel, credit, statusTones } from "../live/status";
+import { chipLabel, statusTones } from "../live/status";
 import { useHistory } from "../live/useHistory";
 import { useNow } from "../live/useNow";
 import { usePlayback } from "../live/usePlayback";
@@ -26,6 +30,7 @@ import { useQueue } from "../live/useQueue";
 import n from "./NowPlaying.module.css";
 import { Bands, OnAirBars, type Sources, SourceTabs } from "./NowSources";
 import styles from "./Page.module.css";
+import { QuickAnnouncement } from "./QuickAnnouncement";
 
 const FROM: Record<SourceKind, string> = {
   queue: "the queue",
@@ -45,6 +50,7 @@ export function NowPlayingPage() {
   const history = useHistory();
   const { show, toast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
   const playing = playback?.status === "playing";
 
   const send: Send = async (method, path, body) => {
@@ -75,6 +81,23 @@ export function NowPlayingPage() {
     }
   };
 
+  const pickStation = async (station: StationTile) => {
+    if (station.filling) {
+      show(`${station.name} is already on.`);
+      return;
+    }
+    try {
+      await api("POST", `/stations/${station.id}/play`);
+      show(
+        playing
+          ? `${station.name} takes over after this song. Requests still play first.`
+          : `${station.name} is picking its first songs. Requests still play first.`,
+      );
+    } catch (caught) {
+      show(errorText(caught));
+    }
+  };
+
   const requestsOnly = async () => {
     if (now?.requests_only) return;
     try {
@@ -91,6 +114,7 @@ export function NowPlayingPage() {
     playing,
     canSwitch: can("switch_source"),
     pick,
+    pickStation,
     requestsOnly,
   };
   const card = (
@@ -104,6 +128,7 @@ export function NowPlayingPage() {
       send={send}
       transport={can("transport")}
       office={can("control_playback")}
+      onAnnounce={can("announce") ? () => setAnnouncing(true) : null}
     />
   );
 
@@ -117,13 +142,13 @@ export function NowPlayingPage() {
           )}
           {!wide && me && (
             <Link to="/profile" aria-label="Profile" className={n.avatar}>
-              <span>{me.display_name.charAt(0).toUpperCase()}</span>
+              <Avatar name={me.display_name} url={me.avatar_url} size={32} />
             </Link>
           )}
         </div>
       </header>
 
-      <PlaybackBanner playback={playback} />
+      <PlaybackBanner playback={playback} canPlay={can("transport")} />
 
       {wide ? (
         <div className={n.split}>
@@ -138,6 +163,11 @@ export function NowPlayingPage() {
       )}
 
       <HistoryList {...history} />
+      <QuickAnnouncement
+        open={announcing}
+        onClose={() => setAnnouncing(false)}
+        onSent={show}
+      />
       {toast}
     </div>
   );
@@ -153,6 +183,7 @@ type NowCardProps = {
   send: Send;
   transport: boolean;
   office: boolean;
+  onAnnounce: (() => void) | null;
 };
 
 function NowCard({
@@ -165,6 +196,7 @@ function NowCard({
   send,
   transport,
   office,
+  onAnnounce,
 }: NowCardProps) {
   const track = playback?.track;
   // Spotify's details for GuildFM's own songs, the speakers' for anything else.
@@ -173,7 +205,11 @@ function NowCard({
   const live = playback?.status === "playing" && !!track?.ours;
   const label = playback?.announcing
     ? "Announcement playing"
-    : !track?.ours
+    : playback?.dj_talking
+      ? "The DJ is talking"
+      : playback?.jingle
+      ? "Jingle playing"
+      : !track?.ours
       ? "On the speakers"
     : playback?.status === "paused"
       ? "Paused"
@@ -198,7 +234,11 @@ function NowCard({
               </span>
               <span className={n.nowTitle}>{queued?.title ?? (track.title || "Untitled")}</span>
               <span className={n.nowArtist}>{queued?.artists ?? track.artist}</span>
-              {queued && entry && <span className={n.nowFrom}>{credit(entry)}</span>}
+              {queued && entry && (
+                <span className={n.nowFrom}>
+                  <Credit entry={entry} />
+                </span>
+              )}
             </div>
           </div>
           {track.duration > 0 && (
@@ -209,7 +249,9 @@ function NowCard({
         <p className={n.nothing}>Nothing playing right now.</p>
       )}
       {playback && transport && <Transport playback={playback} busy={busy} send={send} />}
-      {playback && office && <OfficeControls playback={playback} busy={busy} send={send} />}
+      {playback && office && (
+        <OfficeControls playback={playback} busy={busy} send={send} onAnnounce={onAnnounce} />
+      )}
     </section>
   );
 }
@@ -266,7 +308,12 @@ function Transport({ playback, busy, send }: ControlsProps) {
   );
 }
 
-function OfficeControls({ playback, busy, send }: ControlsProps) {
+type OfficeProps = ControlsProps & { onAnnounce: (() => void) | null };
+
+/** For admins: the volume, room by room if they like, Stop all, and a quick announcement. */
+function OfficeControls({ playback, busy, send, onAnnounce }: OfficeProps) {
+  const [rooms, setRooms] = useState(false);
+  const together = playback.rooms.filter((room) => room.in_group).length;
   return (
     <div className={n.office}>
       {playback.group_volume != null && (
@@ -277,15 +324,43 @@ function OfficeControls({ playback, busy, send }: ControlsProps) {
           onCommit={(volume) => send("PUT", "/volume", { volume })}
         />
       )}
-      <button
-        type="button"
-        disabled={busy || playback.status === "stopped" || playback.status === "offline"}
-        className={n.stop}
-        onClick={() => send("POST", "/stop")}
-      >
-        <Icon name="stop" size={16} />
-        Stop all
-      </button>
+      {playback.rooms.length > 0 && (
+        <button
+          type="button"
+          aria-expanded={rooms}
+          className={n.roomsToggle}
+          onClick={() => setRooms(!rooms)}
+        >
+          <Icon name="chevronDown" size={16} />
+          Rooms
+          <span className={n.roomsNote}>
+            {together} of {playback.rooms.length} playing together
+          </span>
+        </button>
+      )}
+      {rooms && (
+        <RoomVolumes
+          rooms={playback.rooms}
+          onVolume={(uid, volume) => send("PUT", `/rooms/${uid}/volume`, { volume })}
+        />
+      )}
+      <div className={n.officeButtons}>
+        {onAnnounce && (
+          <button type="button" className={n.stop} onClick={onAnnounce}>
+            <Icon name="announce" size={16} />
+            Announce
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={busy || playback.status === "stopped" || playback.status === "offline"}
+          className={n.stop}
+          onClick={() => send("POST", "/stop")}
+        >
+          <Icon name="stop" size={16} />
+          Stop all
+        </button>
+      </div>
     </div>
   );
 }
@@ -295,7 +370,7 @@ function source(play: Play): string {
     const votes = play.upvotes - play.downvotes;
     return `Requested by ${play.requested_by.display_name}${votes > 0 ? ` · +${votes}` : ""}`;
   }
-  return play.playlist ?? "Played";
+  return play.playlist ?? play.station ?? "Played";
 }
 
 function time(iso: string): string {
@@ -325,7 +400,15 @@ function HistoryList({ plays, more, showMore }: HistoryProps) {
             <span className={n.playedText}>
               <span className={n.playedTitle}>{play.track.title}</span>
               <span className={n.playedMeta}>
-                <Icon name={play.requested_by ? "queue" : "library"} size={12} />
+                {play.requested_by ? (
+                  <Avatar
+                    name={play.requested_by.display_name}
+                    url={play.requested_by.avatar_url}
+                    size={14}
+                  />
+                ) : (
+                  <Icon name={play.station ? "radio" : "library"} size={12} />
+                )}
                 <span>
                   {play.track.artists} · {source(play)}
                 </span>

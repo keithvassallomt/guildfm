@@ -26,12 +26,12 @@ export function usePreview() {
   useEffect(() => stop, [stop]);
 
   const play = useCallback(
-    async (text: string, voice?: string) => {
+    async (path: string, body: Record<string, unknown>) => {
       stop();
       const mine = latest.current;
       setStatus("loading");
       try {
-        const blob = await apiAudio("/announcements/preview", { text, voice });
+        const blob = await apiAudio(path, body);
         if (mine !== latest.current) return;
         url.current = URL.createObjectURL(blob);
         audio.current = new Audio(url.current);
@@ -51,13 +51,15 @@ export function usePreview() {
 
 type Props = {
   text: string;
-  /** The announcement voice from settings when left out. */
-  voice?: string;
   onError: (message: string | null) => void;
+  /** Which voice to hear: an announcement (the default) or a station's DJ. */
+  endpoint?: string;
+  /** More for the preview, such as the voice. The announcement voice when left out. */
+  extra?: Record<string, unknown>;
 };
 
 /** Plays `text` in the browser, or stops it. OpenAI takes a moment the first time. */
-export function PreviewButton({ text, voice, onError }: Props) {
+export function PreviewButton({ text, onError, endpoint = "/announcements/preview", extra }: Props) {
   const { status, play, stop } = usePreview();
   const words = text.trim();
 
@@ -67,7 +69,7 @@ export function PreviewButton({ text, voice, onError }: Props) {
       return;
     }
     onError(null);
-    play(words, voice).catch((error) => onError(errorText(error)));
+    play(endpoint, { ...extra, text: words }).catch((error) => onError(errorText(error)));
   };
 
   return (

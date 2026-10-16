@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from tests.fakes import spotify_id
 from tests.helpers import ADMIN, PASSWORD, register, sign_in
 
 
@@ -110,3 +111,49 @@ def test_password_reset_signs_the_user_out_everywhere(client: TestClient) -> Non
     client.cookies.update(old_cookies)
     assert client.get("/api/me").status_code == 401
     assert sign_in(client, "priya", reset["temporary_password"])["must_change_password"] is True
+
+
+# Photos
+
+JPEG = b"\xff\xd8\xff\xe0" + bytes(200)
+PNG = b"\x89PNG\r\n\x1a\n" + bytes(200)
+
+
+def put_photo(client: TestClient, data: bytes, kind: str = "image/jpeg"):
+    return client.put("/api/me/avatar", content=data, headers={"content-type": kind})
+
+
+def test_a_photo_beside_your_name(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    url = put_photo(client, JPEG).json()["avatar_url"]
+    assert url.startswith("/media/avatars/") and url.endswith(".jpg")
+    assert client.get(url).content == JPEG
+    assert client.get("/api/me").json()["avatar_url"] == url
+
+    # Shown with their requests.
+    client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
+    assert client.get("/api/queue").json()["waiting"][0]["requested_by"]["avatar_url"] == url
+
+    # A new photo replaces the old one, file and all.
+    newer = put_photo(client, PNG, "image/png").json()["avatar_url"]
+    assert newer.endswith(".png") and newer != url
+    assert client.get(url).status_code == 404
+
+    assert client.delete("/api/me/avatar").json()["avatar_url"] is None
+    assert client.get(newer).status_code == 404
+
+
+def test_only_pictures_and_not_huge_ones(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    assert put_photo(client, b"just some text", "text/plain").status_code == 415
+    assert put_photo(client, JPEG + bytes(2 * 1024 * 1024)).status_code == 413
+    assert client.get("/api/me").json()["avatar_url"] is None
+
+
+def test_deleting_someone_deletes_their_photo(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    url = put_photo(client, JPEG).json()["avatar_url"]
+    user = client.get("/api/me").json()
+    sign_in(client, *ADMIN)
+    client.delete(f"/api/users/{user['id']}").raise_for_status()
+    assert client.get(url).status_code == 404

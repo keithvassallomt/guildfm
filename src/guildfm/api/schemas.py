@@ -78,6 +78,7 @@ class UserOut(BaseModel):
     role: Role
     announce_requests: bool
     must_change_password: bool
+    avatar_url: str | None
 
 
 class MeOut(UserOut):
@@ -96,6 +97,20 @@ class MeOut(UserOut):
 class TemporaryPasswordOut(BaseModel):
     user: UserOut
     temporary_password: str
+
+
+class PersonOut(BaseModel):
+    """Someone, as shown beside their requests."""
+
+    id: int
+    display_name: str
+    avatar_url: str | None
+
+    @classmethod
+    def of(cls, user: User | None) -> PersonOut | None:
+        if user is None:
+            return None
+        return cls(id=user.id, display_name=user.display_name, avatar_url=user.avatar_url)
 
 
 class TrackOut(BaseModel):

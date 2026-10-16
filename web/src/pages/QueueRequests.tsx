@@ -17,8 +17,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { type ReactNode, useEffect, useState } from "react";
 import type { QueueEntry, QueueSource } from "../api";
+import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
-import { ago, credit } from "../live/status";
+import { ago } from "../live/status";
 import q from "./QueuePage.module.css";
 
 export type Act = (method: "POST" | "DELETE", path: string, body?: unknown, done?: string) => void;
@@ -160,7 +161,7 @@ function Request({ entry, rank, last, curator, trayOpen, onTray, onMove, act }: 
       </div>
       <div className={q.requestBottom}>
         <span className={q.meta}>
-          {credit(entry)}
+          <Credit entry={entry} />
           {entry.pinned && " · placed by a curator"}
         </span>
         {entry.played_at && (

@@ -1,5 +1,7 @@
 """Signing up, signing in and out, and the signed-in user's own profile."""
 
+import secrets
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -17,9 +19,35 @@ from guildfm.auth import (
     sign_out,
 )
 from guildfm.db import get_session
+from guildfm.models import AVATARS, User
 
 router = APIRouter()
 Db = Annotated[AsyncSession, Depends(get_session)]
+
+# The browser shrinks photos to a small square first, so this is generous.
+MAX_AVATAR = 1024 * 1024
+
+
+def _picture(data: bytes) -> str | None:
+    """The file extension for a JPEG, PNG or WebP picture, from its first bytes."""
+    if data.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    return None
+
+
+def avatars(request: Request) -> Path:
+    return request.app.state.settings.data_dir / "media" / AVATARS
+
+
+def forget_avatar(request: Request, user: User) -> None:
+    """Delete the user's photo file, if they have one."""
+    if user.avatar:
+        (avatars(request) / user.avatar).unlink(missing_ok=True)
+        user.avatar = None
 
 
 @router.post("/auth/register", status_code=201)
@@ -63,6 +91,35 @@ async def update_me(body: ProfileIn, user: ActiveUser, db: Db) -> MeOut:
     if body.announce_requests is not None:
         user.announce_requests = body.announce_requests
     await db.commit()
+    return MeOut.of(user)
+
+
+@router.put("/me/avatar")
+async def set_avatar(request: Request, user: ActiveUser, db: Db) -> MeOut:
+    """A photo for beside your name, sent as the request body."""
+    data = await request.body()
+    if len(data) > MAX_AVATAR:
+        raise HTTPException(413, "That picture is too big.")
+    kind = _picture(data)
+    if kind is None:
+        raise HTTPException(415, "That isn't a picture GuildFM can show. Try a JPEG or PNG.")
+    folder = avatars(request)
+    folder.mkdir(parents=True, exist_ok=True)
+    # A new name each time, so browsers don't show the old photo from their cache.
+    name = f"{secrets.token_urlsafe(12)}{kind}"
+    (folder / name).write_bytes(data)
+    forget_avatar(request, user)
+    user.avatar = name
+    await db.commit()
+    await request.app.state.queue.changed()
+    return MeOut.of(user)
+
+
+@router.delete("/me/avatar")
+async def remove_avatar(request: Request, user: ActiveUser, db: Db) -> MeOut:
+    forget_avatar(request, user)
+    await db.commit()
+    await request.app.state.queue.changed()
     return MeOut.of(user)
 
 

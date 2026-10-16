@@ -4,14 +4,12 @@ import { api, errorText, type Playlist, type PlaylistDetail } from "../api";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
 import { Icon } from "../components/Icon";
-import { SegmentedControl } from "../components/SegmentedControl";
 import { FormError, TextField } from "../components/TextField";
 import { useToast } from "../components/Toast";
 import { useLiveEvent } from "../live/LiveProvider";
-import lib from "./LibraryPage.module.css";
+import lib from "./Library.module.css";
+import { Covers } from "./NowSources";
 import styles from "./Page.module.css";
-
-type Tab = "playlists" | "stations";
 
 export function describe(playlist: Playlist): string {
   const songs = `${playlist.tracks} ${playlist.tracks === 1 ? "song" : "songs"}`;
@@ -49,8 +47,8 @@ export function usePlaylistPlayer(onDone: () => void) {
   return { play, takeOff, toast };
 }
 
-export function LibraryPage() {
-  const [tab, setTab] = useState<Tab>("playlists");
+/** The playlists: putting one on, and making or importing new ones. */
+export function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"new" | "import" | null>(null);
@@ -70,90 +68,69 @@ export function LibraryPage() {
   return (
     <div className={`${styles.page} ${styles.narrow}`}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Library</h1>
+        <h1 className={styles.title}>Playlists</h1>
       </header>
 
-      <SegmentedControl
-        label="Library"
-        options={[
-          { value: "playlists", label: "Playlists" },
-          { value: "stations", label: "AI stations" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-
-      {tab === "stations" && (
-        <div className={styles.empty}>
-          <h2 className={styles.emptyTitle}>AI stations</h2>
-          <p className={styles.emptyText}>
-            Stations with an AI DJ arrive in stage 10. Playlists work in the meantime.
-          </p>
+      {playing && (
+        <div className={lib.playing} role="status">
+          <Icon name="queue" size={18} />
+          <span className={lib.playingText}>
+            Playing from <strong>{playing.name}</strong>. Requests always play first.
+          </span>
+          <Button variant="secondary" onClick={takeOff}>
+            Take off
+          </Button>
         </div>
       )}
 
-      {tab === "playlists" && (
-        <>
-          {playing && (
-            <div className={lib.playing} role="status">
-              <Icon name="queue" size={18} />
-              <span className={lib.playingText}>
-                Playing from <strong>{playing.name}</strong>. Requests always play first.
-              </span>
-              <Button variant="secondary" onClick={takeOff}>
-                Take off
-              </Button>
-            </div>
-          )}
-
-          <FormError message={error} />
-          {playlists && (
-            <ul className={lib.list}>
-              {playlists.map((playlist) => (
-                <li key={playlist.id} className={lib.item}>
-                  <Link to={`/library/playlists/${playlist.id}`} className={lib.link}>
-                    <span
-                      aria-hidden="true"
-                      className={`${lib.tile} ${playlist.kind === "best_voted" ? lib.best : ""}`}
-                    >
-                      {playlist.kind === "best_voted" ? (
-                        <Icon name="thumbUp" size={22} filled />
-                      ) : (
-                        playlist.name.charAt(0).toUpperCase()
-                      )}
-                    </span>
-                    <span className={lib.text}>
-                      <span className={lib.name}>{playlist.name}</span>
-                      <span className={lib.meta}>{describe(playlist)}</span>
-                    </span>
-                  </Link>
-                  {playlist.playing ? (
-                    <span className={lib.onAir}>On air</span>
+      <FormError message={error} />
+      {playlists && (
+        <ul className={lib.list}>
+          {playlists.map((playlist) => (
+            <li key={playlist.id} className={lib.item}>
+              <Link to={`/playlists/${playlist.id}`} className={lib.link}>
+                <span
+                  aria-hidden="true"
+                  className={`${lib.tile} ${playlist.kind === "best_voted" ? lib.best : ""}`}
+                >
+                  {playlist.covers.length > 0 ? (
+                    <Covers urls={playlist.covers} />
+                  ) : playlist.kind === "best_voted" ? (
+                    <Icon name="thumbUp" size={22} filled />
                   ) : (
-                    <button
-                      type="button"
-                      aria-label={`Play ${playlist.name}`}
-                      disabled={playlist.tracks === 0}
-                      className={lib.play}
-                      onClick={() => play(playlist)}
-                    >
-                      <Icon name="play" size={18} />
-                    </button>
+                    playlist.name.charAt(0).toUpperCase()
                   )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className={lib.actions}>
-            <Button variant="secondary" onClick={() => setDialog("new")}>
-              <Icon name="plus" size={16} strokeWidth={2.6} />
-              New playlist
-            </Button>
-            <Button onClick={() => setDialog("import")}>Import from Spotify</Button>
-          </div>
-        </>
+                </span>
+                <span className={lib.text}>
+                  <span className={lib.name}>{playlist.name}</span>
+                  <span className={lib.meta}>{describe(playlist)}</span>
+                </span>
+              </Link>
+              {playlist.playing ? (
+                <span className={lib.onAir}>On air</span>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Play ${playlist.name}`}
+                  disabled={playlist.tracks === 0}
+                  className={lib.play}
+                  onClick={() => play(playlist)}
+                >
+                  <Icon name="play" size={18} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
+
+      <div className={lib.actions}>
+        <Button variant="secondary" onClick={() => setDialog("new")}>
+          <Icon name="plus" size={16} strokeWidth={2.6} />
+          New playlist
+        </Button>
+        <Button onClick={() => setDialog("import")}>Import from Spotify</Button>
+      </div>
 
       <NewPlaylist open={dialog === "new"} onClose={() => setDialog(null)} />
       <ImportPlaylist open={dialog === "import"} onClose={() => setDialog(null)} />
@@ -174,7 +151,7 @@ function NewPlaylist({ open, onClose }: { open: boolean; onClose: () => void }) 
     setError(null);
     try {
       const made = await api<PlaylistDetail>("POST", "/playlists", { name });
-      navigate(`/library/playlists/${made.id}`);
+      navigate(`/playlists/${made.id}`);
     } catch (caught) {
       setError(errorText(caught));
       setBusy(false);
@@ -211,7 +188,7 @@ function ImportPlaylist({ open, onClose }: { open: boolean; onClose: () => void 
     setError(null);
     try {
       const imported = await api<PlaylistDetail>("POST", "/playlists/import", { link });
-      navigate(`/library/playlists/${imported.id}`);
+      navigate(`/playlists/${imported.id}`);
     } catch (caught) {
       setError(errorText(caught));
       setBusy(false);

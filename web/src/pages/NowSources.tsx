@@ -1,7 +1,16 @@
 import { type ReactNode, useState } from "react";
 import { Link } from "react-router";
-import type { NowState, PlaylistTile, QueueEntry, QueueState, SourceKind } from "../api";
+import type {
+  NowState,
+  PlaylistTile,
+  QueueEntry,
+  QueueState,
+  SourceKind,
+  StationTile,
+} from "../api";
+import { Avatar } from "../components/Avatar";
 import { Icon } from "../components/Icon";
+import { StationCover } from "../components/StationCover";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { ago } from "../live/status";
 import n from "./NowPlaying.module.css";
@@ -14,10 +23,11 @@ export type Sources = {
   playing: boolean;
   canSwitch: boolean;
   pick: (playlist: PlaylistTile) => void;
+  pickStation: (station: StationTile) => void;
   requestsOnly: () => void;
 };
 
-const NAMES: Record<SourceKind, string> = { queue: "Queue", library: "Library", radio: "Radio" };
+const NAMES: Record<SourceKind, string> = { queue: "Queue", library: "Playlists", radio: "Radio" };
 
 /** Three bouncing bars: this is what's on air. */
 export function OnAirBars({ dark = false }: { dark?: boolean }) {
@@ -42,8 +52,8 @@ function Cover({ url }: { url: string | null }) {
   );
 }
 
-/** A playlist's art: four covers from its songs, or one, or a placeholder. */
-function Covers({ urls }: { urls: string[] }) {
+/** A playlist's art: four covers from its songs, or one, or a placeholder. Fills its box. */
+export function Covers({ urls }: { urls: string[] }) {
   if (urls.length >= 4) {
     return (
       <span aria-hidden="true" className={n.mosaic}>
@@ -65,9 +75,20 @@ function score(value: number): string {
   return `${value > 0 ? "+" : ""}${value}`;
 }
 
-function lastPlayed(playlist: PlaylistTile): string {
-  if (playlist.on_air) return "Playing now";
-  return playlist.last_played_at ? `Played ${ago(playlist.last_played_at)}` : "Not played yet";
+function lastPlayed(source: PlaylistTile | StationTile): string {
+  if (source.on_air) return "Playing now";
+  return source.last_played_at ? `Played ${ago(source.last_played_at)}` : "Not played yet";
+}
+
+/** A station's art: its cover, or the radio, lit up when it's on air. */
+function StationArt({ url }: { url: string | null }) {
+  return <StationCover url={url} className={`${n.cover} ${n.stationArt}`} />;
+}
+
+/** "DJ Della · Played 2h ago", or what AI picks does. */
+function stationCaption(station: StationTile): string {
+  const who = station.kind === "ai_picks" ? "Follows what's playing" : station.dj_name ? `DJ ${station.dj_name}` : "No DJ";
+  return `${who} · ${lastPlayed(station)}`;
 }
 
 /** The queue's side: the request playing, the one locked in next, then the vote. */
@@ -86,7 +107,7 @@ function fillerLabel(sources: Sources): string {
   return sources.playing ? "After this song" : "Up next";
 }
 
-function PlaylistBadge({ playlist, sources }: { playlist: PlaylistTile; sources: Sources }) {
+function PlaylistBadge({ playlist, sources }: { playlist: PlaylistTile | StationTile; sources: Sources }) {
   if (playlist.on_air) {
     return (
       <span className={n.onAirText}>
@@ -153,6 +174,13 @@ function Band({ id, label, note, onAir, link, children }: BandProps) {
   );
 }
 
+function Requester({ entry }: { entry: QueueEntry }) {
+  const person = entry.requested_by;
+  return person ? (
+    <Avatar name={person.display_name} url={person.avatar_url} size={14} inline />
+  ) : null;
+}
+
 function RequestTile({ entry, caption, onAir }: { entry: QueueEntry; caption: ReactNode; onAir?: boolean }) {
   return (
     <div className={`${n.tile} ${onAir ? `${n.on} ${n.glow}` : ""}`}>
@@ -168,7 +196,7 @@ function RequestTile({ entry, caption, onAir }: { entry: QueueEntry; caption: Re
 }
 
 export function Bands(sources: Sources) {
-  const { now, canSwitch, pick, requestsOnly } = sources;
+  const { now, canSwitch, pick, pickStation, requestsOnly } = sources;
   const { playing, next, waiting, count } = queueParts(sources);
   const playlists = now?.playlists ?? [];
 
@@ -177,7 +205,7 @@ export function Bands(sources: Sources) {
       <p className={n.hint}>
         Requests always play first.{" "}
         {canSwitch
-          ? "Pick a playlist to fill the gaps between them: it takes over after this song."
+          ? "Pick a playlist or station to fill the gaps between them: it takes over after this song."
           : "Curators and admins choose what fills the gaps between them."}
       </p>
 
@@ -197,13 +225,23 @@ export function Bands(sources: Sources) {
           <RequestTile
             entry={playing}
             onAir
-            caption={<span className={n.tileCaption}>Playing · {playing.requested_by?.display_name}</span>}
+            caption={
+              <span className={n.tileCaption}>
+                Playing · <Requester entry={playing} />
+                {playing.requested_by?.display_name}
+              </span>
+            }
           />
         )}
         {next && (
           <RequestTile
             entry={next}
-            caption={<span className={n.tileCaption}>Up next · {next.requested_by?.display_name}</span>}
+            caption={
+              <span className={n.tileCaption}>
+                Up next · <Requester entry={next} />
+                {next.requested_by?.display_name}
+              </span>
+            }
           />
         )}
         {waiting.map((entry, index) => (
@@ -213,7 +251,8 @@ export function Bands(sources: Sources) {
             caption={
               <>
                 <span className={n.tileCaption}>
-                  #{index + 1} · {entry.requested_by?.display_name}
+                  #{index + 1} · <Requester entry={entry} />
+                  {entry.requested_by?.display_name}
                 </span>
                 <span className={n.score}>{score(entry.score)}</span>
               </>
@@ -239,12 +278,12 @@ export function Bands(sources: Sources) {
 
       <Band
         id="band-library"
-        label="Library"
+        label="Playlists"
         note="Playlists · last played first"
         onAir={now?.on_air === "library"}
         link={
           canSwitch && (
-            <Link to="/library" className={n.bandLink}>
+            <Link to="/playlists" className={n.bandLink}>
               All playlists
               <Icon name="chevronRight" size={14} />
             </Link>
@@ -271,8 +310,37 @@ export function Bands(sources: Sources) {
         {now && playlists.length === 0 && <p className={n.emptyTile}>No playlists yet.</p>}
       </Band>
 
-      <Band id="band-radio" label="Radio" note="AI stations · last played first" onAir={false}>
-        <p className={n.emptyTile}>AI stations, each with its own DJ, arrive in stage 10.</p>
+      <Band
+        id="band-radio"
+        label="Radio"
+        note="AI stations · last played first"
+        onAir={now?.on_air === "radio"}
+        link={
+          canSwitch && (
+            <Link to="/radio" className={n.bandLink}>
+              All stations
+              <Icon name="chevronRight" size={14} />
+            </Link>
+          )
+        }
+      >
+        {(now?.stations ?? []).map((station) => (
+          <Pickable
+            key={station.id}
+            className={`${n.tile} ${station.on_air ? `${n.on} ${n.glow}` : ""}`}
+            onPick={canSwitch ? () => pickStation(station) : undefined}
+          >
+            <StationArt url={station.art_url} />
+            <span className={n.tileText}>
+              <span className={n.tileName}>{station.name}</span>
+              <span className={n.tileCaption}>{stationCaption(station)}</span>
+            </span>
+            <span className={n.tileFoot}>
+              <PlaylistBadge playlist={station} sources={sources} />
+            </span>
+            {station.on_air && <Needle />}
+          </Pickable>
+        ))}
       </Band>
     </div>
   );
@@ -287,7 +355,8 @@ function RequestRow({ entry, caption, onAir }: { entry: QueueEntry; caption: Rea
       <span className={n.rowText}>
         <span className={n.rowName}>{entry.track.title}</span>
         <span className={n.rowCaption}>
-          {entry.track.artists} · {caption}
+          {entry.track.artists} · <Requester entry={entry} />
+          {caption}
         </span>
       </span>
       {onAir && <OnAirBars />}
@@ -297,7 +366,7 @@ function RequestRow({ entry, caption, onAir }: { entry: QueueEntry; caption: Rea
 }
 
 export function SourceTabs(sources: Sources) {
-  const { now, canSwitch, pick, requestsOnly } = sources;
+  const { now, canSwitch, pick, pickStation, requestsOnly } = sources;
   const { playing, next, waiting, count } = queueParts(sources);
   const onAir = now?.on_air ?? null;
   // Until someone picks a tab, show whichever source is on air.
@@ -314,7 +383,7 @@ export function SourceTabs(sources: Sources) {
         <p className={n.hint}>
           Requests always play first.{" "}
           {canSwitch
-            ? "Pick a playlist to fill the gaps after this song."
+            ? "Pick a playlist or station to fill the gaps after this song."
             : "Curators and admins choose what fills the gaps."}
         </p>
       </div>
@@ -396,7 +465,26 @@ export function SourceTabs(sources: Sources) {
       )}
 
       {tab === "radio" && (
-        <p className={n.emptyRow}>AI stations, each with its own DJ, arrive in stage 10.</p>
+        <>
+          <span className={n.bandNote}>AI stations · last played first</span>
+          <ul className={n.list}>
+            {(now?.stations ?? []).map((station) => (
+              <li key={station.id}>
+                <Pickable
+                  className={`${n.row} ${station.on_air ? `${n.on} ${n.glow}` : ""}`}
+                  onPick={canSwitch ? () => pickStation(station) : undefined}
+                >
+                  <StationArt url={station.art_url} />
+                  <span className={n.rowText}>
+                    <span className={n.rowName}>{station.name}</span>
+                    <span className={n.rowCaption}>{stationCaption(station)}</span>
+                  </span>
+                  <PlaylistBadge playlist={station} sources={sources} />
+                </Pickable>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

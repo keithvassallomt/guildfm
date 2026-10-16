@@ -305,6 +305,49 @@
   opacity: 0.4;
 }
 
+.officeButtons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.roomsToggle {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roomsToggle svg {
+  color: var(--muted);
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.roomsToggle[aria-expanded="true"] svg {
+  transform: none;
+}
+
+.roomsNote {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roomsToggle svg {
+    transition: none;
+  }
+}
+
 /* Wide screens: the deck beside the bands */
 
 .split {
@@ -409,6 +452,8 @@
 .tile {
   position: relative;
   flex: 0 0 168px;
+  /* Otherwise a long caption widens the tile, and its art with it. */
+  min-width: 0;
   padding: 10px;
   border-radius: 18px;
   border: 1px solid var(--line);
@@ -782,4 +827,15 @@
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 10px;
   }
+}
+
+/* A station's tile art: the radio, in the accent colour once it's on air. */
+.stationArt {
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+
+.on .stationArt {
+  background: var(--accent-soft);
+  color: var(--accent);
 }

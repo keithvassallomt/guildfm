@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "./Button";
 import { PreviewButton } from "./PreviewButton";
 import { FormError, TextField } from "./TextField";
+import { isEleven } from "./useVoices";
 import styles from "./VoicePreview.module.css";
 
 const PHRASES = [
@@ -25,14 +26,18 @@ export function VoicePreview({ voice }: { voice: string }) {
         label="Hear it say"
         value={phrase}
         maxLength={600}
-        hint="Type your own words, or try another of ours. Previews play here, not in the office."
+        hint={
+          isEleven(voice)
+            ? "Type your own words, with tags like [laughs] if you like, or try another of ours. Previews play here, not in the office."
+            : "Type your own words, or try another of ours. Previews play here, not in the office."
+        }
         onChange={(event) => setPhrase(event.target.value)}
       />
       <div className={styles.actions}>
         <Button variant="ghost" onClick={another}>
           Another phrase
         </Button>
-        <PreviewButton text={phrase} voice={voice} onError={setError} />
+        <PreviewButton text={phrase} extra={{ voice }} onError={setError} />
       </div>
       <FormError message={error} />
     </div>

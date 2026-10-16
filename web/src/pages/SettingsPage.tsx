@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { Link } from "react-router";
-import { api, errorText, type Hours, type SettingsState, type SettingsValues } from "../api";
+import { api, errorText, type Hours, type SettingsState, type SettingsValues, VOICES } from "../api";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { Icon } from "../components/Icon";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -8,6 +8,7 @@ import { SpotifyConnection } from "../components/SpotifyConnection";
 import { Stepper } from "../components/Stepper";
 import { FormError, TextField } from "../components/TextField";
 import { Toggle } from "../components/Toggle";
+import { isEleven, useVoices, voiceName } from "../components/useVoices";
 import { VoicePreview } from "../components/VoicePreview";
 import { opensAgain } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
@@ -42,12 +43,12 @@ const RUNS_OUT = [
   {
     value: "default_station" as const,
     label: "Play the default AI station",
-    hint: "Switches to the station chosen as the default.",
+    hint: "Switches to the station chosen below. With none chosen, AI picks.",
   },
   {
     value: "ai_pick" as const,
     label: "Let the AI pick the next song",
-    hint: "Something that fits what has been playing.",
+    hint: "The AI picks station: songs that follow on from what has been playing.",
   },
 ];
 
@@ -81,6 +82,8 @@ export function SettingsPage() {
   };
 
   const values = settings?.values;
+  const voices = useVoices();
+  const elevenlabs = voices?.elevenlabs ?? [];
 
   return (
     <div className={styles.page}>
@@ -172,9 +175,26 @@ export function SettingsPage() {
                 value={values.queue_runs_out}
                 onChange={(queue_runs_out) => save({ queue_runs_out })}
               />
+              {values.queue_runs_out === "default_station" && (
+                <label className={s.field}>
+                  <span className={s.fieldLabel}>Default AI station</span>
+                  <select
+                    value={values.default_station ?? 0}
+                    onChange={(event) => save({ default_station: Number(event.target.value) })}
+                    className={s.select}
+                  >
+                    <option value={0}>None: AI picks instead</option>
+                    {settings.stations.map((station) => (
+                      <option key={station.id} value={station.id}>
+                        {station.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <p className={styles.muted}>
-                AI radio arrives in stage 10. Until then, both AI choices stop the music once the
-                queue and any playlist run out.
+                This is for when a playlist plays to the end, or nothing was chosen. Choosing
+                Requests only on Now Playing means nothing takes over.
               </p>
             </Section>
           </div>
@@ -226,13 +246,38 @@ export function SettingsPage() {
                   onChange={(event) => save({ announcement_voice: event.target.value })}
                   className={s.select}
                 >
-                  {settings.voices.map((voice) => (
-                    <option key={voice} value={voice}>
-                      {capitalise(voice)}
-                    </option>
-                  ))}
+                  <optgroup label="OpenAI">
+                    {(voices?.openai ?? VOICES).map((voice) => (
+                      <option key={voice} value={voice}>
+                        {capitalise(voice)}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {(elevenlabs.length > 0 || isEleven(values.announcement_voice)) && (
+                    <optgroup label="ElevenLabs">
+                      {elevenlabs.map((voice) => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </option>
+                      ))}
+                      {/* Still loading, or gone from the account. */}
+                      {isEleven(values.announcement_voice) &&
+                        !elevenlabs.some((voice) => voice.id === values.announcement_voice) && (
+                          <option value={values.announcement_voice}>
+                            {voiceName(values.announcement_voice, voices)}
+                          </option>
+                        )}
+                    </optgroup>
+                  )}
                 </select>
-                <span className={styles.muted}>Marin and Cedar sound the most natural.</span>
+                <span className={styles.muted}>
+                  {isEleven(values.announcement_voice)
+                    ? "An ElevenLabs voice. Announcements can act it out with tags like [excited] or [whispers]."
+                    : "Marin and Cedar sound the most natural."}
+                  {voices && !voices.elevenlabs_ready
+                    ? " Add ELEVENLABS_API_KEY to .env to use your ElevenLabs voices too."
+                    : ""}
+                </span>
               </label>
               <VoicePreview voice={values.announcement_voice} />
             </Section>

@@ -4,6 +4,7 @@ from guildfm.api import (
     account,
     announcements,
     health,
+    jingles,
     now,
     playback,
     playlists,
@@ -11,7 +12,9 @@ from guildfm.api import (
     search,
     settings,
     spotify,
+    stations,
     users,
+    voices,
 )
 
 router = APIRouter()
@@ -26,3 +29,6 @@ router.include_router(settings.router)
 router.include_router(playlists.router)
 router.include_router(now.router)
 router.include_router(announcements.router)
+router.include_router(stations.router)
+router.include_router(jingles.router)
+router.include_router(voices.router)
