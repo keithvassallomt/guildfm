@@ -13,7 +13,7 @@ function nameOf(file: File): string {
 }
 
 type Props = {
-  /** A station's show idents, or GuildFM's station idents for null. */
+  /** A station's own idents, or the system idents for null. */
   stationId: number | null;
   /** Shown when there are none yet. */
   empty: string;
@@ -128,7 +128,9 @@ export function JingleList({ stationId, empty }: Props) {
           <Icon name="plus" size={16} />
           {adding ? "Adding..." : "Add MP3s"}
         </Button>
-        <span className={styles.hint}>Up to a minute each. They play here, not on the speakers.</span>
+        <span className={styles.hint}>
+          Up to a minute each. Previews play on this device, not the speakers.
+        </span>
       </div>
       <FormError message={error} />
     </div>

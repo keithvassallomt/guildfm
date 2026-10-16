@@ -156,8 +156,23 @@ class DJStyle(StrEnum):
 
 
 class JingleKind(StrEnum):
-    STATION = "station"  # GuildFM's own, for any AI station
-    SHOW = "show"  # one station's own
+    SYSTEM = "system"  # GuildFM's own, for any AI station
+    STATION = "station"  # one station's own
+
+
+class DJProfile(Base):
+    """A DJ, who can host any number of AI stations: who they are and how they sound. How often
+    they talk on a station, and about what, is up to the station. Kept when no station has them,
+    so they can host another."""
+
+    __tablename__ = "djs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(40))
+    personality: Mapped[str] = mapped_column(String(600), default="")
+    # An OpenAI voice ("marin"), or an ElevenLabs one ("elevenlabs:" and its id).
+    voice: Mapped[str] = mapped_column(String(64), default="marin")
+    created_at: Mapped[float]
 
 
 class Station(Base):
@@ -174,11 +189,10 @@ class Station(Base):
     )
     description: Mapped[str] = mapped_column(String(600))
     global_awareness: Mapped[bool] = mapped_column(default=False)
-    dj: Mapped[bool] = mapped_column(default=False)
-    dj_name: Mapped[str] = mapped_column(String(40), default="")
-    personality: Mapped[str] = mapped_column(String(600), default="")
-    # An OpenAI voice ("marin"), or an ElevenLabs one ("elevenlabs:" and its id).
-    voice: Mapped[str] = mapped_column(String(64), default="marin")
+    # The DJ hosting it, if any. A DJ can host several stations.
+    dj_id: Mapped[int | None] = mapped_column(
+        ForeignKey("djs.id", ondelete="SET NULL"), default=None
+    )
     talk_every: Mapped[int] = mapped_column(default=3)
     talk_unit: Mapped[TalkUnit] = mapped_column(
         Enum(TalkUnit, native_enum=False, length=16, values_callable=enum_values),
@@ -198,8 +212,28 @@ class Station(Base):
     picked: Mapped[list[str]] = mapped_column(JSON, default=list)
     # Its cover's file name in the media folder's covers, once OpenAI has painted one.
     art: Mapped[str | None] = mapped_column(String(64), default=None)
+    # The name and description the cover was painted from, as covers.painted_from has them.
+    art_for: Mapped[str | None] = mapped_column(String(32), default=None)
 
     creator: Mapped[User | None] = relationship(lazy="joined")
+    host: Mapped[DJProfile | None] = relationship(lazy="joined")
+
+    # The DJ's details, as the DJ, the hour preview and the editor's form all see them.
+    @property
+    def dj(self) -> bool:
+        return self.host is not None
+
+    @property
+    def dj_name(self) -> str:
+        return self.host.name if self.host else ""
+
+    @property
+    def personality(self) -> str:
+        return self.host.personality if self.host else ""
+
+    @property
+    def voice(self) -> str:
+        return self.host.voice if self.host else "marin"
 
     @property
     def art_url(self) -> str | None:
@@ -207,8 +241,8 @@ class Station(Base):
 
 
 class Jingle(Base):
-    """A short ident played between songs on AI stations: GuildFM's own, or one station's.
-    Deleting the station deletes its jingles."""
+    """A short ident played between songs on AI stations: a system ident, GuildFM's own, or a
+    station ident, one station's. Deleting the station deletes its jingles."""
 
     __tablename__ = "jingles"
 
@@ -216,7 +250,7 @@ class Jingle(Base):
     kind: Mapped[JingleKind] = mapped_column(
         Enum(JingleKind, native_enum=False, length=16, values_callable=enum_values)
     )
-    # The station a show ident belongs to; None for a station ident.
+    # The station a station ident belongs to; None for a system ident.
     station_id: Mapped[int | None] = mapped_column(
         ForeignKey("stations.id", ondelete="CASCADE"), default=None
     )

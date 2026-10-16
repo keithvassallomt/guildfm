@@ -11,6 +11,7 @@ still playing its queue and carry on driving them.
 import asyncio
 import json
 import logging
+import threading
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
@@ -427,8 +428,13 @@ class PlaybackController:
         rooms = [r for r in self._rooms if not r.on_tv and (uids is None or r.uid in uids)]
         if not rooms:
             raise SpeakersUnavailable("None of its rooms can play it: they're off or on the TV.")
+        # The rooms connect, then start together, so they're in step.
+        start = threading.Barrier(len(rooms))
         results = await asyncio.gather(
-            *(asyncio.to_thread(self._speakers.play_clip, r.uid, url, r.volume) for r in rooms),
+            *(
+                asyncio.to_thread(self._speakers.play_clip, r.uid, url, r.volume, start)
+                for r in rooms
+            ),
             return_exceptions=True,
         )
         played = [room.name for room, result in zip(rooms, results, strict=True) if result is None]

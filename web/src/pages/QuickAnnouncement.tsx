@@ -1,11 +1,13 @@
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { type AnnounceMode, api, errorText } from "../api";
+import { type AnnounceMode, type AnnouncementsState, api, errorText } from "../api";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { EmotionPicker } from "../components/EmotionPicker";
 import { PreviewButton } from "../components/PreviewButton";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { FormError } from "../components/TextField";
+import { isEleven, useVoices, voiceName } from "../components/useVoices";
 import styles from "./Page.module.css";
 import q from "./QuickAnnouncement.module.css";
 
@@ -20,6 +22,18 @@ export function QuickAnnouncement({ open, onClose, onSent }: Props) {
   const [mode, setMode] = useState<AnnounceMode>("after");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const voices = useVoices();
+  // The announcement voice from Settings, read each time it opens, in case it changed.
+  const [voice, setVoice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    api<AnnouncementsState>("GET", "/announcements")
+      .then((data) => setVoice(data.voice))
+      .catch(() => {});
+  }, [open]);
+  const emotions = !!voice && isEleven(voice);
 
   const send = async (event: FormEvent) => {
     event.preventDefault();
@@ -48,6 +62,7 @@ export function QuickAnnouncement({ open, onClose, onSent }: Props) {
           What should it say?
         </label>
         <textarea
+          ref={box}
           id={textId}
           rows={3}
           maxLength={600}
@@ -56,19 +71,29 @@ export function QuickAnnouncement({ open, onClose, onSent }: Props) {
           onChange={(event) => setText(event.target.value)}
           className={q.textarea}
         />
-        <div className={q.row}>
-          <SegmentedControl
-            label="When"
-            options={[
-              { value: "after", label: "After this song" },
-              { value: "over", label: "Over the music" },
-            ]}
-            value={mode}
-            onChange={setMode}
-          />
+        <div className={q.tools}>
+          {emotions && (
+            <EmotionPicker
+              className={q.emotion}
+              textarea={box}
+              text={text}
+              maxLength={600}
+              onText={setText}
+            />
+          )}
           <PreviewButton text={text} onError={setError} />
         </div>
+        <SegmentedControl
+          label="When"
+          options={[
+            { value: "after", label: "After this song" },
+            { value: "over", label: "Over the music" },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
         <p className={styles.muted}>
+          {voice ? `Read out in ${voiceName(voice, voices)}. ` : ""}
           Plays once, in every room.{" "}
           <button
             type="button"

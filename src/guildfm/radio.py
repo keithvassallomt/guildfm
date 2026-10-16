@@ -7,6 +7,9 @@ recently, picked by the station lately, already queued, or explicit while that's
 left out. Votes never reach the AI, so a station's taste stays its own. With jingles to play, the
 AI also marks the odd song to have an ident before it (see jingles.py).
 
+When the AI can't pick (OpenAI or Spotify is down, or out of credit), the station carries on with
+songs heard before, so the music doesn't stop, and the AI is asked again when those run low.
+
 The AI picks station, which GuildFM keeps itself, follows whatever has been playing. It takes
 over when the queue runs out, unless the settings say otherwise.
 """
@@ -22,14 +25,14 @@ from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from guildfm.ai import AIClient, object_schema
+from guildfm.ai import AIClient, AIError, object_schema
 from guildfm.awareness import Awareness
 from guildfm.jingles import kinds, playable
 from guildfm.models import Play, QueueEntry, Station, StationKind, Track
-from guildfm.playlists import current_source
+from guildfm.playlists import best_voted, current_source, tracks_of
 from guildfm.prefs import get_pref
 from guildfm.spotify import SpotifyClient, SpotifyError, SpotifyTrack, remember
 
@@ -58,8 +61,8 @@ INSTRUCTIONS = (
     "best-known title and main artist. Vary the artists, and don't pick a song more than once."
 )
 IDENTS = {
-    "station": "station, an ident for GuildFM, the network the station is part of",
-    "show": "show, this station's own ident",
+    "system": "system, an ident for GuildFM, the network the station is part of",
+    "station": "station, this station's own ident",
 }
 
 
@@ -118,7 +121,7 @@ class Taste:
     brief: str
     aware: bool  # global awareness
     picked: list[str]  # its recent picks, oldest first
-    idents: tuple[str, ...] = ()  # the kinds of jingle it can play: "station", "show"
+    idents: tuple[str, ...] = ()  # the kinds of jingle it can play: "system", "station"
 
     @classmethod
     def of(cls, station: Station, idents: tuple[str, ...] = ()) -> Taste:
@@ -192,11 +195,19 @@ class Radio:
     async def _top_up(self, station_id: int) -> None:
         try:
             added = await self.pick(station_id)
+        except AIError as error:
+            log.warning("The AI couldn't pick songs for a station: %s", error)
+            added = 0
         except Exception:
             log.exception("Picking songs for a station failed")
             added = 0
         if not added:
             self._failed_at[station_id] = self._monotonic()
+            try:
+                added = await self.replay(station_id)
+            except Exception:
+                log.exception("Lining up a station's songs from before failed")
+        if not added:
             return
         for callback in self.on_picked:
             await callback()
@@ -240,6 +251,49 @@ class Radio:
         for kept in (self.notes, self.idents):
             while len(kept) > NOTES_KEPT:
                 kept.popitem(last=False)
+        return len(chosen)
+
+    async def replay(self, station_id: int) -> int:
+        """For when the AI can't pick: songs heard before, so the music carries on. The
+        station's own earlier picks first, then songs it played longer ago, then Best Voted,
+        each the longest since played first. Anything played lately, queued, or explicit while
+        that's turned off is left out, as ever. Returns how many were added."""
+        async with self._sessions() as db:
+            station = await db.get(Station, station_id)
+            source = await current_source(db)
+            if station is None or source is None or source.station_id != station_id:
+                return 0
+            since = time.time() - await get_pref(db, "recently_played_hours") * 3600
+            avoid = set(await db.scalars(select(Play.track_id).where(Play.played_at >= since)))
+            avoid |= set(await db.scalars(select(QueueEntry.track_id)))
+            avoid |= set(source.order[source.cursor :])
+            if not await get_pref(db, "allow_explicit"):
+                avoid |= set(await db.scalars(select(Track.id).where(Track.explicit)))
+            played_here = await db.scalars(
+                select(Play.track_id).where(Play.station_id == station_id).order_by(Play.id)
+            )
+            favourites = await tracks_of(db, (await best_voted(db)).id)
+            last_played = dict(
+                (
+                    await db.execute(
+                        select(Play.track_id, func.max(Play.played_at)).group_by(Play.track_id)
+                    )
+                ).all()
+            )
+            chosen: list[str] = []
+            pools = (station.picked, played_here.all(), [entry.track_id for entry in favourites])
+            for pool in pools:
+                fresh = [track_id for track_id in dict.fromkeys(pool) if track_id not in avoid]
+                fresh.sort(key=lambda track_id: last_played.get(track_id, 0.0))
+                chosen += fresh[: BATCH - len(chosen)]
+                avoid |= set(fresh)
+            if not chosen:
+                return 0
+            keep = max(0, source.cursor - KEPT_TAKEN)
+            source.order = source.order[keep:] + chosen
+            source.cursor -= keep
+            await db.commit()
+        log.warning("%s is playing songs from before until the AI can pick again", station.name)
         return len(chosen)
 
     async def candidates(

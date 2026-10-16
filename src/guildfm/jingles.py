@@ -1,6 +1,6 @@
 """Jingles: short idents that AI stations play between songs, as a real station would.
 
-Station idents are GuildFM's own and can play on any AI station; show idents belong to one
+System idents are GuildFM's own and can play on any AI station; station idents belong to one
 station. They're MP3s in the media folder, where the speakers fetch them, like announcements.
 
 The AI that picks a station's songs also marks the ones to play an ident before, and which kind
@@ -46,7 +46,7 @@ def _looks_like_mp3(data: bytes) -> bool:
 def add_jingle(
     db: AsyncSession, media_dir: Path, data: bytes, name: str, station_id: int | None = None
 ) -> Jingle:
-    """Save an MP3 as a jingle: a show ident for `station_id`, or a station ident. The caller
+    """Save an MP3 as a jingle: a station ident for `station_id`, or a system ident. The caller
     commits."""
     if len(data) > MAX_BYTES:
         raise JingleError("That file is too big for a jingle.")
@@ -60,7 +60,7 @@ def add_jingle(
     file = f"{secrets.token_urlsafe(12)}.mp3"
     (place / file).write_bytes(data)
     jingle = Jingle(
-        kind=JingleKind.SHOW if station_id else JingleKind.STATION,
+        kind=JingleKind.STATION if station_id else JingleKind.SYSTEM,
         station_id=station_id,
         name=name,
         file=file,
@@ -77,7 +77,7 @@ def forget(media_dir: Path, jingle: Jingle) -> None:
 
 
 async def playable(db: AsyncSession, station_id: int | None) -> list[Jingle]:
-    """The jingles a station can play: GuildFM's station idents and its own show idents."""
+    """The jingles a station can play: the system idents and its own station idents."""
     theirs = Jingle.station_id.is_(None)
     if station_id is not None:
         theirs = or_(theirs, Jingle.station_id == station_id)
@@ -85,7 +85,7 @@ async def playable(db: AsyncSession, station_id: int | None) -> list[Jingle]:
 
 
 def kinds(jingles: list[Jingle]) -> tuple[str, ...]:
-    """The kinds of ident there are to play, station idents first."""
+    """The kinds of ident there are to play, system idents first."""
     return tuple(kind.value for kind in JingleKind if any(j.kind == kind for j in jingles))
 
 

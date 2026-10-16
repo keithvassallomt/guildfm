@@ -8,6 +8,8 @@ from typing import Any
 
 import httpx2
 
+from guildfm.health import Health
+
 API = "https://api.openai.com/v1/responses"
 IMAGES = "https://api.openai.com/v1/images/generations"
 IMAGE_SECONDS = 180  # painting can take a couple of minutes
@@ -34,6 +36,7 @@ class AIClient:
         self._image_model = image_model
         self._image_quality = image_quality
         self._http = http or httpx2.AsyncClient(timeout=90)
+        self.health = Health()
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -81,6 +84,15 @@ class AIClient:
             raise AIError("OpenAI didn't send an image.") from error
 
     async def _post(self, url: str, body: dict[str, Any], **options: Any) -> httpx2.Response:
+        try:
+            response = await self._send(url, body, **options)
+        except AIError as error:
+            self.health.failed(str(error))
+            raise
+        self.health.worked()
+        return response
+
+    async def _send(self, url: str, body: dict[str, Any], **options: Any) -> httpx2.Response:
         try:
             response = await self._http.post(
                 url, json=body, headers={"Authorization": f"Bearer {self._key}"}, **options

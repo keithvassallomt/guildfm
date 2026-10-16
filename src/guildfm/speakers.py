@@ -4,9 +4,11 @@ Everything here is synchronous and talks to the speakers directly; the playback 
 it in a worker thread, one call at a time.
 """
 
+import contextlib
 import json
 import socket
 import ssl
+import threading
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -140,7 +142,9 @@ class SpeakerSystem(Protocol):
     def add_next(self, item: QueueItem) -> int: ...
     def remove(self, position: int) -> None: ...
     def play_position(self, position: int) -> None: ...
-    def play_clip(self, uid: str, url: str, volume: int) -> None: ...
+    def play_clip(
+        self, uid: str, url: str, volume: int, start: threading.Barrier | None = None
+    ) -> None: ...
     def own_address(self) -> str: ...
 
 
@@ -316,12 +320,20 @@ class SocoSystem:
     def play_position(self, position: int) -> None:
         self._guard(lambda: self._coordinator.play_from_queue(position - 1))
 
-    def play_clip(self, uid: str, url: str, volume: int) -> None:
+    def play_clip(
+        self, uid: str, url: str, volume: int, start: threading.Barrier | None = None
+    ) -> None:
         """Play the MP3 at `url` in one room, over whatever it's playing: the music goes quiet
         and comes back up afterwards. Each room takes its own call. Safe to run alongside other
-        speaker calls, so it doesn't go through `_guard`."""
+        speaker calls, so it doesn't go through `_guard`.
+
+        Rooms playing the same clip share `start`: each connects, then waits there until they
+        all have, and they send together. Connecting takes some speakers a tenth of a second
+        longer than others, which within earshot of each other sounds like an echo."""
         zone = next((zone for zone in self._zones if zone.uid == uid), None)
         if zone is None:
+            if start:
+                start.abort()
             raise SpeakersUnavailable("That room isn't on the network any more.")
         name = "A speaker"
         context = ssl.create_default_context()
@@ -340,6 +352,10 @@ class SocoSystem:
                 additional_headers={"X-Sonos-Api-Key": CLIP_API_KEY},
                 open_timeout=CLIP_TIMEOUT,
             ) as websocket:
+                # If a room couldn't connect, or took too long, the rest go without it.
+                if start:
+                    with contextlib.suppress(threading.BrokenBarrierError):
+                        start.wait(CLIP_TIMEOUT)
                 command = {
                     "namespace": "audioClip:1",
                     "command": "loadAudioClip",
@@ -355,6 +371,8 @@ class SocoSystem:
                 websocket.send(json.dumps([command, clip]))
                 reply = json.loads(websocket.recv(timeout=CLIP_TIMEOUT))
         except Exception as error:  # SoCo, the network, the websocket or a garbled reply
+            if start:
+                start.abort()  # so the rooms waiting for this one go ahead
             raise SpeakersUnavailable(f"{name} isn't answering: {error}") from error
         headers, body = (reply + [{}])[:2] if isinstance(reply, list) else (reply, {})
         if headers.get("success") is False or body.get("_objectType") == "globalError":

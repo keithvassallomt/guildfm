@@ -54,6 +54,7 @@ const paths = {
       <circle cx="17" cy="16" r="3" />
     </>
   ),
+  status: <path d="M3 12h4l3-7 4 14 3-7h4" />,
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,

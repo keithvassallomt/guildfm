@@ -106,7 +106,8 @@ export function SpotifyConnection() {
         ) : (
           <p className={page.muted}>
             Spotify only lets GuildFM connect from the machine it runs on. Open{" "}
-            <strong>{here}</strong> there, sign in, and connect from this page.
+            <strong>{here}</strong> there, sign in, and connect from this page. For a machine
+            without a screen, the README shows how to do it from a laptop.
           </p>
         )}
 

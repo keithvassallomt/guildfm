@@ -8,16 +8,25 @@ import "./styles/theme.css";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router";
+import { createBrowserRouter, RouterProvider } from "react-router";
 import { App } from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <BrowserRouter>
+// A data router, so pages with unsaved changes can ask before they're left (useBlocker). The
+// routes themselves are in App.
+const router = createBrowserRouter([
+  {
+    path: "*",
+    element: (
       <AuthProvider>
         <App />
       </AuthProvider>
-    </BrowserRouter>
+    ),
+  },
+]);
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

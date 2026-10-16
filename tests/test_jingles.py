@@ -10,7 +10,7 @@ PNG = b"\x89PNG\r\n\x1a\n" + bytes(64)
 
 
 def songs(**idents: str) -> list[dict]:
-    """Twelve picks, with the ident the AI wants before some, by song number: songs(s2="show")."""
+    """Twelve picks, with the ident the AI wants before some, by song number: songs(s2="system")."""
     picks = []
     for n in range(1, 13):
         song = {"title": f"Song {n}", "artist": "Fleetwood Mac", "note": f"Note {n}"}
@@ -72,10 +72,10 @@ def heard(speakers: FakeSpeakers) -> list[str]:
     return [clip.url.split("/media/", 1)[1] for clip in speakers.clips if clip.room == room]
 
 
-def test_admins_look_after_station_idents(client: TestClient) -> None:
+def test_admins_look_after_system_idents(client: TestClient) -> None:
     sign_in(client, *ADMIN)
     jingle = upload(client, "GuildFM sting").json()
-    assert (jingle["kind"], jingle["name"]) == ("station", "GuildFM sting")
+    assert (jingle["kind"], jingle["name"]) == ("system", "GuildFM sting")
     assert jingle["station_id"] is None
     assert jingle["seconds"] == pytest.approx(9.0, abs=0.1)
     assert jingle["url"].startswith("/media/jingles/")
@@ -98,13 +98,13 @@ def test_jingles_are_mp3s_of_up_to_a_minute(client: TestClient) -> None:
     assert client.get("/api/jingles").json() == []
 
 
-def test_show_idents_belong_to_their_station(client: TestClient, people) -> None:
+def test_station_idents_belong_to_their_station(client: TestClient, people) -> None:
     sign_in(client, *people["curator"])
     station = make_station(client)
     jingle = upload(client, "Guildbert", station_id=station["id"]).json()
-    assert (jingle["kind"], jingle["station_id"]) == ("show", station["id"])
+    assert (jingle["kind"], jingle["station_id"]) == ("station", station["id"])
     assert client.get("/api/jingles", params={"station_id": station["id"]}).json() == [jingle]
-    # Station idents are for admins.
+    # System idents are for admins.
     assert client.get("/api/jingles").status_code == 403
     assert upload(client).status_code == 403
     # Deleting the station deletes them, files and all.
@@ -121,20 +121,20 @@ def test_the_ai_marks_songs_and_the_jingle_plays_before_the_dj(client, openai, s
     sign_in(client, *ADMIN)
     upload(client, "GuildFM sting")
     station = make_station(client, dj=True, dj_name="Guildbert")
-    show = upload(client, "Guildbert", station_id=station["id"]).json()
-    openai.picks = songs(s2="show")
+    own = upload(client, "Guildbert", station_id=station["id"]).json()
+    openai.picks = songs(s2="station")
     openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
     put_on(client, station)
 
     asked = openai.asked_for("picks")[0]
     ident = asked["text"]["format"]["schema"]["properties"]["songs"]["items"]["properties"]["ident"]
-    assert ident["enum"] == ["none", "station", "show"]
+    assert ident["enum"] == ["none", "system", "station"]
     assert "Idents are short jingles" in asked["input"]
-    assert "show, this station's own ident" in asked["input"]
+    assert "station, this station's own ident" in asked["input"]
 
     song_change(client, speakers)
     jingle, line = heard(speakers)
-    assert show["url"].endswith(jingle)
+    assert own["url"].endswith(jingle)
     assert line.startswith("speech/")
     # Both in the pause between songs, then Song 2 starts.
     assert {clip.music for clip in speakers.clips} == {"PAUSED_PLAYBACK"}
@@ -144,7 +144,7 @@ def test_the_ai_marks_songs_and_the_jingle_plays_before_the_dj(client, openai, s
 def test_never_at_two_song_changes_in_a_row(client, openai, speakers) -> None:
     sign_in(client, *ADMIN)
     upload(client, "GuildFM sting")
-    openai.picks = songs(s2="station", s3="station", s4="station")
+    openai.picks = songs(s2="system", s3="system", s4="system")
     put_on(client, make_station(client))
     for _ in range(3):
         song_change(client, speakers)
@@ -156,7 +156,7 @@ def test_never_at_two_song_changes_in_a_row(client, openai, speakers) -> None:
 def test_a_jingle_never_plays_over_music(client, openai, speakers) -> None:
     sign_in(client, *ADMIN)
     upload(client, "GuildFM sting")
-    openai.picks = songs(s2="station")
+    openai.picks = songs(s2="system")
     put_on(client, make_station(client))
     speakers.track_position = 190
     read_speakers(client)
@@ -184,7 +184,7 @@ def test_no_idents_without_jingles(client, openai: FakeOpenAI, speakers) -> None
 def test_no_idents_with_jingles_turned_off(client, openai: FakeOpenAI, speakers) -> None:
     sign_in(client, *ADMIN)
     upload(client, "GuildFM sting")
-    openai.picks = songs(s1="station", s2="station")
+    openai.picks = songs(s1="system", s2="system")
     put_on(client, make_station(client, jingles=False))
     assert "ident" not in song_fields(openai)
     song_change(client, speakers)
@@ -194,7 +194,7 @@ def test_no_idents_with_jingles_turned_off(client, openai: FakeOpenAI, speakers)
 def test_requests_dont_get_jingles(client, openai, speakers, people) -> None:
     sign_in(client, *ADMIN)
     upload(client, "GuildFM sting")
-    openai.picks = songs(s1="station", s2="station")
+    openai.picks = songs(s1="system", s2="system")
     put_on(client, make_station(client))
     sign_in(client, *people["user"])
     client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
@@ -205,7 +205,7 @@ def test_requests_dont_get_jingles(client, openai, speakers, people) -> None:
 def test_the_hour_preview_shows_the_jingles(client: TestClient, openai: FakeOpenAI) -> None:
     sign_in(client, *ADMIN)
     upload(client, "GuildFM sting", seconds=9.5)
-    openai.picks = songs(s2="station")
+    openai.picks = songs(s2="system")
     body = {"name": "Guildbert's Hour", "description": "Upbeat soul."}
     slots = client.post("/api/stations/preview-hour", json=body).json()["slots"]
     assert [slot["jingle"] and slot["jingle"]["name"] for slot in slots[:3]] == [
@@ -220,13 +220,13 @@ def test_the_hour_preview_shows_the_jingles(client: TestClient, openai: FakeOpen
 
 def test_the_same_jingle_never_plays_twice_running() -> None:
     one, two = (
-        Jingle(id=n, kind=JingleKind.STATION, name=f"{n}", file="", seconds=9, created_at=0)
+        Jingle(id=n, kind=JingleKind.SYSTEM, name=f"{n}", file="", seconds=9, created_at=0)
         for n in (1, 2)
     )
     rotation = Rotation()
-    played = [rotation.next("station", [one, two]) for _ in range(20)]
+    played = [rotation.next("system", [one, two]) for _ in range(20)]
     assert played[1::2] == [None] * 10  # never two song changes in a row
     chosen = [jingle.id for jingle in played[0::2]]
     assert all(a != b for a, b in zip(chosen, chosen[1:], strict=False))
     # Marked for a kind there's none of: nothing.
-    assert Rotation().next("show", [one, two]) is None
+    assert Rotation().next("station", [one, two]) is None

@@ -8,7 +8,7 @@ from guildfm.announcements import Spoken, next_time, upcoming
 from guildfm.models import Announcement, AnnounceMode, Repeat
 from guildfm.prefs import DEFAULTS
 from guildfm.speech import mp3_seconds
-from tests.fakes import FakeOpenAI, FakeSpeakers, mp3, spotify_id
+from tests.fakes import FakeElevenLabs, FakeOpenAI, FakeSpeakers, mp3, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
 LONDON = ZoneInfo("Europe/London")
@@ -205,6 +205,9 @@ def test_now_over_the_music_in_every_room(client: TestClient, speakers, naps) ->
         ("RINCON_LOUNGE", 20, "PLAYING"),
         ("RINCON_KITCHEN", 19, "PLAYING"),
     }
+    # Both rooms wait at the same starting line, so they play it in step.
+    first, second = speakers.clips
+    assert first.start is second.start and first.start.parties == 2
     assert speakers.clips[0].url.startswith("http://127.0.0.1:8000/media/speech/")
     assert client.get(speakers.clips[0].url.removeprefix("http://127.0.0.1:8000")).content
     assert naps == [(pytest.approx(3.5, abs=0.05), True)]  # the clip, while announcing
@@ -301,6 +304,24 @@ def test_announcements_go_before_the_dj(client: TestClient, speakers, naps) -> N
     assert played()[1] == line.path.name
     # The DJ's lines don't go in the announcements log.
     assert [entry["text"] for entry in recent(client)] == ["Fire drill."]
+
+
+def test_if_elevenlabs_fails_openai_reads_it_out(
+    client: TestClient, speakers, naps, openai: FakeOpenAI, elevenlabs: FakeElevenLabs
+) -> None:
+    playing(client, speakers)
+    voice = {"announcement_voice": "elevenlabs:guildbert01"}
+    client.patch("/api/settings", json=voice).raise_for_status()
+    elevenlabs.status, elevenlabs.detail = 401, {"status": "quota_exceeded"}
+    response = client.post("/api/announcements/now", json={"text": "Fire drill.", "mode": "over"})
+    assert response.status_code == 200
+    tick(client)
+    assert len(speakers.clips) == 3
+    assert [r["voice"] for r in openai.requests] == ["cedar"]
+    # A preview still says what's wrong, so the voice can be put right.
+    response = client.post("/api/announcements/preview", json={"text": "Hi"})
+    assert response.status_code == 502
+    assert "out of credits" in response.json()["detail"]
 
 
 # Scheduled

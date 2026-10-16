@@ -5,6 +5,7 @@ import { useAuth, useMe } from "../auth/AuthProvider";
 import { useQueue } from "../live/useQueue";
 import { Avatar } from "../components/Avatar";
 import { Button, ButtonLink } from "../components/Button";
+import { InstallApp } from "../components/InstallApp";
 import { RoleBadge } from "../components/RoleBadge";
 import { PhotoCropper } from "../components/PhotoCropper";
 import { croppedPhoto, openPhoto } from "../components/photo";
@@ -200,6 +201,8 @@ export function ProfilePage() {
               </Button>
             </div>
           </section>
+
+          <InstallApp />
         </div>
       </div>
     </div>

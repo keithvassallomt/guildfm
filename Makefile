@@ -1,4 +1,4 @@
-.PHONY: install dev build serve test lint format migration
+.PHONY: install dev build serve backup update test lint format migration
 
 install:  ## Install Python and front end dependencies
 	uv sync
@@ -12,6 +12,12 @@ build:  ## Build the front end into web/dist
 
 serve: build  ## Build, then run GuildFM as it runs in production (http://<this machine>:8000)
 	uv run guildfm
+
+backup:  ## Make a backup now: the database and uploaded media, as a zip in data/backups
+	uv run guildfm backup
+
+update:  ## On the office machine: pull, rebuild, back up and restart the service
+	./scripts/update.sh
 
 test:  ## Run the backend tests
 	uv run pytest

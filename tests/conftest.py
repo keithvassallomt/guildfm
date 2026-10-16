@@ -27,6 +27,7 @@ def settings(tmp_path: Path) -> Settings:
         guildfm_admin_username=ADMIN[0],
         guildfm_admin_password=ADMIN[1],
         data_dir=tmp_path / "data",
+        audio_loudness=None,  # the fakes' MP3s are silence; tests compare them byte for byte
         web_dist=tmp_path / "dist",
     )
 

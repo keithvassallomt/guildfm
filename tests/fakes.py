@@ -32,6 +32,7 @@ class PlayedClip(NamedTuple):
     url: str
     volume: int
     music: str  # what the music was doing while it played: PLAYING, PAUSED_PLAYBACK...
+    start: object = None  # the starting line the rooms playing it share
 
 
 class FakeSpeakers:
@@ -155,11 +156,11 @@ class FakeSpeakers:
         self.track_position = 0
         self.transport = "PLAYING"
 
-    def play_clip(self, uid: str, url: str, volume: int) -> None:
+    def play_clip(self, uid: str, url: str, volume: int, start=None) -> None:
         self._check()
         if uid in self.refusing_clips:
             raise SpeakersRefused(f"{self.rooms[uid].name} wouldn't play it (ERROR_PLAYBACK).")
-        self.clips.append(PlayedClip(uid, url, volume, self.transport))
+        self.clips.append(PlayedClip(uid, url, volume, self.transport, start))
 
     def own_address(self) -> str:
         return "127.0.0.1"
@@ -245,9 +246,21 @@ class FakeElevenLabs:
         self.status = 200
         self.detail: dict | None = None  # sent with an error status
         self.seconds = 4.0
+        # The account's credits this month, or None for a key that can't read them.
+        self.subscription: dict | None = {
+            "tier": "creator",
+            "character_count": 2235,
+            "character_limit": 131000,
+            "next_character_count_reset_unix": 1794825022,
+        }
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         assert request.headers["xi-api-key"] == "eleven-test"
+        if request.url.path == "/v1/user/subscription":
+            if self.subscription is None:
+                detail = {"status": "missing_permissions", "message": "user_read"}
+                return httpx2.Response(401, json={"detail": detail})
+            return httpx2.Response(200, json=self.subscription)
         if request.url.path == "/v2/voices":
             assert request.url.params["voice_type"] == "personal"
             return httpx2.Response(200, json={"voices": self.voices, "has_more": False})

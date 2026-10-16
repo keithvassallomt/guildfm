@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import {
   type AnnounceMode,
@@ -14,10 +14,12 @@ import {
 import { Button, ButtonLink } from "../components/Button";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { Dialog } from "../components/Dialog";
+import { EmotionPicker } from "../components/EmotionPicker";
 import { Icon } from "../components/Icon";
 import { PreviewButton } from "../components/PreviewButton";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { FormError } from "../components/TextField";
+import { isEleven, useVoices, voiceName } from "../components/useVoices";
 import { usePlayback } from "../live/usePlayback";
 import a from "./Announcements.module.css";
 import { DAYS, REPEATS, summarise } from "./announcementText";
@@ -297,13 +299,17 @@ type MessageProps = {
 
 function Message({ form, voice, onChange, onError }: MessageProps) {
   const id = useId();
-  const name = voice ? voice.charAt(0).toUpperCase() + voice.slice(1) : null;
+  const box = useRef<HTMLTextAreaElement>(null);
+  const voices = useVoices();
+  const name = voice ? voiceName(voice, voices) : null;
+  const emotions = !!voice && isEleven(voice);
   return (
     <div className={a.group}>
       <label htmlFor={id} className={a.legend}>
         What should it say?
       </label>
       <textarea
+        ref={box}
         id={id}
         rows={4}
         required
@@ -313,18 +319,28 @@ function Message({ form, voice, onChange, onError }: MessageProps) {
         onChange={(event) => onChange(event.target.value)}
         className={a.textarea}
       />
-      <div className={a.voiceRow}>
-        <span className={a.voiceNote}>
-          {name ? (
-            <>
-              Read out in <strong>{name}</strong>, the announcement voice from Settings.
-            </>
-          ) : (
-            "Read out in the announcement voice from Settings."
-          )}
-        </span>
+      <div className={a.voiceTools}>
+        {emotions && (
+          <EmotionPicker
+            className={a.emotion}
+            textarea={box}
+            text={form.text}
+            maxLength={MAX_TEXT}
+            onText={onChange}
+          />
+        )}
         <PreviewButton text={form.text} onError={onError} />
       </div>
+      <p className={a.voiceNote}>
+        {name ? (
+          <>
+            Read out in <strong>{name}</strong>, the announcement voice from Settings.
+          </>
+        ) : (
+          "Read out in the announcement voice from Settings."
+        )}
+        {emotions && " An emotion changes how the words after it are said."}
+      </p>
     </div>
   );
 }

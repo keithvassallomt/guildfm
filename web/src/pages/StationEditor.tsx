@@ -1,17 +1,19 @@
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { api, errorText, type Station, type StationFields, VOICES } from "../api";
+import { api, type DJProfile, errorText, type Station, type StationFields, VOICES } from "../api";
 import { Button, ButtonLink } from "../components/Button";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { Dialog } from "../components/Dialog";
 import { Icon } from "../components/Icon";
 import { JingleList } from "../components/JingleList";
+import { useLeaveGuard } from "../components/LeaveGuard";
 import { PreviewButton } from "../components/PreviewButton";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { StationCover } from "../components/StationCover";
 import { FormError, TextField } from "../components/TextField";
 import { Toggle } from "../components/Toggle";
 import { isEleven, useVoices, voiceName } from "../components/useVoices";
+import { listed } from "./announcementText";
 import { HourPreview } from "./HourPreview";
 import styles from "./Page.module.css";
 import e from "./StationEditor.module.css";
@@ -23,6 +25,7 @@ const BLANK: StationFields = {
   description: "",
   global_awareness: false,
   dj: false,
+  dj_id: null,
   dj_name: "",
   personality: "",
   voice: "marin",
@@ -83,6 +86,8 @@ export function StationEditor() {
   const editing = id !== undefined;
   const navigate = useNavigate();
   const [form, setForm] = useState<StationFields | null>(editing ? null : BLANK);
+  // The form as saved, to tell whether there are changes to lose.
+  const [saved, setSaved] = useState<StationFields | null>(editing ? null : BLANK);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -95,6 +100,7 @@ export function StationEditor() {
     api<Station>("GET", `/stations/${id}`)
       .then((station) => {
         setForm(fieldsOf(station));
+        setSaved(fieldsOf(station));
         setArt(station.art_url);
       })
       .catch((caught) => setError(errorText(caught)));
@@ -102,6 +108,9 @@ export function StationEditor() {
 
   const change = (changes: Partial<StationFields>) =>
     setForm((current) => current && { ...current, ...changes });
+
+  const dirty = !!form && !!saved && JSON.stringify(form) !== JSON.stringify(saved);
+  const { allow, dialog: leaving } = useLeaveGuard(dirty);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -114,6 +123,7 @@ export function StationEditor() {
         editing ? `/stations/${id}` : "/stations",
         form,
       );
+      allow();
       navigate(BACK, { state: { said: editing ? "Saved." : `${saved.name} is ready to put on.` } });
     } catch (caught) {
       setError(errorText(caught));
@@ -124,6 +134,7 @@ export function StationEditor() {
   const remove = async () => {
     try {
       await api("DELETE", `/stations/${id}`);
+      allow();
       navigate(BACK, { state: { said: "Deleted." } });
     } catch (caught) {
       setDeleting(false);
@@ -171,7 +182,14 @@ export function StationEditor() {
                 onChange={(global_awareness) => change({ global_awareness })}
               />
               {editing ? (
-                <Cover stationId={Number(id)} url={art} onPainted={setArt} onError={setError} />
+                <Cover
+                  stationId={Number(id)}
+                  url={art}
+                  name={form.name.trim()}
+                  description={form.description.trim()}
+                  onPainted={setArt}
+                  onError={setError}
+                />
               ) : (
                 <p className={styles.muted}>
                   Once it's created, OpenAI paints its cover from the name and description.
@@ -186,29 +204,34 @@ export function StationEditor() {
             <Section title="Jingles">
               <SwitchRow
                 label="Play jingles"
-                hint="GuildFM's station idents and this station's own show idents, in the pause between songs. The AI chooses where."
+                hint="GuildFM's system idents and this station's own station idents, in the pause between songs. The AI chooses where."
                 checked={form.jingles}
                 onChange={(jingles) => change({ jingles })}
               />
               {form.jingles &&
                 (editing ? (
                   <div className={e.field}>
-                    <span className={e.label}>Show idents</span>
+                    <span className={e.label}>Station idents</span>
                     <JingleList
                       stationId={Number(id)}
-                      empty="None yet. Without its own, the station plays GuildFM's station idents."
+                      empty="None yet. Without its own, the station plays GuildFM's system idents."
                     />
                   </div>
                 ) : (
                   <p className={styles.muted}>
-                    Create the station first, then come back to add its own show idents.
+                    Create the station first, then come back to add its own station idents.
                   </p>
                 ))}
             </Section>
           </div>
 
           <div className={styles.stack}>
-            <DJ form={form} onChange={change} onError={setError} />
+            <DJ
+              form={form}
+              stationId={editing ? Number(id) : null}
+              onChange={change}
+              onError={setError}
+            />
             <Button
               variant="secondary"
               block
@@ -245,6 +268,8 @@ export function StationEditor() {
         />
       )}
 
+      {leaving}
+
       <Dialog open={deleting} onClose={() => setDeleting(false)} title="Delete this station?">
         <p className={styles.muted}>
           If it's on, nothing fills the gaps between requests until the queue runs out.
@@ -280,19 +305,25 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
 type CoverProps = {
   stationId: number;
   url: string | null;
+  /** As they are in the form, saved or not: what the new cover is painted from. */
+  name: string;
+  description: string;
   onPainted: (url: string | null) => void;
   onError: (message: string | null) => void;
 };
 
 /** The station's cover, standing in for album art, and a button for another. */
-function Cover({ stationId, url, onPainted, onError }: CoverProps) {
+function Cover({ stationId, url, name, description, onPainted, onError }: CoverProps) {
   const [busy, setBusy] = useState(false);
 
   const repaint = async () => {
     setBusy(true);
     onError(null);
     try {
-      const station = await api<Station>("POST", `/stations/${stationId}/cover`);
+      const station = await api<Station>("POST", `/stations/${stationId}/cover`, {
+        name,
+        description,
+      });
       onPainted(station.art_url);
     } catch (caught) {
       onError(errorText(caught));
@@ -306,10 +337,10 @@ function Cover({ stationId, url, onPainted, onError }: CoverProps) {
       <StationCover url={url} className={e.coverArt} iconSize={34} />
       <div className={e.coverText}>
         <span className={e.rowHint}>
-          Painted by OpenAI from the name and description. Saving a new name or description
-          paints a new one.
+          Painted by OpenAI from the name and description above, saved or not. Saving a new
+          name or description paints a new one, unless this cover was painted from them.
         </span>
-        <Button variant="secondary" disabled={busy} onClick={repaint}>
+        <Button variant="secondary" disabled={busy || !name || !description} onClick={repaint}>
           {busy ? "Painting, about half a minute..." : url ? "Paint another" : "Paint one"}
         </Button>
       </div>
@@ -369,16 +400,36 @@ function SwitchRow({ label, hint, checked, onChange }: SwitchRowProps) {
 
 type DJProps = {
   form: StationFields;
+  /** The station being edited, or null for a new one. */
+  stationId: number | null;
   onChange: (changes: Partial<StationFields>) => void;
   onError: (message: string | null) => void;
 };
 
-function DJ({ form, onChange, onError }: DJProps) {
+function DJ({ form, stationId, onChange, onError }: DJProps) {
   const switchId = useId();
   const everyId = useId();
   const [phrase, setPhrase] = useState("intro");
   const [own, setOwn] = useState("");
+  const [djs, setDjs] = useState<DJProfile[]>([]);
   const voices = useVoices();
+
+  useEffect(() => {
+    api<DJProfile[]>("GET", "/djs")
+      .then(setDjs)
+      .catch((caught) => onError(errorText(caught)));
+  }, [onError]);
+
+  const host = djs.find((dj) => dj.id === form.dj_id);
+  const elsewhere = (host?.stations ?? [])
+    .filter((station) => station.id !== stationId)
+    .map((station) => station.name);
+  const choose = (dj: DJProfile | null) =>
+    onChange(
+      dj
+        ? { dj_id: dj.id, dj_name: dj.name, personality: dj.personality, voice: dj.voice }
+        : { dj_id: null, dj_name: "", personality: "", voice: "marin" },
+    );
   const tags = isEleven(form.voice);
   const chosen = PHRASES.find((p) => p.id === phrase) ?? PHRASES[0];
   const words = phrase === "custom" ? own : tags ? chosen.tagged : chosen.text;
@@ -399,6 +450,40 @@ function DJ({ form, onChange, onError }: DJProps) {
       {!form.dj && <p className={styles.muted}>Music only. Announcements still play on schedule.</p>}
       {form.dj && (
         <>
+          {djs.length > 0 && (
+            <fieldset className={e.group}>
+              <legend className={e.label}>Which DJ</legend>
+              <div className={e.chips}>
+                {djs.map((dj) => (
+                  <button
+                    key={dj.id}
+                    type="button"
+                    aria-pressed={form.dj_id === dj.id}
+                    className={e.chip}
+                    onClick={() => choose(dj)}
+                  >
+                    {dj.name}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-pressed={form.dj_id === null}
+                  className={e.chip}
+                  onClick={() => choose(null)}
+                >
+                  New DJ
+                </button>
+              </div>
+              <span className={e.rowHint}>
+                {form.dj_id === null
+                  ? "Saving makes a new DJ, who can host other stations too."
+                  : elsewhere.length > 0
+                    ? `${host?.name} also hosts ${listed(elsewhere)}. Changes to the name, ` +
+                      "personality or voice apply there too."
+                    : "A DJ can host other stations too. How often they talk is up to each station."}
+              </span>
+            </fieldset>
+          )}
           <TextField
             label="DJ name"
             value={form.dj_name}

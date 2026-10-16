@@ -12,6 +12,7 @@ from datetime import datetime
 import httpx2
 
 from guildfm.ai import AIClient, AIError
+from guildfm.health import Health
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ class Awareness:
         self._weather: dict[str, tuple[float, str | None]] = {}  # when it was read, and what
         self._news: tuple[float, str | None] | None = None
         self._gathering: asyncio.Task | None = None
+        self.weather_health = Health()
 
     async def close(self) -> None:
         if self._gathering:
@@ -134,6 +136,12 @@ class Awareness:
         except (httpx2.HTTPError, KeyError, ValueError) as error:
             # An expected hiccup, tried again later, so one line rather than a traceback.
             log.warning("Couldn't get the weather for %s (%s)", location, type(error).__name__)
+            self.weather_health.failed(f"Couldn't get the weather for {location}.")
+        else:
+            if words:
+                self.weather_health.worked()
+            else:
+                self.weather_health.failed(f"Couldn't find {location} on the map.")
         self._weather[location] = (self._clock(), words)
         return words
 

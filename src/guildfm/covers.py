@@ -2,12 +2,15 @@
 description, with the name on it, to stand in for album art.
 
 A station gets one when it's made, and a new one when its name or description changes, or when
-a curator asks for another. Stations without one, such as AI picks, get theirs at startup. The
-images live in the media folder, like photos. If OpenAI can't paint one, the station keeps the
-cover it had, or the radio icon.
+a curator asks for another. Asking from the editor paints from the name and description there,
+saved or not, and saving those afterwards doesn't paint another. Stations without one, such as
+AI picks, get theirs at startup. The images live in the media folder, like photos. If OpenAI
+can't paint one, the station keeps the cover it had, or the radio icon.
 """
 
 import asyncio
+import hashlib
+import json
 import logging
 import secrets
 from collections.abc import Awaitable, Callable
@@ -31,6 +34,11 @@ def prompt(name: str, description: str) -> str:
         "in a bold, clear typeface that's easy to read when the cover is small. No other text, "
         "numbers or logos."
     )
+
+
+def painted_from(name: str, description: str) -> str:
+    """A cover's name and description, short, to tell whether they've changed since."""
+    return hashlib.sha256(json.dumps([name, description]).encode()).hexdigest()[:32]
 
 
 class Painter:
@@ -79,16 +87,17 @@ class Painter:
         except Exception:
             log.exception("Painting a station's cover failed")
 
-    async def paint(self, station_id: int) -> bool:
-        """Paint the station a new cover and wait for it: half a minute or so. False if the
-        station has gone. Raises AIError when OpenAI can't paint it."""
+    async def paint(self, station_id: int, asked: tuple[str, str] | None = None) -> bool:
+        """Paint the station a new cover and wait for it: half a minute or so. From `asked`, a
+        name and description, such as the editor's unsaved ones, or else the saved ones. False
+        if the station has gone. Raises AIError when OpenAI can't paint it."""
         while True:
             async with self._sessions() as db:
                 station = await db.get(Station, station_id)
                 if station is None:
                     return False
-                asked = (station.name, station.description)
-            data = await self._ai.image(prompt(*asked))
+                wanted = asked or (station.name, station.description)
+            data = await self._ai.image(prompt(*wanted))
             self._folder.mkdir(parents=True, exist_ok=True)
             file = f"{secrets.token_urlsafe(12)}.webp"
             (self._folder / file).write_bytes(data)
@@ -99,12 +108,13 @@ class Painter:
                     (self._folder / file).unlink(missing_ok=True)
                     return False
                 old, station.art = station.art, file
+                station.art_for = painted_from(*wanted)
                 await db.commit()
                 now = (station.name, station.description)
             if old:
                 (self._folder / old).unlink(missing_ok=True)
             for callback in self.on_painted:
                 await callback()
-            if now == asked:
+            if asked or now == wanted:
                 return True
             # Renamed or redescribed while it was painting: paint it again.

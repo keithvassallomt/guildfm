@@ -163,21 +163,30 @@ Goal: curators create stations with an AI DJ that picks songs and talks between 
 - [x] Library screen, AI stations tab, wired up, and the Radio band on Now Playing
 - [x] The DJ can comment on requests, knowing how often a song, its artist and its requester have come up lately, and a station never plays a song a request played recently (added after building the stage)
 - [x] Preview an hour of a station from its editor, saved or not: the songs, and what the DJ says and where, with each line playable in the DJ's voice (added after building the stage)
+- [x] Installable as an app from backlog.md: manifest, icons (with a maskable one for Android), iPhone home screen tags, and an install section on Profile. Browsers only offer to install over HTTPS or on localhost, so the office needs HTTPS for that (Stage 11) (added after building the stage)
+- [x] Voices at the music's loudness (ffmpeg, about -14 LUFS) and clips starting in step in every room, after Keith heard them quiet and echoing (added after building the stage)
+- [x] Announcement voices from backlog.md: the voice shown by name, and an "Add an emotion" list for ElevenLabs voices in the editor and the quick announcement (added after building the stage)
 - [x] Cropping profile photos from backlog.md: choose the part to use in a round frame, with drag and zoom, before it's sent (react-easy-crop) (added after building the stage)
 - [x] Whole albums in the queue from backlog.md, for curators and admins: albums in their request search, queued in order as their requests without counting towards the cap, and one DJ shout-out per album (added after building the stage)
 - [x] Station covers from backlog.md: OpenAI paints each station a cover from its name and description, shown on Now Playing, the Radio page and the station editor (with "Paint another"); a new name or description gets a new one, and stations without one get theirs at startup. Now Playing's tiles stay the same width whatever their captions (added after building the stage)
 - [x] ElevenLabs voices from backlog.md: the account's own voices alongside OpenAI's, grouped apart in the station editor and settings, for the DJ and announcements. On an ElevenLabs voice the DJ can use tags such as [laughs]; tags are taken out for OpenAI's voices (added after building the stage)
 - [x] Jingles from backlog.md: GuildFM's station idents (Admin, Jingles) and each station's show idents (its editor), played in the pause between songs where the AI marks them, never twice in a row, each station with a switch, and shown in the hour preview (added after building the stage)
+- [x] Shared DJs from backlog.md: a DJ (name, personality, voice) is their own, chosen in the station editor or made new there, and can host several stations; changes apply on all of them, and how often they talk stays per station. Existing stations' DJs were moved over by a migration (added after building the stage)
+- [x] Jingles renamed from backlog.md: system idents (GuildFM's own) and station idents (one station's), and Xennials' Delight's three replaced with six new ones (added after building the stage)
+- [x] Station editor from backlog.md: "Paint another" paints from the name and description in the editor, saved or not, and saving those doesn't paint another; leaving with unsaved changes asks first (added after building the stage)
 
 Done when: a station with a DJ plays for an hour, announces a request by name, and mentions the Carlisle weather.
 
 ## Stage 11: Hardening and handover
 Goal: GuildFM runs unattended on the office machine.
 - [x] After a restart, GuildFM carries on driving the speakers if they're still playing its queue (done early, after trying Stage 8)
-- [ ] Graceful failure: speakers offline, Spotify token expired, OpenAI errors (music keeps playing, the DJ goes quiet)
-- [ ] Logging and a simple status view for admins
-- [ ] Run as a service on the always-on machine (systemd, or Docker with host networking), with SQLite backups
-- [ ] README: setting up the Spotify app, the redirect URI and `.env`, and running GuildFM
-- [ ] Full end-to-end run on the office speakers
+- [x] Graceful failure: speakers offline (a clip still plays in the rooms that answer), Spotify token expired, OpenAI and ElevenLabs errors including running out of credit, and the weather or a cover failing. The music keeps playing and the DJ goes quiet. An announcement whose ElevenLabs voice fails is read out in the OpenAI announcement voice instead. A station whose AI can't pick plays songs from before (its earlier picks, then its older plays, then Best Voted) rather than going silent (decided while building)
+- [x] Logging and a simple status view for admins (Admin, Status): the speakers, Spotify, OpenAI, ElevenLabs (with the credits used this month), the weather, whether ffmpeg was found, the backups and disk space, and recent problems from the log. Each service is judged by how GuildFM's own calls to it went, not by test calls
+- [x] Run as a service: a systemd unit (`deploy/guildfm.service`) rather than Docker, ffmpeg in the setup steps, old speech clips cleared out daily rather than only at startup, and `scripts/update.sh` for updates. An empty `AUDIO_LOUDNESS=` no longer stops GuildFM starting (found while building)
+- [x] Backups: daily zips of the SQLite database and the uploaded media (jingles, covers, profile photos), the last 14 kept, in `data/backups` or `BACKUP_DIR`, and `guildfm backup` for one now. Speech clips are a cache and are left out
+- [ ] Moving in: GuildFM installed on the office machine following the README, with a backup from the laptop unzipped into its data folder, or a fresh start with the jingles uploaded again from `assets/jingles`
+- [ ] Reaching GuildFM: `guildfm.local` advertised over mDNS (Avahi, in the README), and checked on the office's phones and laptops (older Android phones may not resolve `.local` names). Then decide on HTTPS. A `.local` name can't get a certificate browsers trust, so HTTPS means a hostname on a company domain (Let's Encrypt through a DNS challenge, behind Caddy). On plain HTTP, iPhones still add GuildFM to the home screen, and Android and desktop get a shortcut that opens a browser tab. The speakers keep fetching clips over plain HTTP either way
+- [x] README: setting up the Spotify app, the redirect URI and `.env` (OpenAI, and ElevenLabs if wanted), installing ffmpeg, and running GuildFM. Spotify only accepts an HTTPS or `127.0.0.1` redirect, so without HTTPS, Spotify is connected from a browser on the machine itself or through an SSH tunnel. Also what it costs to run: OpenAI for the DJ's lines, voices and covers, and ElevenLabs credits per line
+- [ ] Full end-to-end run on the office speakers: requests and votes, a whole album, a station with an ElevenLabs DJ and its jingles, an announcement in chosen rooms, and installing GuildFM on a phone
 
 Done when: GuildFM survives a restart of the machine and a day of normal office use without anyone touching it.

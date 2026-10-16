@@ -1,4 +1,8 @@
-"""AI stations for curators: making and editing them, putting one on, and hearing the DJ."""
+"""AI stations for curators: making and editing them, putting one on, and hearing the DJ.
+
+A station's DJ is a DJ of their own, who can host other stations too. The editor's form names the
+DJ by id, or none for a new one, with their details: saving the station saves those to the DJ,
+on every station they host."""
 
 import time
 from datetime import UTC, datetime
@@ -15,10 +19,11 @@ from guildfm.ai import AIError
 from guildfm.api.jingles import JingleOut, media
 from guildfm.api.schemas import TrackOut
 from guildfm.auth import require
+from guildfm.covers import painted_from
 from guildfm.db import get_session
 from guildfm.dj import voice_instructions
 from guildfm.jingles import forget
-from guildfm.models import DJStyle, Jingle, Play, Station, StationKind, TalkUnit, User
+from guildfm.models import DJProfile, DJStyle, Jingle, Play, Station, StationKind, TalkUnit, User
 from guildfm.permissions import Permission
 from guildfm.playlists import current_source
 from guildfm.prefs import get_pref, set_pref
@@ -44,6 +49,7 @@ class StationIn(BaseModel):
     description: Brief
     global_awareness: bool = False
     dj: bool = False
+    dj_id: int | None = None  # the DJ these details are for; None for a new one
     dj_name: DJName = ""
     personality: Personality = ""
     voice: Voice = "marin"
@@ -67,6 +73,7 @@ class StationOut(BaseModel):
     description: str
     global_awareness: bool
     dj: bool
+    dj_id: int | None
     dj_name: str
     personality: str
     voice: str
@@ -104,6 +111,13 @@ class HourOut(BaseModel):
     minutes: int  # how long the songs add up to
 
 
+class CoverIn(BaseModel):
+    """What to paint a cover from: the editor's name and description, saved or not."""
+
+    name: Name
+    description: Brief
+
+
 class PreviewIn(BaseModel):
     text: Words
     voice: Voice
@@ -121,6 +135,7 @@ async def _out(db: AsyncSession, station: Station) -> StationOut:
         description=station.description,
         global_awareness=station.global_awareness,
         dj=station.dj,
+        dj_id=station.dj_id,
         dj_name=station.dj_name,
         personality=station.personality,
         voice=station.voice,
@@ -145,9 +160,44 @@ async def _station(db: AsyncSession, station_id: int, editing: bool = False) -> 
     return station
 
 
-def _apply(station: Station, body: StationIn) -> None:
-    for field, value in body.model_dump().items():
-        setattr(station, field, value)
+# What's the station's own; the DJ's details go to the DJ.
+STATION_FIELDS = (
+    "name",
+    "description",
+    "global_awareness",
+    "talk_every",
+    "talk_unit",
+    "style",
+    "announce_requests",
+    "jingles",
+)
+
+
+async def _apply(db: AsyncSession, station: Station, body: StationIn) -> None:
+    for field in STATION_FIELDS:
+        setattr(station, field, getattr(body, field))
+    station.host = await _host(db, body) if body.dj else None
+
+
+async def _host(db: AsyncSession, body: StationIn) -> DJProfile:
+    """The DJ the form describes: the one it names, with these details, or a new one."""
+    host = None
+    if body.dj_id is not None:
+        host = await db.get(DJProfile, body.dj_id)
+        if host is None:
+            raise HTTPException(404, "That DJ doesn't exist any more.")
+    same_name = select(DJProfile.id).where(func.lower(DJProfile.name) == body.dj_name.lower())
+    if host is not None:
+        same_name = same_name.where(DJProfile.id != host.id)
+    if await db.scalar(same_name.limit(1)):
+        raise HTTPException(
+            409, f"There's already a DJ called {body.dj_name}. Choose them from the list instead."
+        )
+    if host is None:
+        host = DJProfile(created_at=time.time())
+        db.add(host)
+    host.name, host.personality, host.voice = body.dj_name, body.personality, body.voice
+    return host
 
 
 @router.get("")
@@ -162,7 +212,7 @@ async def stations(_: Viewer, db: Db) -> list[StationOut]:
 async def create(body: StationIn, user: Maker, request: Request, db: Db) -> StationOut:
     """A new station. Its cover is painted in the background, in half a minute or so."""
     station = Station(created_by=user.id, created_at=time.time())
-    _apply(station, body)
+    await _apply(db, station, body)
     db.add(station)
     await db.commit()
     request.app.state.covers.paint_later(station.id)
@@ -218,11 +268,12 @@ async def station(station_id: int, _: Viewer, db: Db) -> StationOut:
 @router.put("/{station_id}")
 async def change(station_id: int, body: StationIn, _: Maker, request: Request, db: Db):
     station = await _station(db, station_id, editing=True)
-    before = (station.name, station.description)
-    _apply(station, body)
+    # What its cover shows. Covers from before this was noted show the saved details.
+    painted = station.art_for or painted_from(station.name, station.description)
+    await _apply(db, station, body)
     await db.commit()
-    # A new name or description gets a new cover.
-    if (station.name, station.description) != before:
+    # A new name or description gets a new cover, unless it was already painted from them.
+    if station.art is None or painted_from(station.name, station.description) != painted:
         request.app.state.covers.paint_later(station.id)
     await request.app.state.queue.changed()
     return await _out(db, station)
@@ -233,7 +284,7 @@ async def delete(station_id: int, _: Maker, request: Request, db: Db) -> Respons
     station = await _station(db, station_id, editing=True)
     if await get_pref(db, "default_station") == station.id:
         await set_pref(db, "default_station", None)
-    # Its show idents go with it: the database deletes the rows, and this the files.
+    # Its station idents go with it: the database deletes the rows, and this the files.
     for jingle in await db.scalars(select(Jingle).where(Jingle.station_id == station.id)):
         forget(media(request), jingle)
     request.app.state.covers.forget(station)
@@ -244,11 +295,15 @@ async def delete(station_id: int, _: Maker, request: Request, db: Db) -> Respons
 
 
 @router.post("/{station_id}/cover")
-async def repaint(station_id: int, _: Maker, request: Request, db: Db) -> StationOut:
-    """Another cover for the station, painted while you wait: half a minute or so."""
+async def repaint(
+    station_id: int, _: Maker, request: Request, db: Db, body: CoverIn | None = None
+) -> StationOut:
+    """Another cover for the station, painted while you wait: half a minute or so. From the
+    editor's name and description when it sends them, saved or not."""
     await _station(db, station_id)
+    asked = (body.name, body.description) if body else None
     try:
-        await request.app.state.covers.paint(station_id)
+        await request.app.state.covers.paint(station_id, asked)
     except AIError as error:
         raise HTTPException(502, f"{error} No new cover this time.") from None
     db.expire_all()

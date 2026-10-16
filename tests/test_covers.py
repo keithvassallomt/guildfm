@@ -71,6 +71,25 @@ def test_another_cover_on_request(client: TestClient, openai: FakeOpenAI) -> Non
     assert client.get(again["art_url"]).content == openai.painted(2)
 
 
+def test_another_cover_from_the_editors_unsaved_details(client, openai: FakeOpenAI) -> None:
+    sign_in(client, *ADMIN)
+    made = make_station(client)
+    settle(client)
+    body = {"name": "Teatime Grooves", "description": "Soul for teatime."}
+    client.post(f"/api/stations/{made['id']}/cover", json=body).raise_for_status()
+    assert '"Teatime Grooves"' in openai.images[1]["prompt"]
+    assert "Soul for teatime." in openai.images[1]["prompt"]
+    assert station(client, made["id"])["name"] == "Lunchtime Grooves"  # not saved
+
+    # Saving what it was painted from doesn't paint another; anything else does.
+    client.put(f"/api/stations/{made['id']}", json=body).raise_for_status()
+    settle(client)
+    assert len(openai.images) == 2
+    client.put(f"/api/stations/{made['id']}", json=body | {"name": "Supper Club"})
+    settle(client)
+    assert len(openai.images) == 3
+
+
 def test_when_openai_cant_paint_the_station_carries_on(client, openai: FakeOpenAI) -> None:
     sign_in(client, *ADMIN)
     openai.images_down = True

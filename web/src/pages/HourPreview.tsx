@@ -208,7 +208,7 @@ function JingleLine({ jingle }: { jingle: Jingle }) {
     <div className={`${h.line} ${h.jingle}`}>
       <span className={h.lineLabel}>
         <Icon name="jingle" size={15} />
-        {jingle.kind === "show" ? "Show ident" : "Station ident"}
+        {jingle.kind === "station" ? "Station ident" : "System ident"}
       </span>
       <div className={h.jingleTop}>
         <span className={h.jingleName}>

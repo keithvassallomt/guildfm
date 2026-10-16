@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -18,8 +19,10 @@ from guildfm.config import Settings, get_settings
 from guildfm.covers import Painter
 from guildfm.db import make_engine, upgrade_to_head
 from guildfm.dj import DJ
+from guildfm.housekeeping import Housekeeping
 from guildfm.jingles import JinglePlayer
 from guildfm.live import LiveHub, live_socket
+from guildfm.logs import Recent, to_console
 from guildfm.playback import PlaybackController
 from guildfm.queue import QueueEngine
 from guildfm.radio import Radio
@@ -46,9 +49,13 @@ def create_app(
     or the weather, turn off `poll` so they decide when the speakers are read and announcements
     are checked, and set `now` to pick the time."""
     settings = settings or get_settings()
+    to_console()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        app.state.started_at = time.time()
+        app.state.problems = Recent()
+        app.state.problems.attach()
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(upgrade_to_head, settings.sync_database_url)
         engine = make_engine(settings.database_url)
@@ -81,7 +88,7 @@ def create_app(
         await app.state.queue.recover()
         app.state.schedule = Scheduler(app.state.sessionmaker, app.state.playback, **clock)
         await app.state.schedule.tick()
-        app.state.speech.prune()
+        app.state.housekeeping = Housekeeping(app.state.speech, settings.data_dir, settings.backups)
         app.state.announcer = Announcer(
             app.state.sessionmaker,
             app.state.playback,
@@ -114,6 +121,7 @@ def create_app(
                 app.state.schedule.run(),
                 app.state.announcer.run(),
                 app.state.covers.fill_in(),
+                app.state.housekeeping.run(),
             )
             if poll
             else ()
@@ -132,6 +140,7 @@ def create_app(
         await app.state.awareness.close()
         await app.state.ai.close()
         await engine.dispose()
+        app.state.problems.detach()
 
     app = FastAPI(title="GuildFM", version=__version__, lifespan=lifespan)
     app.state.settings = settings
@@ -153,6 +162,7 @@ def create_app(
         media_dir=settings.data_dir / "media",
         eleven_key=settings.elevenlabs_api_key.get_secret_value(),
         eleven_model=settings.elevenlabs_model,
+        loudness=settings.audio_loudness,
     )
     app.state.ai = ai or AIClient(
         api_key=settings.openai_api_key.get_secret_value(),

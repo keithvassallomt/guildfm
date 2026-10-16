@@ -1,5 +1,5 @@
-"""Jingles: admins look after GuildFM's station idents, and whoever makes stations looks after
-each station's show idents. Uploaded as MP3s, sent as the request body."""
+"""Jingles: admins look after the system idents, GuildFM's own, and whoever makes stations looks
+after each station's station idents. Uploaded as MP3s, sent as the request body."""
 
 from pathlib import Path
 from typing import Annotated
@@ -9,6 +9,7 @@ from pydantic import BaseModel, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm.audio import level
 from guildfm.auth import ActiveUser
 from guildfm.db import get_session
 from guildfm.jingles import JingleError, add_jingle, forget
@@ -45,7 +46,7 @@ def media(request: Request) -> Path:
 
 
 async def _allowed(db: AsyncSession, user: User, station_id: int | None) -> None:
-    """Station idents are for admins, a station's show idents for whoever makes stations."""
+    """System idents are for admins, a station's own idents for whoever makes stations."""
     needs = Permission.CREATE_STATIONS if station_id else Permission.CHANGE_SETTINGS
     if not can(user.role, needs):
         raise HTTPException(403, "You don't have permission to do that.")
@@ -54,12 +55,12 @@ async def _allowed(db: AsyncSession, user: User, station_id: int | None) -> None
         if station is None:
             raise HTTPException(404, "That station doesn't exist any more.")
         if station.kind == StationKind.AI_PICKS:
-            raise HTTPException(409, "AI picks plays GuildFM's station idents only.")
+            raise HTTPException(409, "AI picks plays the system idents only.")
 
 
 @router.get("")
 async def jingles(user: ActiveUser, db: Db, station_id: int | None = None) -> list[JingleOut]:
-    """GuildFM's station idents, or with `station_id`, that station's show idents."""
+    """The system idents, or with `station_id`, that station's station idents."""
     await _allowed(db, user, station_id)
     rows = await db.scalars(
         select(Jingle).where(Jingle.station_id == station_id).order_by(Jingle.id)
@@ -77,10 +78,12 @@ async def upload(
     name: Annotated[Name, Query()],
     station_id: int | None = None,
 ) -> JingleOut:
-    """Add an MP3 as a station ident, or with `station_id`, a show ident for that station."""
+    """Add an MP3 as a system ident, or with `station_id`, a station ident for that station. It's
+    evened out to the same loudness as the voices."""
     await _allowed(db, user, station_id)
+    data = await level(await request.body(), request.app.state.settings.audio_loudness)
     try:
-        jingle = add_jingle(db, media(request), await request.body(), name, station_id)
+        jingle = add_jingle(db, media(request), data, name, station_id)
     except JingleError as error:
         raise HTTPException(415, str(error)) from None
     await db.commit()

@@ -1,0 +1,21 @@
+# GuildFM as a systemd service: started at boot, and started again if it ever stops.
+# It expects a "guildfm" user with GuildFM checked out in /home/guildfm/guildfm (see the README).
+# Install it with:
+#   sudo cp deploy/guildfm.service /etc/systemd/system/
+#   sudo systemctl enable --now guildfm
+
+[Unit]
+Description=GuildFM, the office jukebox
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+User=guildfm
+WorkingDirectory=/home/guildfm/guildfm
+ExecStart=/home/guildfm/guildfm/.venv/bin/guildfm
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

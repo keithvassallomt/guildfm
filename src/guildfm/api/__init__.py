@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from guildfm.api import (
     account,
     announcements,
+    djs,
     health,
     jingles,
     now,
@@ -13,6 +14,7 @@ from guildfm.api import (
     settings,
     spotify,
     stations,
+    status,
     users,
     voices,
 )
@@ -30,5 +32,7 @@ router.include_router(playlists.router)
 router.include_router(now.router)
 router.include_router(announcements.router)
 router.include_router(stations.router)
+router.include_router(djs.router)
 router.include_router(jingles.router)
 router.include_router(voices.router)
+router.include_router(status.router)

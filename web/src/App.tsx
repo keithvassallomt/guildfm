@@ -19,6 +19,7 @@ import { QueuePage } from "./pages/QueuePage";
 import { RadioPage } from "./pages/RadioPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StationEditor } from "./pages/StationEditor";
+import { StatusPage } from "./pages/StatusPage";
 import { UsersPage } from "./pages/UsersPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
@@ -164,6 +165,14 @@ export function App() {
             element={
               <Allowed permission="change_settings">
                 <JinglesPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="admin/status"
+            element={
+              <Allowed permission="change_settings">
+                <StatusPage />
               </Allowed>
             }
           />

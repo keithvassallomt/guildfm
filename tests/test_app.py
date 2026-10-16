@@ -15,6 +15,13 @@ def test_health(client: TestClient) -> None:
     assert response.json()["status"] == "ok"
 
 
+def test_settings_left_empty_in_env(settings: Settings) -> None:
+    fields = {**settings.model_dump(), "audio_loudness": "", "backup_dir": ""}
+    empty = Settings(_env_file=None, **fields)
+    assert empty.audio_loudness is None  # levelling off
+    assert empty.backups == settings.data_dir / "backups"
+
+
 def test_migrations_run_on_startup(client: TestClient, settings: Settings) -> None:
     head = ScriptDirectory(str(MIGRATIONS)).get_current_head()
     with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
@@ -42,6 +49,17 @@ def test_serves_built_front_end(settings: Settings) -> None:
         assert client.get("/api/nope").status_code == 404
         # Paths can't escape the build folder.
         assert "nope" not in client.get("/..%2Fsecret.txt").text
+
+
+def test_the_app_manifest_is_served_as_one(settings: Settings) -> None:
+    settings.web_dist.mkdir(parents=True)
+    (settings.web_dist / "index.html").write_text("<html>GuildFM</html>")
+    (settings.web_dist / "manifest.webmanifest").write_text('{"name": "GuildFM"}')
+
+    with TestClient(create_app(settings, FakeSpeakers())) as client:
+        response = client.get("/manifest.webmanifest")
+        assert response.headers["content-type"] == "application/manifest+json"
+        assert response.json() == {"name": "GuildFM"}
 
 
 def test_media_is_served_without_signing_in(client: TestClient, settings: Settings) -> None:

@@ -22,7 +22,7 @@ const PLACES: Place[] = [
     to: "/admin/jingles",
     icon: "jingle",
     title: "Jingles",
-    hint: "GuildFM's idents, played between songs on AI stations",
+    hint: "System idents, played between songs on any AI station",
     needs: "change_settings",
   },
   {
@@ -37,6 +37,13 @@ const PLACES: Place[] = [
     icon: "admin",
     title: "Settings",
     hint: "Playback hours, voting rules, voices and connections",
+    needs: "change_settings",
+  },
+  {
+    to: "/admin/status",
+    icon: "status",
+    title: "Status",
+    hint: "The speakers and services GuildFM needs, backups and recent problems",
     needs: "change_settings",
   },
 ];

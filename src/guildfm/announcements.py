@@ -1,9 +1,11 @@
 """Announcements: an admin types one, and the office hears it, now or on a schedule.
 
-Each is read out by OpenAI in the announcement voice from settings and played as an overlay clip
-in each chosen room. Over the music, the music goes quiet and comes back up. Between songs,
-GuildFM pauses the music just before the current song ends, plays the clip, then starts the next
-song. (A clip in the Sonos queue would play in every room in the group, not just the chosen ones.)
+Each is read out in the announcement voice from settings and played as an overlay clip in each
+chosen room. If that's an ElevenLabs voice and ElevenLabs fails (out of credits, say), OpenAI
+reads it out instead: the message matters more than the voice. Over the music, the music goes
+quiet and comes back up. Between songs, GuildFM pauses the music just before the current song
+ends, plays the clip, then starts the next song. (A clip in the Sonos queue would play in every
+room in the group, not just the chosen ones.)
 
 Announcements only play while GuildFM is driving the speakers: not after Stop, an outside
 takeover or closing time. Scheduled ones also keep to playback hours. One that comes due while
@@ -28,10 +30,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from guildfm.live import LiveHub
 from guildfm.models import Announcement, AnnouncementPlay, AnnounceMode, Repeat
 from guildfm.playback import PlaybackController, Status
-from guildfm.prefs import DAYS, get_pref
+from guildfm.prefs import DAYS, DEFAULTS, get_pref
 from guildfm.schedule import is_open
 from guildfm.speakers import SpeakersRefused, SpeakersUnavailable
-from guildfm.speech import Clip, SpeechClient, SpeechError
+from guildfm.speech import Clip, SpeechClient, SpeechError, is_eleven
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +50,7 @@ INSTRUCTIONS = (
     "easy to follow from across the room."
 )
 WEEKDAYS = DAYS[:5]
+STAND_IN = DEFAULTS["announcement_voice"]  # OpenAI's, for when an ElevenLabs voice fails
 HOURLY_LOOKAHEAD = 24 * 8  # hours searched for the next one inside playback hours
 
 # Why an announcement didn't play, by what GuildFM was doing at the time.
@@ -168,6 +171,17 @@ class Announcer:
                 voice = await get_pref(db, "announcement_voice")
         return await self._speech.say(text, voice, INSTRUCTIONS)
 
+    async def _read_out(self, text: str, voice: str) -> Clip:
+        """Like `speak`, for an announcement that's going on the speakers: if ElevenLabs fails,
+        OpenAI's stand-in voice reads it out instead."""
+        try:
+            return await self._speech.say(text, voice, INSTRUCTIONS)
+        except SpeechError as error:
+            if not is_eleven(voice):
+                raise
+            log.warning("ElevenLabs couldn't read an announcement out, so OpenAI did: %s", error)
+            return await self._speech.say(text, STAND_IN, INSTRUCTIONS)
+
     def check_can_play(self) -> None:
         if not self._controller.in_control:
             raise CantAnnounce(BLOCKED.get(self._controller.status, BLOCKED[Status.STOPPED]))
@@ -183,7 +197,9 @@ class Announcer:
         """Play an announcement straight away: over the music, or between songs after this one.
         True when it waits for the current song to end."""
         self.check_can_play()
-        self.say(Spoken(text, await self.speak(text), rooms, mode))
+        async with self._sessions() as db:
+            voice = await get_pref(db, "announcement_voice")
+        self.say(Spoken(text, await self._read_out(text, voice), rooms, mode))
         return mode == AnnounceMode.AFTER and self._controller.status == Status.PLAYING
 
     # Running
@@ -254,7 +270,7 @@ class Announcer:
             problem = MISSED.get(self._controller.status, MISSED[Status.STOPPED])
         else:
             try:
-                clip = await self._speech.say(rule.text, voice, INSTRUCTIONS)
+                clip = await self._read_out(rule.text, voice)
             except SpeechError as error:
                 problem = str(error)
             else:

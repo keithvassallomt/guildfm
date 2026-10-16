@@ -5,6 +5,7 @@ connected once through Spotify's sign-in page and kept fresh with its refresh to
 """
 
 import asyncio
+import contextlib
 import secrets
 import time
 from collections.abc import Callable
@@ -17,6 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm.health import Health
 from guildfm.models import SpotifyAccount, Track
 
 API = "https://api.spotify.com/v1"
@@ -141,6 +143,7 @@ class SpotifyClient:
         self._app_token: tuple[str, float] | None = None
         # "Connect Spotify" links handed out, waiting for Spotify to send people back.
         self._states: dict[str, float] = {}
+        self.health = Health()
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -148,6 +151,10 @@ class SpotifyClient:
     # Talking to Spotify
 
     async def _token(self, form: dict[str, str]) -> dict[str, Any]:
+        with self._noted():
+            return await self._ask_token(form)
+
+    async def _ask_token(self, form: dict[str, str]) -> dict[str, Any]:
         try:
             response = await self._http.post(
                 f"{ACCOUNTS}/api/token", data=form, auth=(self._id, self._secret)
@@ -167,7 +174,25 @@ class SpotifyClient:
         self._app_token = (data["access_token"], self._clock() + data["expires_in"])
         return data["access_token"]
 
+    @contextlib.contextmanager
+    def _noted(self):
+        """Note how a call went, for the status page. Spotify not having something, or not
+        sharing it, isn't Spotify failing."""
+        try:
+            yield
+        except SpotifyNotFound, SpotifyForbidden:
+            self.health.worked()
+            raise
+        except SpotifyError as error:
+            self.health.failed(str(error))
+            raise
+        self.health.worked()
+
     async def _get(self, path: str, params: dict | None = None, user_token: str | None = None):
+        with self._noted():
+            return await self._fetch(path, params, user_token)
+
+    async def _fetch(self, path: str, params: dict | None, user_token: str | None):
         for attempt in range(2):
             token = user_token or await self.app_token()
             try:

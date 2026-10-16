@@ -28,15 +28,16 @@
   border-color: var(--accent);
 }
 
-.row {
+/* Under the text box: the emotions on the left, Preview on the right. */
+.tools {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
-.row > [role="radiogroup"] {
-  flex: 1 1 240px;
+.emotion {
+  margin-right: auto;
 }
 
 .more {

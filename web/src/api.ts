@@ -291,6 +291,16 @@ export type PlaylistTile = {
   on_air: boolean;
 };
 
+/** A DJ, who can host any number of stations. */
+export type DJProfile = {
+  id: number;
+  name: string;
+  personality: string;
+  voice: string;
+  /** The stations they host, by name. */
+  stations: { id: number; name: string }[];
+};
+
 export type SourceKind = "queue" | "library" | "radio";
 
 /** A station as a source on the Now Playing screen. */
@@ -404,6 +414,8 @@ export type StationFields = {
   description: string;
   global_awareness: boolean;
   dj: boolean;
+  /** The DJ the name, personality and voice are for; null for a new one. */
+  dj_id: number | null;
   dj_name: string;
   personality: string;
   voice: string;
@@ -439,10 +451,10 @@ export type HourSlot = {
 
 export type Hour = { slots: HourSlot[]; minutes: number };
 
-/** A short ident played between songs: GuildFM's own (station), or one station's (show). */
+/** A short ident played between songs: GuildFM's own (system), or one station's (station). */
 export type Jingle = {
   id: number;
-  kind: "station" | "show";
+  kind: "system" | "station";
   station_id: number | null;
   name: string;
   seconds: number;
@@ -456,4 +468,38 @@ export type Voices = {
   elevenlabs: { id: string; name: string }[];
   /** Whether there's an ElevenLabs key in .env. */
   elevenlabs_ready: boolean;
+};
+
+/** How an outside service is doing. "off" isn't set up; "unused" hasn't been needed yet. */
+export type ServiceState = "ok" | "failing" | "unused" | "off";
+
+export type Service = {
+  key: string;
+  name: string;
+  state: ServiceState;
+  /** What it's for, or what's wrong. */
+  detail: string;
+  ok_at: string | null;
+  failed_at: string | null;
+};
+
+/** The admins' status page: the speakers, outside services, backups and recent problems. */
+export type SystemStatus = {
+  version: string;
+  started_at: string;
+  /** Browsers with GuildFM open. */
+  connected: number;
+  services: Service[];
+  /** ElevenLabs credits this month, when it'll say. */
+  credits: { used: number; limit: number; resets_at: string | null } | null;
+  backups: { folder: string; count: number; latest_at: string | null };
+  /** Bytes free where the data folder is. */
+  disk_free: number;
+  problems: {
+    at: string;
+    level: "warning" | "error";
+    source: string;
+    message: string;
+    count: number;
+  }[];
 };

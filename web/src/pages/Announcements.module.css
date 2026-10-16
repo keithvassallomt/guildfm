@@ -173,14 +173,20 @@ label.legend {
   border-color: var(--accent);
 }
 
-.voiceRow {
+/* Under the text box: the emotions on the left, Preview on the right. */
+.voiceTools {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.emotion {
+  margin-right: auto;
 }
 
 .voiceNote {
+  margin: 0;
   font-size: 13px;
   line-height: 1.4;
   color: var(--muted);

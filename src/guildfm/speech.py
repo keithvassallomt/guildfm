@@ -22,6 +22,8 @@ import httpx2
 from pydantic import AfterValidator
 from pydantic_core import PydanticCustomError
 
+from guildfm.audio import FFMPEG, level
+from guildfm.health import Health
 from guildfm.prefs import VOICES
 
 log = logging.getLogger(__name__)
@@ -30,9 +32,10 @@ API = "https://api.openai.com/v1/audio/speech"
 ELEVENLABS = "https://api.elevenlabs.io"
 ELEVEN = "elevenlabs:"  # how an ElevenLabs voice's name starts
 FOLDER = "speech"  # inside the media folder
-KEPT_DAYS = 30  # MP3s nobody has used for this long are cleared out at startup
+KEPT_DAYS = 30  # MP3s nobody has used for this long are cleared out (see housekeeping.py)
 MAX_TEXT = 600  # characters; OpenAI's limit is far higher, but announcements are short
 VOICES_KEPT = 5 * 60  # seconds the ElevenLabs account's voices are remembered for
+CREDITS_KEPT = 60  # seconds the ElevenLabs account's credits are remembered for
 
 _ELEVEN_VOICE = re.compile(rf"{ELEVEN}[A-Za-z0-9]{{1,40}}")
 # Words in square brackets, such as [laughs] or [sighs, quietly], but not [3].
@@ -80,6 +83,15 @@ class ElevenVoice:
     name: str
 
 
+@dataclass(frozen=True)
+class Credits:
+    """The ElevenLabs account's credits this month."""
+
+    used: int
+    limit: int
+    resets_at: float | None  # seconds since the epoch
+
+
 class SpeechClient:
     def __init__(
         self,
@@ -90,15 +102,24 @@ class SpeechClient:
         *,
         eleven_key: str = "",
         eleven_model: str = "eleven_v4",
+        loudness: float | None = None,
     ) -> None:
         self._key = api_key
         self._model = model
         self._eleven_key = eleven_key
         self._eleven_model = eleven_model
+        # Clips are evened out to this, in LUFS, when ffmpeg is about; else left as they come.
+        self._loudness = loudness if FFMPEG else None
+        if loudness is not None and not FFMPEG:
+            log.warning("ffmpeg isn't installed, so voices play quieter than the music")
         self._folder = media_dir / FOLDER
         self._http = http or httpx2.AsyncClient(timeout=30)
         self._voices: list[ElevenVoice] = []
         self._voices_at = float("-inf")  # when they were read, by time.monotonic
+        self._credits: Credits | None = None
+        self._credits_at = float("-inf")
+        self.openai_health = Health()
+        self.eleven_health = Health()
 
     @property
     def eleven_ready(self) -> bool:
@@ -116,16 +137,25 @@ class SpeechClient:
         else:
             text = without_tags(text)
             recipe = [self._model, voice, instructions, text]
+        if self._loudness is not None:
+            recipe.append(f"{self._loudness} LUFS")
         name = hashlib.sha256(json.dumps(recipe).encode()).hexdigest()[:32]
         path = self._folder / f"{name}.mp3"
         if path.exists():
             path.touch()  # still in use, so pruning leaves it
             return Clip(path, mp3_seconds(path.read_bytes()))
 
-        if is_eleven(voice):
-            data = await self._eleven(text, voice.removeprefix(ELEVEN))
-        else:
-            data = await self._openai(text, voice, instructions)
+        health = self.eleven_health if is_eleven(voice) else self.openai_health
+        try:
+            if is_eleven(voice):
+                data = await self._eleven(text, voice.removeprefix(ELEVEN))
+            else:
+                data = await self._openai(text, voice, instructions)
+        except SpeechError as error:
+            health.failed(str(error))
+            raise
+        health.worked()
+        data = await level(data, self._loudness)
         self._folder.mkdir(parents=True, exist_ok=True)
         draft = path.with_suffix(".tmp")
         draft.write_bytes(data)
@@ -191,13 +221,38 @@ class SpeechClient:
             found = response.json().get("voices", [])
         except (httpx2.HTTPError, ValueError) as error:
             log.warning("Couldn't list the ElevenLabs voices: %s", error)
+            self.eleven_health.failed("Couldn't list the ElevenLabs voices.")
             return self._voices
+        self.eleven_health.worked()
         self._voices = sorted(
             (ElevenVoice(ELEVEN + v["voice_id"], v.get("name") or "Unnamed") for v in found),
             key=lambda voice: voice.name.lower(),
         )
         self._voices_at = time.monotonic()
         return self._voices
+
+    async def eleven_credits(self) -> Credits | None:
+        """The ElevenLabs account's credits this month, remembered for a minute. None without a
+        key, or when ElevenLabs won't say, such as for a key without permission to read them."""
+        if not self._eleven_key:
+            return None
+        if time.monotonic() - self._credits_at < CREDITS_KEPT:
+            return self._credits
+        try:
+            response = await self._http.get(
+                f"{ELEVENLABS}/v1/user/subscription", headers={"xi-api-key": self._eleven_key}
+            )
+            response.raise_for_status()
+            found = response.json()
+            self._credits = Credits(
+                used=int(found["character_count"]),
+                limit=int(found["character_limit"]),
+                resets_at=found.get("next_character_count_reset_unix"),
+            )
+        except httpx2.HTTPError, KeyError, TypeError, ValueError:
+            self._credits = None
+        self._credits_at = time.monotonic()
+        return self._credits
 
     def prune(self) -> None:
         """Clear out MP3s that haven't been used for a while."""

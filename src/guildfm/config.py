@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # OpenAI's voices are offered. The model has to understand audio tags such as [laughs].
     elevenlabs_api_key: SecretStr = SecretStr("")
     elevenlabs_model: str = "eleven_v4"
+    # How loud voices and uploaded jingles are made, in LUFS, so they sit at about the music's
+    # level. Needs ffmpeg; empty leaves them as they come.
+    audio_loudness: float | None = -14.0
     spotify_client_id: str
     spotify_client_secret: SecretStr
     spotify_redirect_uri: str = "http://127.0.0.1:8000/auth/spotify/callback"
@@ -44,11 +47,24 @@ class Settings(BaseSettings):
     sonos_spotify_sid: int = 9
     sonos_spotify_sn: int = 1
     data_dir: Path = ROOT / "data"
+    # Where the daily backups go. Empty means a "backups" folder in the data folder; somewhere on
+    # another disk or a network share is safer.
+    backup_dir: Path | None = None
     web_dist: Path = ROOT / "web" / "dist"
+
+    @field_validator("audio_loudness", "backup_dir", mode="before")
+    @classmethod
+    def _empty_means_none(cls, value):
+        """`AUDIO_LOUDNESS=` turns levelling off, and `BACKUP_DIR=` means the default."""
+        return None if value == "" else value
 
     @property
     def sonos_host_list(self) -> list[str]:
         return [host.strip() for host in self.sonos_hosts.split(",") if host.strip()]
+
+    @property
+    def backups(self) -> Path:
+        return self.backup_dir or self.data_dir / "backups"
 
     @property
     def database_url(self) -> str:

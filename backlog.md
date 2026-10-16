@@ -1,23 +1,14 @@
 # Improvements
 
-## PWA
-
-The application should be installable as a PWA.
-
-## Voices
-
-1:
-I've chosen Guildbert as the default announcement voice. When creating an annoucment, the page says:
-
-Read out in Elevenlabs:RbXJqzRWkDP73C6d7O7T, the announcement voice from Settings.
-
-So it's not getting the voice name there. 
-
-2:
-Do the DJ interjections take advantage of elevenlab's emotions when generating a script, if one is selected?
-
-
 # Bugs
+
+1. App was running, and playing music. 
+2. Someone started playing from the Sonos app. 
+3. Expected: GuildFM says it's stepping aside since someone is playing directly.
+4. Actual: As expected. 
+5. GuildFM restarts.
+6. Expected: Still says the same thing.
+7. Actual: The music is stopped. Press Play to start it again. - even though the music still was playing from the sonos app.
 
 # Stretch goals
 

@@ -1,10 +1,14 @@
 """Serves the built React front end, sending unknown paths to index.html so client routes work."""
 
+import mimetypes
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+
+# Browsers expect the app manifest as this; Python doesn't know the extension.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 def mount_web(app: FastAPI, dist: Path) -> None:

@@ -34,6 +34,7 @@ const tabs: Tab[] = [
       { to: "/admin/jingles", label: "Jingles", needs: "change_settings" },
       { to: "/admin/users", label: "Users", needs: "manage_users" },
       { to: "/admin/settings", label: "Settings", needs: "change_settings" },
+      { to: "/admin/status", label: "Status", needs: "change_settings" },
     ],
   },
   { to: "/profile", label: "Profile", icon: "profile", wideOnly: true },

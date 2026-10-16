@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import time
 
@@ -47,8 +48,8 @@ def song_ends(client: TestClient, speakers: FakeSpeakers) -> None:
     read_speakers(client)
 
 
-def played(settings: Settings, track_id: str, title: str, artists: str) -> None:
-    """Put a play in the history, as if it played this morning."""
+def played(settings: Settings, track_id: str, title: str, artists: str, ago: float = 0) -> None:
+    """Put a play in the history, as if it played just now, or `ago` seconds ago."""
     with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
         db.execute(
             "INSERT OR IGNORE INTO tracks (id, title, artists, album, duration_ms, explicit) "
@@ -57,7 +58,7 @@ def played(settings: Settings, track_id: str, title: str, artists: str) -> None:
         )
         db.execute(
             "INSERT INTO plays (track_id, played_at, upvotes, downvotes) VALUES (?, ?, 0, 0)",
-            (track_id, time.time()),
+            (track_id, time.time() - ago),
         )
 
 
@@ -233,6 +234,28 @@ def test_when_the_ai_finds_nothing_it_tries_again_later(client, openai: FakeOpen
     assert queue(client)["source"]["upcoming"] == []
     client.portal.call(client.app.state.radio.top_up)
     assert len(openai.asked_for("picks")) == 1  # not straight away
+
+
+def test_when_the_ai_cant_pick_the_station_plays_songs_from_before(
+    client: TestClient, openai: FakeOpenAI, settings: Settings
+) -> None:
+    days = 24 * 60 * 60
+    for name, title, artists, ago in [
+        ("dreams", "Dreams", "Fleetwood Mac", 3 * days),
+        ("gyow", "Go Your Own Way", "Fleetwood Mac", 2 * days),
+        ("chain", "The Chain", "Fleetwood Mac", 60 * 60),  # an hour ago: too recent
+    ]:
+        played(settings, spotify_id(name), title, artists, ago=ago)
+    sign_in(client, *ADMIN)
+    station = make_station(client)
+    picked = json.dumps([spotify_id(name) for name in ("gyow", "chain", "dreams")])
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        db.execute("UPDATE stations SET picked = ? WHERE id = ?", (picked, station["id"]))
+
+    openai.down = True
+    put_on(client, station)
+    # Its earlier picks, the longest since played first.
+    assert upcoming(client) == ["Dreams", "Go Your Own Way"]
 
 
 def test_same_artist() -> None:
