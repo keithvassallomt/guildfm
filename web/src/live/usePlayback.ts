@@ -5,11 +5,12 @@ import { useLiveEvent } from "./LiveProvider";
 /** What's on the speakers, kept up to date by the server's live broadcasts. */
 export function usePlayback() {
   const [state, setState] = useState<PlaybackState | null>(null);
-  const [receivedAt, setReceivedAt] = useState(() => Date.now());
+  // When the latest state arrived, so the play position can tick along from it.
+  const [receivedAt, setReceivedAt] = useState(() => performance.now());
 
   const apply = useCallback((next: PlaybackState) => {
     setState(next);
-    setReceivedAt(Date.now());
+    setReceivedAt(performance.now());
   }, []);
 
   useEffect(() => {
@@ -21,23 +22,6 @@ export function usePlayback() {
   useLiveEvent("playback", (data) => apply(data as PlaybackState));
 
   return { state, receivedAt, apply };
-}
-
-/** The play position, ticking along between updates from the server. */
-export function usePosition(state: PlaybackState | null, receivedAt: number): number {
-  const [now, setNow] = useState(() => Date.now());
-  const playing = state?.status === "playing";
-
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [playing]);
-
-  const track = state?.track;
-  if (!track) return 0;
-  const elapsed = playing ? Math.max(0, (now - receivedAt) / 1000) : 0;
-  return track.duration ? Math.min(track.duration, track.position + elapsed) : track.position;
 }
 
 export function clock(seconds: number): string {

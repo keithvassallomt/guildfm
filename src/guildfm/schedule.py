@@ -70,6 +70,11 @@ class Scheduler:
         now, schedule = await self._now()
         return is_open(schedule, now)
 
+    async def day_start(self) -> float:
+        """When today began in the office's time zone, as seconds since the epoch."""
+        now, _ = await self._now()
+        return now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+
     async def summary(self) -> dict[str, Any]:
         """For screens: whether GuildFM is open, and when that changes."""
         now, schedule = await self._now()

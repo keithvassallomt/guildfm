@@ -44,7 +44,24 @@
   color: var(--accent);
 }
 
+.wideOnly,
+.long {
+  display: none;
+}
+
 @media (min-width: 768px) {
+  .wideOnly {
+    display: flex;
+  }
+
+  .long {
+    display: inline;
+  }
+
+  .short {
+    display: none;
+  }
+
   .nav {
     position: sticky;
     top: 0;

@@ -3,10 +3,12 @@ import {
   api,
   errorText,
   type FoundTrack,
+  type PlaylistDetail,
   type QueueState,
   type SearchArtist,
   type SearchResult,
 } from "../api";
+import { useMe } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { FormError } from "../components/TextField";
@@ -19,18 +21,23 @@ const TYPING_PAUSE_MS = 300;
 
 export type SearchChanges = { q?: string | null; artist?: string | null };
 
+/** Where Add puts a song: in the queue as a request, or into a playlist. */
+export type AddTo =
+  | { to: "queue"; queue: QueueState | null; onQueue: (queue: QueueState) => void }
+  | { to: "playlist"; playlist: PlaylistDetail; onPlaylist: (playlist: PlaylistDetail) => void };
+
 type Props = {
   /** The search, kept wherever the caller likes: the address bar, or local state. */
   query: string;
   artist: string | null;
   onChange: (changes: SearchChanges) => void;
-  queue: QueueState | null;
-  onQueue: (queue: QueueState) => void;
+  addTo: AddTo;
   autoFocus?: boolean;
 };
 
-/** Search Spotify and request songs. Used by the Search page and the Queue screen. */
-export function SongSearch({ query, artist, onChange, queue, onQueue, autoFocus }: Props) {
+/** Search Spotify and add songs: as requests (the Search page and Queue screen) or to a
+ *  playlist (the playlist screen). */
+export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props) {
   const [typed, setTyped] = useState(query);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,7 +45,14 @@ export function SongSearch({ query, artist, onChange, queue, onQueue, autoFocus 
   const [added, setAdded] = useState<string | null>(null);
   const latest = useRef(0);
   const input = useRef<HTMLInputElement>(null);
-  const capped = !!queue && queue.mine >= queue.request_cap;
+  const me = useMe();
+  const queue = addTo.to === "queue" ? addTo.queue : null;
+  // Admins have no request cap.
+  const unlimited = me.role === "admin";
+  const capped = !!queue && !unlimited && queue.mine >= queue.request_cap;
+  const inPlaylist = new Set(addTo.to === "playlist" ? addTo.playlist.items.map((i) => i.id) : []);
+  const isAdded = (track: FoundTrack) =>
+    addTo.to === "queue" ? track.queued : inPlaylist.has(track.id);
 
   // In a dialog, the browser focuses the first button; the search box is what people want.
   useEffect(() => {
@@ -89,14 +103,23 @@ export function SongSearch({ query, artist, onChange, queue, onQueue, autoFocus 
   const add = async (track: FoundTrack) => {
     setError(null);
     try {
-      onQueue(await api<QueueState>("POST", "/queue", { track_id: track.id }));
-      setResult((current) =>
-        current && {
-          ...current,
-          tracks: current.tracks.map((t) => (t.id === track.id ? { ...t, queued: true } : t)),
-        },
-      );
-      setAdded(`Added ${track.title} to the queue.`);
+      if (addTo.to === "queue") {
+        addTo.onQueue(await api<QueueState>("POST", "/queue", { track_id: track.id }));
+        setResult((current) =>
+          current && {
+            ...current,
+            tracks: current.tracks.map((t) => (t.id === track.id ? { ...t, queued: true } : t)),
+          },
+        );
+        setAdded(`Added ${track.title} to the queue.`);
+      } else {
+        addTo.onPlaylist(
+          await api<PlaylistDetail>("POST", `/playlists/${addTo.playlist.id}/tracks`, {
+            track_id: track.id,
+          }),
+        );
+        setAdded(`Added ${track.title} to ${addTo.playlist.name}.`);
+      }
     } catch (caught) {
       setAdded(null);
       setError(errorText(caught));
@@ -145,7 +168,8 @@ export function SongSearch({ query, artist, onChange, queue, onQueue, autoFocus 
         </div>
         {queue && (
           <span className={search.count}>
-            Your requests: <strong>{queue.mine}</strong> of {queue.request_cap}
+            Your requests: <strong>{queue.mine}</strong>
+            {unlimited ? " (no limit for admins)" : ` of ${queue.request_cap}`}
           </span>
         )}
       </div>
@@ -216,7 +240,14 @@ export function SongSearch({ query, artist, onChange, queue, onQueue, autoFocus 
           ) : (
             <ul className={search.results}>
               {result.tracks.map((track) => (
-                <TrackRow key={track.id} track={track} capped={capped} onAdd={add} />
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  added={isAdded(track)}
+                  addedLabel={addTo.to === "queue" ? "In queue" : "In playlist"}
+                  capped={capped}
+                  onAdd={add}
+                />
               ))}
             </ul>
           )}
@@ -243,9 +274,15 @@ export function SongSearch({ query, artist, onChange, queue, onQueue, autoFocus 
   );
 }
 
-type RowProps = { track: FoundTrack; capped: boolean; onAdd: (track: FoundTrack) => void };
+type RowProps = {
+  track: FoundTrack;
+  added: boolean;
+  addedLabel: string;
+  capped: boolean;
+  onAdd: (track: FoundTrack) => void;
+};
 
-function TrackRow({ track, capped, onAdd }: RowProps) {
+function TrackRow({ track, added, addedLabel, capped, onAdd }: RowProps) {
   return (
     <li className={search.track}>
       {track.art_url ? (
@@ -272,8 +309,8 @@ function TrackRow({ track, capped, onAdd }: RowProps) {
           </span>
         )}
       </span>
-      {track.queued ? (
-        <span className={search.queued}>In queue</span>
+      {added ? (
+        <span className={search.queued}>{addedLabel}</span>
       ) : (
         <Button
           disabled={capped}

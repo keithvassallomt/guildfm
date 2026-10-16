@@ -14,6 +14,7 @@ TABLE = [
     (Permission.MANAGE_PLAYLISTS, False, True, True),
     (Permission.CREATE_STATIONS, False, True, True),
     (Permission.SWITCH_SOURCE, False, True, True),
+    (Permission.TRANSPORT, False, True, True),
     (Permission.CONTROL_PLAYBACK, False, False, True),
     (Permission.ANNOUNCE, False, False, True),
     (Permission.MANAGE_USERS, False, False, True),

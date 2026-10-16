@@ -1,0 +1,36 @@
+.marquee {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.text {
+  display: inline-block;
+  vertical-align: top;
+}
+
+/* Pause at the start, scroll to the end, pause, and back again. */
+.scrolling .text {
+  animation: marquee var(--marquee-time) ease-in-out infinite alternate;
+}
+
+@keyframes marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(var(--marquee-shift));
+  }
+}
+
+/* No movement: cut the text short instead. It then never overflows, so never scrolls. */
+@media (prefers-reduced-motion: reduce) {
+  .text {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

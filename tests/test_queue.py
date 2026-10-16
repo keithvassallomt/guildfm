@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
+from guildfm.speakers import SpeakersRefused
 from tests.fakes import FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, read_speakers, register, sign_in
 
@@ -73,6 +74,12 @@ def test_requests_per_person_are_capped(client: TestClient, people) -> None:
     # Someone else still can.
     sign_in(client, *people["curator"])
     assert request(client, "fm6").status_code == 201
+
+
+def test_admins_have_no_cap(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
+    for number in range(1, 8):
+        assert request(client, f"fm{number}").status_code == 201
 
 
 def test_the_cap_is_a_setting(client: TestClient, people, settings: Settings) -> None:
@@ -305,6 +312,82 @@ def test_skip_lines_up_the_next_request_first(client: TestClient, speakers) -> N
     body = queue(client)
     assert body["playing"]["track"]["title"] == "Song 2"
     assert client.get("/api/playback").json()["status"] == "playing"
+
+
+def test_previous_goes_back_and_the_song_it_left_is_next_again(client, speakers) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "fm1")
+    request(client, "fm2")
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/playback/skip").raise_for_status()  # Song 2 playing, just started
+
+    client.post("/api/playback/previous").raise_for_status()
+    assert speakers.position == 1
+    body = queue(client)
+    assert body["playing"] is None  # Song 1 already left the queue when it was skipped
+    assert body["next"]["track"]["title"] == "Song 2"
+
+    speakers.song_ends()
+    read_speakers(client)
+    assert queue(client)["playing"]["track"]["title"] == "Song 2"
+
+
+def test_previous_well_into_a_song_starts_it_again(client: TestClient, speakers) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "fm1")
+    request(client, "fm2")
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/playback/skip").raise_for_status()
+    speakers.track_position = 60
+    read_speakers(client)
+
+    client.post("/api/playback/previous").raise_for_status()
+    assert (speakers.position, speakers.track_position) == (2, 0)
+    assert queue(client)["playing"]["track"]["title"] == "Song 2"
+
+
+def test_a_refused_previous_leaves_the_queue_as_it_was(client, speakers, monkeypatch) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "fm1")
+    request(client, "fm2")
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/playback/skip").raise_for_status()
+
+    def refuse(position: int) -> None:
+        raise SpeakersRefused("The speakers wouldn't do that (Illegal seek target).")
+
+    monkeypatch.setattr(speakers, "play_position", refuse)
+    assert client.post("/api/playback/previous").status_code == 409
+    body = queue(client)
+    assert body["playing"]["track"]["title"] == "Song 2"
+    assert body["next"] is None
+
+
+def test_no_going_back_over_a_song_already_lined_up(client: TestClient, speakers) -> None:
+    sign_in(client, *ADMIN)
+    for name in ("fm1", "fm2", "fm3"):
+        request(client, name)
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/playback/skip").raise_for_status()
+    assert client.get("/api/playback").json()["previous"] == "back"
+
+    # A very short song: Song 3 is lined up while Song 2 has barely started.
+    speakers.track_position = 175
+    read_speakers(client)
+    speakers.track_position = 2
+    read_speakers(client)
+    assert client.get("/api/playback").json()["previous"] is None
+    response = client.post("/api/playback/previous")
+    assert response.status_code == 409
+    assert "already lined up" in response.json()["detail"]
+    assert speakers.position == 2
+
+    # Further in, Previous starts the song again, which leaves the queue as it is.
+    speakers.track_position = 60
+    read_speakers(client)
+    client.post("/api/playback/previous").raise_for_status()
+    assert (speakers.position, speakers.track_position) == (2, 0)
+    assert queue(client)["next"]["track"]["title"] == "Song 3"
 
 
 def test_recently_played_songs_are_flagged_but_allowed(client: TestClient, speakers) -> None:

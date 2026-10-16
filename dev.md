@@ -14,10 +14,11 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 4: Spotify catalogue
 - [x] Stage 5: Queue and voting
 - [x] Stage 6: Playback rules and settings
-- [ ] Stage 7: Playlists
-- [ ] Stage 8: Announcements
-- [ ] Stage 9: AI radio
-- [ ] Stage 10: Hardening and handover
+- [x] Stage 7: Playlists
+- [ ] Stage 8: Now Playing
+- [ ] Stage 9: Announcements
+- [ ] Stage 10: AI radio
+- [ ] Stage 11: Hardening and handover
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -104,20 +105,39 @@ Goal: admins can shape when and how GuildFM plays.
 - [x] Connections section: Spotify status and reconnect, Sonos status
 - [x] An admin's Play works at any time, overriding the playback hours until Stop or the next closing time (added after trying it out)
 - [x] Quick controls for admins: a floating button on every screen but Admin, opening play, pause, stop and the office volume (added after trying it out)
+- [x] Previous and skip in the quick controls, Previous on Admin too (greyed out when going back would jump over a song already lined up), and a long track name scrolls (added after trying it out)
+- [x] The progress bar glides instead of ticking and jumping (from backlog.md)
 
 Done when: GuildFM starts and stops itself on schedule, and Stop then Play resumes the same source.
 
 ## Stage 7: Playlists
 Goal: curators can build, import and play playlists, and the office's favourites collect themselves.
-- [ ] Playlist model: create, rename, add and remove tracks, play as the source
-- [ ] Import a Spotify playlist from a link, with a clear message when Spotify refuses it (not owned or collaborative)
-- [ ] Best Voted playlist: a track joins with more than X upvotes (default 5), holds Y tracks (default 50), the fewest upvotes drop out first, then the oldest, and a newcomer needs at least as many upvotes as the track it replaces
-- [ ] "Restart the current playlist" option for when the queue runs out
-- [ ] Library screen, Playlists tab, wired up
+- [x] Playlist model: create, rename, add and remove tracks, play as the source
+- [x] Import a Spotify playlist from a link, with a clear message when Spotify refuses it (not owned or collaborative)
+- [x] Best Voted playlist: a track joins with more than X upvotes (default 5), holds Y tracks (default 50), the fewest upvotes drop out first, then the oldest, and a newcomer needs at least as many upvotes as the track it replaces
+- [x] "Restart the current playlist" option for when the queue runs out
+- [x] Library screen, Playlists tab, wired up
+- [x] Shuffle per playlist (off by default, on for Best Voted), and the playing playlist's next 3 songs on the Queue screen with thumbs down to skip (decided before building)
+- [x] Admins have no request cap (decided before building)
 
 Done when: a curator imports a Spotify playlist, plays it, and requests still jump ahead of it.
 
-## Stage 8: Announcements
+## Stage 8: Now Playing
+Goal: everyone lands on a screen that shows what's playing and where it came from, and curators and admins switch sources from it. Added from backlog.md: the desktop layout is prototype B (Tuner), the phone layout prototype A (Console), at https://claude.ai/artifact/86PFwBpK2T7jAJ1t6VJMdu
+- [x] Play history records where each song came from (a request, a playlist, later a station), with an API for today's plays, newest first
+- [x] Each playlist remembers when it last played, so sources sort last played first
+- [x] Switching source takes effect after the current song, even when the old source's next song is already lined up on the speakers. A playlist switched away from carries on where it left off when it's put back on (decided while building)
+- [x] "Requests only": after this song, nothing fills the gaps
+- [x] Curators get play, pause, previous and skip; volume and Stop all stay with admins
+- [x] Now Playing screen, desktop: now playing and the controls on the left, Queue, Library and Radio as bands of tiles with a needle on what's on air, history below
+- [x] Now Playing screen, phone: the now playing card, the three sources as tabs, history below
+- [x] On air is animated (equaliser, glow, needle), and holds still for people who turn motion off
+- [x] The Radio band shows an empty state until Stage 10
+- [x] Now Playing is the landing screen and the first tab; Queue stays its own tab; on phones Profile moves to an avatar in the header; quick controls are hidden on Now Playing
+
+Done when: an admin lands on Now Playing and picks another playlist, a waiting request still plays first, the needle moves to the new playlist when it takes over, and a curator can skip but can't change the volume.
+
+## Stage 9: Announcements
 Goal: admins type an announcement and the office hears it, now or on schedule.
 - [ ] Text to speech with OpenAI, saved as MP3 and served to the speakers over the network
 - [ ] Voice preview in the browser, with built-in or typed phrases
@@ -129,7 +149,7 @@ Goal: admins type an announcement and the office hears it, now or on schedule.
 
 Done when: a recurring announcement plays in two chosen rooms between songs, and doesn't play while GuildFM is stopped.
 
-## Stage 9: AI radio
+## Stage 10: AI radio
 Goal: curators create stations with an AI DJ that picks songs and talks between them.
 - [ ] Station model and the New AI station screen: name, description, global awareness, DJ name, personality, voice, how often, style, announce requests
 - [ ] Song picking: the AI suggests tracks from the description and recent plays, GuildFM finds them on Spotify, avoiding repeats
@@ -142,7 +162,7 @@ Goal: curators create stations with an AI DJ that picks songs and talks between 
 
 Done when: a station with a DJ plays for an hour, announces a request by name, and mentions the Carlisle weather.
 
-## Stage 10: Hardening and handover
+## Stage 11: Hardening and handover
 Goal: GuildFM runs unattended on the office machine.
 - [ ] Graceful failure: speakers offline, Spotify token expired, OpenAI errors (music keeps playing, the DJ goes quiet)
 - [ ] Logging and a simple status view for admins

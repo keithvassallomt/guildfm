@@ -26,8 +26,7 @@ export function SearchPage() {
         query={params.get("q") ?? ""}
         artist={params.get("artist")}
         onChange={update}
-        queue={queue}
-        onQueue={apply}
+        addTo={{ to: "queue", queue, onQueue: apply }}
       />
     </div>
   );

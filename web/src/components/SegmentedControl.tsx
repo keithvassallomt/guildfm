@@ -1,7 +1,7 @@
-import { type CSSProperties, type KeyboardEvent, useRef } from "react";
+import { type CSSProperties, type KeyboardEvent, type ReactNode, useRef } from "react";
 import styles from "./SegmentedControl.module.css";
 
-type Option<T extends string> = { value: T; label: string };
+type Option<T extends string> = { value: T; label: ReactNode };
 
 type Props<T extends string> = {
   label: string;

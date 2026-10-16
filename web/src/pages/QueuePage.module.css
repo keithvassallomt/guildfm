@@ -44,33 +44,6 @@
   }
 }
 
-.banner {
-  padding: 14px 16px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--muted);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.banner strong {
-  color: var(--text);
-}
-
-.warn {
-  background: var(--warn-soft);
-  border-color: rgba(245, 196, 81, 0.35);
-  color: var(--text-soft);
-}
-
-.warn strong {
-  color: var(--warn);
-}
-
 .card {
   padding: 16px;
   border-radius: var(--radius-lg);
@@ -125,31 +98,9 @@
   line-height: 1.2;
 }
 
-.progress {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
-.bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--line);
-  overflow: hidden;
-}
 
-.fill {
-  height: 100%;
-  background: var(--accent);
-}
 
-.times {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-}
 
 .requested {
   font-size: 13px;
@@ -453,4 +404,33 @@
   .trayToggle svg {
     transition: none;
   }
+}
+
+/* The playing playlist's next songs, under the requests. */
+.upcoming {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upcomingTitle {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fromPlaylist {
+  background: var(--bar);
+  padding-bottom: 8px;
+}
+
+.downCount {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--down);
 }

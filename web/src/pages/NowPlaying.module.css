@@ -1,0 +1,785 @@
+/* On air: bouncing bars, a slow glow and the tuner's needle. They hold still while the music
+   is paused, and for people who turn motion off. */
+
+.bars {
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.bars span {
+  width: 3px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--accent);
+  animation: bars 0.9s ease-in-out infinite;
+}
+
+.bars span:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.bars span:nth-child(3) {
+  animation-delay: -0.6s;
+}
+
+.dark span {
+  background: var(--on-accent);
+}
+
+@keyframes bars {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+.glow {
+  animation: glow 2.4s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 138, 61, 0);
+  }
+  50% {
+    box-shadow: 0 0 30px 0 rgba(255, 138, 61, 0.28);
+  }
+}
+
+/* Below its tile, over the band's tick marks. */
+.needle {
+  position: absolute;
+  left: 50%;
+  bottom: -32px;
+  width: 3px;
+  height: 36px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(255, 138, 61, 0.8);
+  animation: needle 1.6s ease-in-out infinite;
+}
+
+@keyframes needle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.page[data-paused="true"] .bars span,
+.page[data-paused="true"] .glow,
+.page[data-paused="true"] .needle {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bars span,
+  .glow,
+  .needle {
+    animation: none;
+  }
+
+  .bars span {
+    height: 10px;
+  }
+}
+
+/* Header */
+
+.headerEnd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.avatar,
+.avatar:hover {
+  width: var(--touch);
+  height: var(--touch);
+  margin-right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.avatar span {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Now playing: a card on phones, a deck with big art on wide screens */
+
+.now {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nowTop {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nowArt {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+
+.nowText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nowLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.nowTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.nowArtist {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.nowFrom {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.nothing {
+  margin: 0;
+  padding: 8px 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.deck {
+  padding: 18px;
+  border-radius: 24px;
+  gap: 16px;
+}
+
+.deck .nowTop {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.deck .nowArt {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+}
+
+.deck .nowTitle {
+  font-size: 26px;
+}
+
+.deck .nowArtist {
+  font-size: 15px;
+}
+
+.deck .nowFrom {
+  font-size: 13px;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.round {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.round:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.round:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.play,
+.play:hover:not(:disabled) {
+  width: 68px;
+  height: 68px;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.deck .play {
+  width: 76px;
+  height: 76px;
+}
+
+.office {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stop {
+  min-height: var(--touch);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stop:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.stop:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Wide screens: the deck beside the bands */
+
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.split > .deck {
+  flex: 1 1 300px;
+  max-width: 380px;
+}
+
+.bands {
+  flex: 999 1 480px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.band {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bandTop {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.bandLabel {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bandOn {
+  color: var(--accent);
+}
+
+.bandNote {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bandLink,
+.bandLink:hover {
+  margin-left: auto;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A row of tiles over a tuner's tick marks. The needle sits in the space under the tiles. */
+.strip {
+  padding: 6px 4px 32px;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  background-image: linear-gradient(90deg, var(--line-strong) 1px, transparent 1px);
+  background-size: 14px 10px;
+  background-repeat: repeat-x;
+  background-position: 0 calc(100% - 8px);
+  background-attachment: local;
+}
+
+.tile {
+  position: relative;
+  flex: 0 0 168px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pickable {
+  cursor: pointer;
+}
+
+.pickable:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-raised);
+}
+
+.on,
+.on:hover {
+  border-color: rgba(255, 138, 61, 0.7);
+  background: var(--accent-tint);
+}
+
+.cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mosaic {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mosaic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tileText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tileName {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tileCaption {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tileFoot {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.score {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.onAirText {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.fillBadge {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--down-soft);
+  color: var(--down);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.onlyTile {
+  flex-basis: 140px;
+  justify-content: flex-end;
+  gap: 6px;
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: transparent;
+  cursor: pointer;
+}
+
+.onlyTile:hover {
+  background: var(--surface);
+}
+
+.onlyTile[aria-pressed="true"] {
+  border-style: solid;
+  border-color: rgba(255, 138, 61, 0.7);
+  color: var(--accent);
+}
+
+.onlyNote {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.emptyTile {
+  flex: 0 0 240px;
+  margin: 0;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px dashed var(--line-strong);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+}
+
+/* Phones: the sources as tabs */
+
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sourcesTop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sourcesTitle {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sources .hint {
+  font-size: 13px;
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.row .cover,
+.row .mosaic {
+  width: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowName {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowCaption {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emptyRow {
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--line-strong);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.listFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.only {
+  min-height: var(--touch);
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.only[aria-pressed="true"] {
+  border-color: rgba(255, 138, 61, 0.7);
+  color: var(--accent);
+}
+
+.queueLink,
+.queueLink:hover {
+  min-height: var(--touch);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Played today */
+
+.sectionTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionNote {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.played {
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.playedArt {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+
+.playedText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playedTitle {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playedMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.playedMeta svg {
+  flex-shrink: 0;
+}
+
+.playedMeta span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playedAt {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.more {
+  align-self: flex-start;
+}
+
+@media (min-width: 768px) {
+  .history {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 10px;
+  }
+}

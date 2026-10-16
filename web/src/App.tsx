@@ -8,7 +8,9 @@ import { QuickControls } from "./components/QuickControls";
 import { LiveProvider } from "./live/LiveProvider";
 import { AdminPage } from "./pages/AdminPage";
 import { ChoosePasswordPage } from "./pages/ChoosePasswordPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { LibraryPage } from "./pages/LibraryPage";
+import { NowPlayingPage } from "./pages/NowPlayingPage";
+import { PlaylistPage } from "./pages/PlaylistPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { QueuePage } from "./pages/QueuePage";
 import { SearchPage } from "./pages/SearchPage";
@@ -19,8 +21,8 @@ import { WelcomePage } from "./pages/WelcomePage";
 function Shell() {
   const { can } = useAuth();
   const { pathname } = useLocation();
-  // Admins get quick controls everywhere but the Admin screen, which has the full set.
-  const quick = can("control_playback") && pathname !== "/admin";
+  // Admins get quick controls everywhere but Now Playing and Admin, which have the controls.
+  const quick = can("control_playback") && pathname !== "/" && pathname !== "/admin";
 
   return (
     <div
@@ -36,7 +38,7 @@ function Shell() {
   );
 }
 
-/** Sends people without the permission back to the queue. The server enforces it too. */
+/** Sends people without the permission back to Now Playing. The server enforces it too. */
 function Allowed({ permission, children }: { permission: Permission; children: ReactNode }) {
   const { can } = useAuth();
   return can(permission) ? children : <Navigate to="/" replace />;
@@ -53,13 +55,22 @@ export function App() {
     <LiveProvider onUnauthorised={() => refresh().catch(() => {})}>
       <Routes>
         <Route element={<Shell />}>
-          <Route index element={<QueuePage />} />
+          <Route index element={<NowPlayingPage />} />
+          <Route path="queue" element={<QueuePage />} />
           <Route path="search" element={<SearchPage />} />
           <Route
             path="library"
             element={
               <Allowed permission="switch_source">
-                <PlaceholderPage title="Library" stage={7} />
+                <LibraryPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="library/playlists/:id"
+            element={
+              <Allowed permission="switch_source">
+                <PlaylistPage />
               </Allowed>
             }
           />

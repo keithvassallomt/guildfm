@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { api, errorText, type PlaybackState, type PlaybackStatus } from "../api";
 import { Icon } from "../components/Icon";
+import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { FormError } from "../components/TextField";
 import { VolumeSlider } from "../components/VolumeSlider";
 import { chipLabel, opensAgain, statusTones } from "../live/status";
-import { clock, usePlayback, usePosition } from "../live/usePlayback";
+import { clock, usePlayback } from "../live/usePlayback";
 import admin from "./AdminPage.module.css";
 import styles from "./Page.module.css";
 
@@ -41,7 +42,7 @@ export function AdminPage() {
           <Banner state={state} />
           <section className={styles.card} aria-label="Playback">
             <NowPlaying state={state} receivedAt={receivedAt} />
-            <Transport status={status} busy={busy} send={send} />
+            <Transport status={status} previous={state?.previous ?? null} busy={busy} send={send} />
             <FormError message={error} />
           </section>
         </div>
@@ -117,7 +118,6 @@ function Banner({ state }: { state: PlaybackState | null }) {
 }
 
 function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receivedAt: number }) {
-  const position = usePosition(state, receivedAt);
   const track = state?.track;
   if (!track) {
     return <p className={styles.muted}>Nothing on the speakers.</p>;
@@ -126,7 +126,7 @@ function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receiv
   const label = !track.ours
     ? "On the speakers"
     : state.status === "paused"
-      ? `Paused at ${clock(position)}`
+      ? `Paused at ${clock(track.position)}`
       : "Now playing";
 
   return (
@@ -144,18 +144,7 @@ function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receiv
         </div>
       </div>
       {track.duration > 0 && (
-        <div className={admin.progress}>
-          <div className={admin.bar}>
-            <div
-              className={admin.fill}
-              style={{ width: `${(100 * position) / track.duration}%` }}
-            />
-          </div>
-          <div className={admin.times}>
-            <span>{clock(position)}</span>
-            <span>{clock(track.duration)}</span>
-          </div>
-        </div>
+        <Progress track={track} playing={state.status === "playing"} receivedAt={receivedAt} />
       )}
     </div>
   );
@@ -163,14 +152,20 @@ function NowPlaying({ state, receivedAt }: { state: PlaybackState | null; receiv
 
 type Send = (method: "POST" | "PUT", path: string, body?: unknown) => Promise<void>;
 
-type TransportProps = { status: PlaybackStatus; busy: boolean; send: Send };
+type TransportProps = {
+  status: PlaybackStatus;
+  previous: PlaybackState["previous"];
+  busy: boolean;
+  send: Send;
+};
 
-function Transport({ status, busy, send }: TransportProps) {
+function Transport({ status, previous, busy, send }: TransportProps) {
   const driving = status === "playing" || status === "paused" || status === "idle";
   const offline = status === "offline";
 
   return (
     <div className={admin.transport}>
+      <TransportButton icon="previous" label="Previous" disabled={busy || !previous} onClick={() => send("POST", "/previous")} />
       {status === "playing" ? (
         <TransportButton icon="pause" label="Pause" primary disabled={busy} onClick={() => send("POST", "/pause")} />
       ) : (
@@ -188,7 +183,7 @@ function Transport({ status, busy, send }: TransportProps) {
 }
 
 type TransportButtonProps = {
-  icon: "play" | "pause" | "skip" | "stop";
+  icon: "play" | "pause" | "skip" | "previous" | "stop";
   label: string;
   primary?: boolean;
   disabled?: boolean;

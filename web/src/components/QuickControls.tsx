@@ -5,12 +5,13 @@ import { chipLabel, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import { Dialog } from "./Dialog";
 import { Icon } from "./Icon";
+import { Marquee } from "./Marquee";
 import styles from "./QuickControls.module.css";
 import { StatusChip } from "./StatusChip";
 import { FormError } from "./TextField";
 import { VolumeSlider } from "./VolumeSlider";
 
-/** A floating button for admins that opens play, pause, stop and the office volume. */
+/** A floating button for admins that opens the transport controls and the office volume. */
 export function QuickControls() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,7 +30,9 @@ export function QuickControls() {
     }
   };
 
-  const playing = state?.status === "playing";
+  const status = state?.status;
+  const playing = status === "playing";
+  const driving = playing || status === "paused" || status === "idle";
   const track = state?.track;
 
   return (
@@ -49,7 +52,9 @@ export function QuickControls() {
         {state && (
           <div className={styles.now}>
             <span className={styles.nowText}>
-              <span className={styles.title}>{track?.title || "Nothing playing"}</span>
+              <Marquee key={track?.title} className={styles.title}>
+                {track?.title || "Nothing playing"}
+              </Marquee>
               {track?.artist && <span className={styles.artist}>{track.artist}</span>}
             </span>
             <StatusChip tone={statusTones[state.status]}>{chipLabel(state)}</StatusChip>
@@ -57,6 +62,16 @@ export function QuickControls() {
         )}
 
         <div className={styles.transport}>
+          <button
+            type="button"
+            aria-label="Previous"
+            title="Previous"
+            disabled={busy || !state?.previous}
+            className={styles.round}
+            onClick={() => send("POST", "/previous")}
+          >
+            <Icon name="previous" size={22} />
+          </button>
           {playing ? (
             <button
               type="button"
@@ -70,7 +85,7 @@ export function QuickControls() {
           ) : (
             <button
               type="button"
-              disabled={busy || state?.status === "offline"}
+              disabled={busy || status === "offline"}
               className={`${styles.round} ${styles.primary}`}
               onClick={() => send("POST", "/play")}
             >
@@ -80,8 +95,18 @@ export function QuickControls() {
           )}
           <button
             type="button"
-            disabled={busy || !state || state.status === "stopped" || state.status === "offline"}
+            aria-label="Skip"
+            title="Skip"
+            disabled={busy || !driving}
             className={styles.round}
+            onClick={() => send("POST", "/skip")}
+          >
+            <Icon name="skip" size={22} />
+          </button>
+          <button
+            type="button"
+            disabled={busy || !state || status === "stopped" || status === "offline"}
+            className={`${styles.round} ${styles.stop}`}
             onClick={() => send("POST", "/stop")}
           >
             <Icon name="stop" size={22} />

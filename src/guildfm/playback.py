@@ -30,6 +30,7 @@ OFFLINE_POLL_SECONDS = 5.0
 FULL_EVERY = 5  # rooms and volumes are read on every fifth poll
 GRACE_SECONDS = 4.0  # after a GuildFM command, the speakers take a moment to catch up
 HEARTBEAT_SECONDS = 5.0  # state is re-sent at least this often, so positions stay fresh
+RESTART_SECONDS = 5  # further into a song than this, Previous starts it again
 ACTIVE = ("PLAYING", "TRANSITIONING")
 
 
@@ -48,6 +49,10 @@ class NotInControl(Exception):
 
 class NothingToPlay(Exception):
     """Play was pressed, but GuildFM hasn't queued anything."""
+
+
+class CantGoBack(Exception):
+    """Previous was pressed, but going back would jump over a song already lined up."""
 
 
 TrackChange = Callable[[str | None, str | None], Awaitable[None]]
@@ -158,6 +163,20 @@ class PlaybackController:
         return self._in_control and not self._error
 
     @property
+    def previous_action(self) -> str | None:
+        """What Previous does now: "back" to the song before near the start of a song, as on
+        any music player, or "restart" this one. None while GuildFM isn't driving, or when
+        going back would jump over a song already lined up after this one: that song would
+        then play in between with no place in the queue."""
+        if not self._in_control:
+            return None
+        track = self._snapshot.track if self._snapshot else None
+        early = track is None or track.position <= RESTART_SECONDS
+        if not early or self._position == 1:
+            return "restart"
+        return "back" if len(self._items) <= self._position else None
+
+    @property
     def time_left(self) -> int | None:
         """Seconds left in the current track, or None when the speakers don't know."""
         track = self._snapshot.track if self._snapshot else None
@@ -197,6 +216,7 @@ class PlaybackController:
                 "position": track.position,
                 "ours": track_key(track.uri) in {item.key for item in self._items},
             },
+            "previous": self.previous_action,
             "group_volume": snapshot.group_volume if snapshot else None,
             "rooms": [asdict(room) for room in self._rooms],
             "hours": self.hours,
@@ -253,6 +273,16 @@ class PlaybackController:
         self._settle()
         await self.poll()
 
+    async def previous(self, action: str | None) -> None:
+        """Carry out `previous_action`, read beforehand so the queue can get ready for it."""
+        self._require_control()
+        if action is None:
+            raise CantGoBack
+        position = self._position - 1 if action == "back" else self._position
+        await self._call(self._speakers.play_position, position)
+        self._settle()
+        await self.poll()
+
     async def stop(self) -> None:
         """Silence the speakers and stop driving them, whoever was playing."""
         if self._snapshot and self._snapshot.transport in ACTIVE:
@@ -265,6 +295,16 @@ class PlaybackController:
         self._require_control()
         position = await self._call(self._speakers.add_next, item)
         self._items.insert(position - 1, item)
+
+    async def unqueue(self, item: QueueItem) -> None:
+        """Take `item` back off the speakers, if it's still to come."""
+        self._require_control()
+        # Everything after the current track, latest first.
+        for index in range(len(self._items) - 1, self._position - 1, -1):
+            if self._items[index].key == item.key:
+                await self._call(self._speakers.remove, index + 1)
+                del self._items[index]
+                return
 
     async def play_now(self, item: QueueItem) -> None:
         """Play `item` straight away, taking the speakers over if GuildFM isn't driving them."""

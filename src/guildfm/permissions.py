@@ -13,7 +13,8 @@ class Permission(StrEnum):
     MANAGE_PLAYLISTS = "manage_playlists"  # create and import
     CREATE_STATIONS = "create_stations"
     SWITCH_SOURCE = "switch_source"  # start or switch playlists and AI stations
-    CONTROL_PLAYBACK = "control_playback"  # play, pause, resume, skip, volume, stop
+    TRANSPORT = "transport"  # play, pause, resume, skip, previous
+    CONTROL_PLAYBACK = "control_playback"  # office and room volume, stop
     ANNOUNCE = "announce"
     MANAGE_USERS = "manage_users"  # create accounts, reset passwords, change roles
     CHANGE_SETTINGS = "change_settings"
@@ -25,6 +26,7 @@ _CURATORS = _EVERYONE | {
     Permission.MANAGE_PLAYLISTS,
     Permission.CREATE_STATIONS,
     Permission.SWITCH_SOURCE,
+    Permission.TRANSPORT,
 }
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {

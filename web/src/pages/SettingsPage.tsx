@@ -161,7 +161,6 @@ export function SettingsPage() {
               </Row>
               <p className={styles.muted}>
                 When it's full, the track with the fewest upvotes drops out; on a tie, the oldest.
-                The playlist itself arrives in stage 7.
               </p>
             </Section>
 
@@ -173,8 +172,8 @@ export function SettingsPage() {
                 onChange={(queue_runs_out) => save({ queue_runs_out })}
               />
               <p className={styles.muted}>
-                Playlists arrive in stage 7 and AI radio in stage 9. Until then, the music stops
-                when the queue runs out, whichever is chosen.
+                AI radio arrives in stage 10. Until then, both AI choices stop the music once the
+                queue and any playlist run out.
               </p>
             </Section>
           </div>
@@ -234,7 +233,7 @@ export function SettingsPage() {
                 </select>
                 <span className={styles.muted}>
                   Marin and Cedar sound the most natural. Previews come with announcements in
-                  stage 8.
+                  stage 9.
                 </span>
               </label>
             </Section>

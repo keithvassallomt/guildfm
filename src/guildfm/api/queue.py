@@ -13,8 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from guildfm.api.schemas import TrackOut
 from guildfm.auth import ActiveUser, require
 from guildfm.db import get_session
-from guildfm.models import EntryState, QueueEntry, Track, User, Vote
+from guildfm.models import EntryState, QueueEntry, Role, Track, User, Vote
 from guildfm.permissions import Permission, can
+from guildfm.playlists import current_source
+from guildfm.playlists import upcoming as upcoming_songs
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine, Tally, in_order, recent_plays, tallies, waiting
 from guildfm.spotify import SpotifyError, remember
@@ -35,7 +37,8 @@ class EntryOut(BaseModel):
     id: int
     state: EntryState
     track: TrackOut
-    requested_by: PersonOut
+    requested_by: PersonOut | None  # None for songs from the playing playlist
+    playlist: str | None  # the playlist a song came from, if it did
     requested_at: datetime
     up: int
     down: int
@@ -51,10 +54,24 @@ class ActivityOut(BaseModel):
     at: datetime
 
 
+class UpcomingOut(BaseModel):
+    track: TrackOut
+    down: int  # thumbs down so far
+    my_down: bool
+
+
+class SourceOut(BaseModel):
+    playlist_id: int
+    name: str
+    upcoming: list[UpcomingOut]
+    skip_at: int  # thumbs down needed to skip a song
+
+
 class QueueOut(BaseModel):
     playing: EntryOut | None
     next: EntryOut | None
     waiting: list[EntryOut]
+    source: SourceOut | None  # the playlist filling the gaps between requests
     activity: list[ActivityOut]
     mine: int  # how many requests the viewer has in the queue
     request_cap: int
@@ -85,9 +102,10 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
             id=entry.id,
             state=entry.state,
             track=TrackOut.of(entry.track),
-            requested_by=PersonOut(
-                id=entry.requester.id, display_name=entry.requester.display_name
-            ),
+            requested_by=PersonOut(id=entry.requester.id, display_name=entry.requester.display_name)
+            if entry.requester
+            else None,
+            playlist=entry.playlist.name if entry.playlist else None,
             requested_at=_when(entry.added_at),
             up=tally.up,
             down=tally.down,
@@ -99,10 +117,30 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
         )
 
     by_state = {state: [e for e in entries if e.state == state] for state in EntryState}
+    source = await current_source(db)
+    source_out = None
+    if source:
+        upcoming = await upcoming_songs(db, {entry.track_id for entry in entries})
+        found = {t.id: t for t in await db.scalars(select(Track).where(Track.id.in_(upcoming)))}
+        source_out = SourceOut(
+            playlist_id=source.playlist_id,
+            name=source.playlist.name,
+            upcoming=[
+                UpcomingOut(
+                    track=TrackOut.of(found[track_id]),
+                    down=len(source.downvotes.get(track_id, [])),
+                    my_down=viewer.id in source.downvotes.get(track_id, []),
+                )
+                for track_id in upcoming
+                if track_id in found
+            ],
+            skip_at=-(await get_pref(db, "downvote_threshold")),
+        )
     return QueueOut(
         playing=next(map(out, by_state[EntryState.PLAYING]), None),
         next=next(map(out, by_state[EntryState.NEXT]), None),
         waiting=[out(entry) for entry in in_order(by_state[EntryState.WAITING], scores)],
+        source=source_out,
         activity=[ActivityOut(text=a["text"], at=_when(a["at"])) for a in queue.activity],
         mine=sum(entry.requested_by == viewer.id for entry in entries),
         request_cap=await get_pref(db, "request_cap"),
@@ -150,7 +188,8 @@ async def add(body: RequestIn, user: Requester, request: Request, db: Db) -> Que
         mine = await db.scalar(
             select(func.count()).select_from(QueueEntry).where(QueueEntry.requested_by == user.id)
         )
-        if mine >= cap:
+        # Admins have no cap.
+        if mine >= cap and user.role != Role.ADMIN:
             raise HTTPException(
                 409, f"You have {cap} requests in the queue already. Add more once one has played."
             )

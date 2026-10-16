@@ -26,7 +26,8 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 | Create and import playlists | | Yes | Yes |
 | Create AI stations | | Yes | Yes |
 | Start or switch playlists and AI stations | | Yes | Yes |
-| Playback controls (play, pause, resume, skip, volume, stop) | | | Yes |
+| Play, pause, resume, skip and previous | | Yes | Yes |
+| Volume and stop | | | Yes |
 | Create announcements | | | Yes |
 | Manage users (create accounts, reset passwords, promote to curator or admin, delete accounts) | | | Yes |
 | Change settings | | | Yes |
@@ -42,11 +43,22 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
   - A queue management system for users to add tracks, and remove their own.
 - The application should be MOBILE FIRST, and responsive: designed for phones first, but on a desktop browser it uses the space properly (sidebar navigation, wider content, more columns where they help) instead of looking like a small portrait app.
 
+## Now Playing
+- The screen everyone lands on, and the first tab. The Queue screen stays its own tab, for requesting and voting.
+- Shows the current song, how far through it is, and where it came from: a request (and who asked), a playlist, or an AI station.
+- Curators and admins get the playback controls here. Admins also get the office volume and Stop all.
+- The sources: Queue, Library (playlists) and Radio (AI stations). Library and Radio are sorted by when they last played, most recent first. The queue keeps its vote order.
+- The source the current song came from is highlighted and animated. Requests always play first: a picked playlist or station fills the gaps between them, and says so while a request is playing.
+- Curators and admins switch source by picking a playlist or station, which takes over after the current song. "Requests only" means nothing fills the gaps.
+- Below the sources: the songs played today, newest first, each with where it came from.
+- On a desktop, now playing and the controls sit on the left, and each kind of source is a band of tiles, with a needle on the one on air. On a phone, the sources are three tabs under the now playing card.
+- On phones, Profile moves to an avatar in the header, keeping the bottom tabs to five.
+
 ## Queue and Voting
 - Users can vote tracks up or down, using thumbs up and thumbs down. The system automatically orders the queue by votes.
 - A track whose score falls to the downvote threshold is removed from the queue. The threshold is a setting.
 - Users can remove their own tracks, but only their own.
-- Each user can have a limited number of tracks in the queue at once. The cap is a setting (default: 5).
+- Each user can have a limited number of tracks in the queue at once. The cap is a setting (default: 5). Admins have no cap.
 - A track that is already in the queue cannot be added again.
 - Tracks played recently show a warning badge (for example, "played 2 hours ago") in search and in the queue, but can still be added.
 - Explicit tracks are allowed by default. Admins can block them in settings.
@@ -54,15 +66,15 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Votes reorder everything after the next track. GuildFM hands the next track to Sonos shortly before it plays, so that one is locked.
 
 ## Playback
-- Admins can play, pause, resume, skip, change volume and stop.
-- Admins also get a floating button on every screen (except Admin, which has the full controls) that opens quick controls: play, pause, stop all, and the whole-office volume.
+- Curators and admins can play, pause, resume, skip and go back. Only admins change the volume and stop. Previous goes back a song in the first few seconds of one, and otherwise starts the current song again. It's greyed out when going back would jump over a song already lined up on the speakers.
+- Admins also get a floating button on every screen (except Admin and Now Playing, which have the controls) that opens quick controls: previous, play, pause, skip, stop all, and the whole-office volume.
 - **Stop** halts all playback, including announcements and the DJ, until play is pressed again.
 - **Play** continues whatever was playing before (a playlist, an AI station, or the queue).
 - **Playback schedule** (setting): the hours GuildFM plays, for example weekdays 08:00 to 18:00. Outside these hours it behaves as if stopped, so scheduled announcements don't play either.
     - At opening time, GuildFM starts playing by itself if there's something to play, taking over the speakers as if Play was pressed. With nothing to play yet, it starts as soon as someone makes a request.
     - At closing time, it stops everything, as if Stop was pressed.
     - A Stop during playback hours lasts until someone presses Play or the next opening time, whichever comes first.
-    - An admin can press Play at any time. Outside playback hours this overrides the schedule: GuildFM plays until someone presses Stop or the next closing time comes round.
+    - A curator or admin can press Play at any time. Outside playback hours this overrides the schedule: GuildFM plays until someone presses Stop or the next closing time comes round.
 - **When the queue runs out** (setting), one of:
   1. Restart the current playlist. If no playlist is playing, fall back to option 3.
   2. Play a default AI station.
@@ -75,7 +87,10 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 
 ## Playlists
 - Curators and admins can create playlists in GuildFM, or import them from Spotify by pasting a playlist link.
-- Curators and admins can play any playlist.
+- Curators and admins can play any playlist. A playing playlist fills the gaps: requests always play first.
+- Switching to another playlist takes effect after the current song. A playlist that's switched away from keeps its place, and carries on from there when it's put back on; once it plays to the end, it starts afresh.
+- Each playlist has a Shuffle switch: off by default, on by default for Best Voted.
+- While a playlist is playing, the Queue screen shows its next 3 songs under the requests. Anyone can give them a thumbs down; enough of them (the same threshold as requests) skips that song this time round. There's no thumbs up for them, since a playlist keeps its own order.
 
 ### Best Voted playlist
 - There is one Best Voted playlist, maintained automatically.

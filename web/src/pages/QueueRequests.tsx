@@ -16,9 +16,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { type ReactNode, useEffect, useState } from "react";
-import type { QueueEntry } from "../api";
+import type { QueueEntry, QueueSource } from "../api";
 import { Icon } from "../components/Icon";
-import { ago } from "../live/status";
+import { ago, credit } from "../live/status";
 import q from "./QueuePage.module.css";
 
 export type Act = (method: "POST" | "DELETE", path: string, body?: unknown, done?: string) => void;
@@ -160,7 +160,7 @@ function Request({ entry, rank, last, curator, trayOpen, onTray, onMove, act }: 
       </div>
       <div className={q.requestBottom}>
         <span className={q.meta}>
-          Requested by {entry.mine ? "you" : entry.requested_by.display_name}
+          {credit(entry)}
           {entry.pinned && " · placed by a curator"}
         </span>
         {entry.played_at && (
@@ -226,6 +226,48 @@ function Tray({ title, open, onToggle, children }: TrayProps) {
       >
         <Icon name="back" size={18} />
       </button>
+    </div>
+  );
+}
+
+type UpcomingProps = { source: QueueSource; onThumb: (trackId: string, down: boolean) => void };
+
+/** The playing playlist's next songs. A thumbs down counts towards skipping one this time round;
+ *  there's no thumbs up, since the playlist keeps its own order. */
+export function Upcoming({ source, onThumb }: UpcomingProps) {
+  if (source.upcoming.length === 0) return null;
+  return (
+    <div className={q.upcoming}>
+      <h3 className={q.upcomingTitle}>Then from {source.name}</h3>
+      <ul className={q.list}>
+        {source.upcoming.map(({ track, down, my_down }) => (
+          <li key={track.id} className={`${q.request} ${q.fromPlaylist}`}>
+            <div className={q.requestTop}>
+              {track.art_url ? (
+                <img src={track.art_url} alt="" className={q.art} />
+              ) : (
+                <span aria-hidden="true" className={q.art} />
+              )}
+              <div className={q.text}>
+                <span className={q.title}>{track.title}</span>
+                <span className={q.meta}>{track.artists}</span>
+              </div>
+              <span className={q.downCount} aria-label={`${down} of ${source.skip_at} thumbs down to skip`}>
+                {down > 0 ? `${down}/${source.skip_at}` : ""}
+              </span>
+              <button
+                type="button"
+                aria-label={`Thumbs down for ${track.title}`}
+                aria-pressed={my_down}
+                className={`${q.vote} ${my_down ? q.down : ""}`}
+                onClick={() => onThumb(track.id, !my_down)}
+              >
+                <Icon name="thumbDown" size={20} filled={my_down} />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

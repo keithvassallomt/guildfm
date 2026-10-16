@@ -199,21 +199,43 @@ def test_everyone_signed_in_can_see_whats_playing(client: TestClient, people) ->
     assert state["track"]["title"] == "Nobody's Business"
 
 
-COMMANDS = [
+TRANSPORT = [
     ("post", "/api/playback/play", None),
     ("post", "/api/playback/pause", None),
     ("post", "/api/playback/skip", None),
+    ("post", "/api/playback/previous", None),
+]
+ADMIN_ONLY = [
     ("post", "/api/playback/stop", None),
     ("put", "/api/playback/volume", {"volume": 10}),
     ("put", "/api/playback/rooms/RINCON_KITCHEN/volume", {"volume": 10}),
 ]
 
 
-@pytest.mark.parametrize(("method", "path", "body"), COMMANDS)
-@pytest.mark.parametrize("who", ["user", "curator"])
-def test_only_admins_control_playback(client: TestClient, people, method, path, body, who):
-    sign_in(client, *people[who])
+@pytest.mark.parametrize(("method", "path", "body"), TRANSPORT + ADMIN_ONLY)
+def test_users_dont_control_playback(client: TestClient, people, method, path, body):
+    sign_in(client, *people["user"])
     assert client.request(method, path, json=body).status_code == 403
+
+
+@pytest.mark.parametrize(("method", "path", "body"), ADMIN_ONLY)
+def test_only_admins_stop_and_change_the_volume(client: TestClient, people, method, path, body):
+    sign_in(client, *people["curator"])
+    assert client.request(method, path, json=body).status_code == 403
+
+
+def test_curators_play_pause_and_skip(client: TestClient, people, speakers) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "fm1")
+    request(client, "fm2")
+    sign_in(client, *people["curator"])
+    assert client.post("/api/playback/play").json()["status"] == "playing"
+    assert client.post("/api/playback/pause").json()["status"] == "paused"
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/playback/skip").raise_for_status()
+    assert speakers.position == 2
+    client.post("/api/playback/previous").raise_for_status()
+    assert speakers.position == 1
 
 
 def test_admin_plays_pauses_and_stops(client: TestClient, speakers: FakeSpeakers) -> None:
@@ -231,6 +253,7 @@ def test_playback_problems_read_well(client: TestClient, speakers: FakeSpeakers)
     sign_in(client, *ADMIN)
     assert client.post("/api/playback/play").json()["detail"] == "There's nothing to play yet."
     assert client.post("/api/playback/skip").status_code == 409
+    assert client.post("/api/playback/previous").status_code == 409
 
     speakers.available = False
     response = client.put("/api/playback/volume", json={"volume": 10})
@@ -245,6 +268,15 @@ def test_skipping_the_last_song_ends_playback(client: TestClient) -> None:
     response = client.post("/api/playback/skip")
     assert response.status_code == 200
     assert response.json()["status"] == "idle"
+
+
+def test_previous_on_the_first_song_starts_it_again(client: TestClient, speakers) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "dreams")
+    client.post("/api/playback/play").raise_for_status()
+    response = client.post("/api/playback/previous")
+    assert response.json()["status"] == "playing"
+    assert (speakers.position, speakers.track_position) == (1, 0)
 
 
 def test_a_refusal_from_the_speakers_isnt_an_outage(client: TestClient, speakers, monkeypatch):

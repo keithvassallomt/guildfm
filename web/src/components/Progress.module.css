@@ -1,0 +1,29 @@
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+/* Full width, scaled down to the play position: a transform redraws smoothly every frame. */
+.fill {
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}

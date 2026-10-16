@@ -122,9 +122,16 @@ class FakeSpeakers:
         self.queue.insert(position - 1, item)
         return position
 
+    def remove(self, position: int) -> None:
+        self._check()
+        del self.queue[position - 1]
+        if self.position and position < self.position:
+            self.position -= 1
+
     def play_position(self, position: int) -> None:
         self._check()
         self.position = position
+        self.track_position = 0
         self.transport = "PLAYING"
 
     def own_address(self) -> str:
@@ -143,6 +150,9 @@ class FakeSpotify:
             self.track(f"fm{number}", f"Song {number}", "Fleetwood Mac", "Tusk")
             for number in range(1, 22)
         ]
+        # Playlists the connected account owns, and one it doesn't (like Spotify's own).
+        self.playlists = {spotify_id("classics"): ("Office Classics", ["dreams", "gyow", "fm1"])}
+        self.not_ours = {spotify_id("editorial")}
         self.token_requests: list[str] = []
         self.refresh_fails = False
         self.busy = False
@@ -188,6 +198,31 @@ class FakeSpotify:
             }
         return result
 
+    def _playlist(self, path: str, params: dict) -> httpx2.Response:
+        parts = path.split("/")  # "", "v1", "playlists", id, maybe "items"
+        playlist_id, items = parts[3], len(parts) > 4
+        if playlist_id in self.not_ours:
+            # Spotify shares only the name of playlists the account doesn't own.
+            return (
+                httpx2.Response(403)
+                if items
+                else httpx2.Response(200, json={"name": "All Out 80s"})
+            )
+        if playlist_id not in self.playlists:
+            return httpx2.Response(404)
+        name, names = self.playlists[playlist_id]
+        if not items:
+            return httpx2.Response(200, json={"name": name})
+        by_id = {t["id"]: t for t in self.tracks}
+        rows = [{"item": by_id[spotify_id(n)]} for n in names]
+        # Podcast episodes and gaps get left out of an import.
+        rows += [{"item": {"type": "episode", "id": "ep1"}}, {"item": None}]
+        offset, limit = int(params["offset"]), int(params["limit"])
+        page = rows[offset : offset + limit]
+        return httpx2.Response(
+            200, json={"items": page, "next": "more" if offset + limit < len(rows) else None}
+        )
+
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         path = request.url.path
         if path == "/api/token":
@@ -201,6 +236,8 @@ class FakeSpotify:
             return httpx2.Response(200, json=body)
         if self.busy:
             return httpx2.Response(429, headers={"Retry-After": "7"})
+        if path.startswith("/v1/playlists/"):
+            return self._playlist(path, dict(request.url.params))
         if path.startswith("/v1/tracks/"):
             found = [t for t in self.tracks if t["id"] == path.rsplit("/", 1)[-1]]
             return httpx2.Response(200, json=found[0]) if found else httpx2.Response(404)

@@ -16,8 +16,18 @@ from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from guildfm.live import LiveHub
-from guildfm.models import EntryState, Play, QueueEntry, Vote
+from guildfm.models import EntryState, Play, Playlist, QueueEntry, Vote
 from guildfm.playback import PlaybackController, Status
+from guildfm.playlists import (
+    best_voted,
+    consider_for_best_voted,
+    current_source,
+    give_back,
+    play_playlist,
+    stop_playlist,
+    take_next,
+)
+from guildfm.prefs import get_pref
 from guildfm.speakers import QueueItem, SpeakersRefused, SpeakersUnavailable, spotify_item
 from guildfm.speakers import spotify_track_id as track_id_in
 
@@ -119,9 +129,16 @@ class QueueEngine:
         self.activity.appendleft({"text": text, "at": self._clock()})
 
     async def recover(self) -> None:
-        """After a restart GuildFM isn't driving the speakers, so nothing is locked in."""
+        """After a restart GuildFM isn't driving the speakers, so nothing is locked in. A locked
+        request goes back to the top of the vote; a locked playlist song is let go."""
         async with self._sessions() as db:
+            await best_voted(db)
             await db.execute(delete(QueueEntry).where(QueueEntry.state == EntryState.PLAYING))
+            await db.execute(
+                delete(QueueEntry).where(
+                    QueueEntry.state == EntryState.NEXT, QueueEntry.requested_by.is_(None)
+                )
+            )
             await db.execute(
                 update(QueueEntry)
                 .where(QueueEntry.state == EntryState.NEXT)
@@ -130,10 +147,11 @@ class QueueEngine:
             await db.commit()
 
     async def _lock_head(self, db: AsyncSession) -> QueueEntry | None:
-        """Take the top request out of the vote and mark it as next. Placed entries move up."""
+        """Take the top request out of the vote and mark it as next, or, with no requests
+        waiting, the playing playlist's next song. Placed requests move up a place."""
         entries, _ = await waiting(db)
         if not entries:
-            return None
+            return await self._from_playlist(db)
         head = entries[0]
         head.state = EntryState.NEXT
         head.pinned_position = None
@@ -143,11 +161,37 @@ class QueueEngine:
         await db.commit()
         return head
 
+    async def _from_playlist(self, db: AsyncSession) -> QueueEntry | None:
+        """The playing playlist's next song, as a locked-in queue entry with no requester."""
+        source = await current_source(db)
+        if source is None:
+            return None
+        playlist_id = source.playlist_id
+        queued = set(await db.scalars(select(QueueEntry.track_id)))
+        restart = await get_pref(db, "queue_runs_out") == "restart_playlist"
+        track_id = await take_next(db, queued, restart=restart)
+        if track_id is None:
+            return None
+        entry = QueueEntry(
+            track_id=track_id,
+            playlist_id=playlist_id,
+            added_at=self._clock(),
+            state=EntryState.NEXT,
+        )
+        db.add(entry)
+        await db.commit()
+        return await db.get(QueueEntry, entry.id)
+
     async def _unlock(self, entry_id: int) -> None:
         async with self._sessions() as db:
             entry = await db.get(QueueEntry, entry_id)
             if entry and entry.state == EntryState.NEXT:
-                entry.state, entry.pinned_position = EntryState.WAITING, 1
+                if entry.requested_by is None:
+                    # A playlist song: let it go, and the playlist can offer it again.
+                    await give_back(db, entry.track_id)
+                    await db.delete(entry)
+                else:
+                    entry.state, entry.pinned_position = EntryState.WAITING, 1
                 await db.commit()
 
     async def keep_fed(self) -> None:
@@ -192,6 +236,69 @@ class QueueEngine:
         await controller.skip()
         await self.changed()
 
+    async def previous(self) -> None:
+        """Go back a song, or start this one again if it's well under way. Going back leaves the
+        song that was playing next in line on the speakers, so it's next here again too."""
+        controller = self._controller
+        action = controller.previous_action
+        requeued = None
+        if action == "back":
+            async with self.lock, self._sessions() as db:
+                playing = await in_state(db, EntryState.PLAYING)
+                if playing and not await in_state(db, EntryState.NEXT):
+                    playing.state, requeued = EntryState.NEXT, playing.id
+                    await db.commit()
+        try:
+            await controller.previous(action)
+        except Exception:
+            if requeued:
+                await self._set_state(requeued, EntryState.PLAYING)
+            raise
+        await self.changed()
+
+    async def _set_state(self, entry_id: int, state: EntryState) -> None:
+        async with self._sessions() as db:
+            entry = await db.get(QueueEntry, entry_id)
+            if entry:
+                entry.state = state
+                await db.commit()
+
+    async def switch(self, playlist: Playlist | None) -> bool:
+        """Make `playlist` fill the gaps between requests from the next song on, or nothing
+        ("requests only") for None. A playlist song already lined up on the speakers comes back
+        off them, so the switch still comes straight after the current song. False when that
+        was the source already."""
+        async with self._sessions() as db:
+            source = await current_source(db)
+            if (source and source.playlist_id) == (playlist and playlist.id):
+                return False
+            lined_up = await in_state(db, EntryState.NEXT)
+        stale = lined_up if lined_up and lined_up.requested_by is None else None
+        if stale and self._controller.in_control:
+            try:
+                await self._controller.unqueue(self.item(stale))
+            except SpeakersUnavailable, SpeakersRefused:
+                log.warning("Couldn't take the old playlist's song off the speakers", exc_info=True)
+                stale = None  # it plays, and the switch comes a song later
+        elif stale:
+            stale = None  # not driving the speakers, so it stays where it is
+
+        async with self.lock, self._sessions() as db:
+            if stale:
+                entry = await db.get(QueueEntry, stale.id)
+                if entry and entry.state == EntryState.NEXT:
+                    await give_back(db, entry.track_id)
+                    await db.delete(entry)
+            if playlist is None:
+                await stop_playlist(db)
+            else:
+                await play_playlist(db, await db.get(Playlist, playlist.id))
+        await self.changed()
+        # Lines up the new source's song in place of the one taken off, or starts it if the
+        # music had run out.
+        await self.keep_fed()
+        return True
+
     async def _first_up(self) -> list[QueueItem]:
         """What to play when GuildFM takes the speakers over and has nothing lined up."""
         async with self.lock, self._sessions() as db:
@@ -219,14 +326,28 @@ class QueueEngine:
                     Play(
                         track_id=entry.track_id,
                         requested_by=entry.requested_by,
+                        playlist_id=entry.playlist_id,
                         played_at=self._clock(),
                         upvotes=tally.up,
                         downvotes=tally.down,
                     )
                 )
-                self.note(
-                    f"Now playing {entry.track.title}, requested by {entry.requester.display_name}"
-                )
+                if entry.requester:
+                    self.note(
+                        f"Now playing {entry.track.title}, "
+                        f"requested by {entry.requester.display_name}"
+                    )
+                    joined = await consider_for_best_voted(
+                        db,
+                        entry.track_id,
+                        tally.up,
+                        more_than=await get_pref(db, "best_voted_min_upvotes"),
+                        size=await get_pref(db, "best_voted_size"),
+                    )
+                    if joined:
+                        self.note(f"{entry.track.title} made it into Best Voted")
+                elif entry.playlist:
+                    self.note(f"Now playing {entry.track.title} from {entry.playlist.name}")
             await db.commit()
         if finished or started:
             await self.changed()

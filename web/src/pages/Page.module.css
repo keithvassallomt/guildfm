@@ -112,11 +112,6 @@
   color: var(--muted);
 }
 
-/* On phones the logo heads the first screen; on wider screens it lives in the sidebar. */
-.wideOnly {
-  display: none;
-}
-
 @media (min-width: 768px) {
   .page {
     padding: 32px 40px 48px;
@@ -133,14 +128,6 @@
 
   .card {
     padding: 20px;
-  }
-
-  .narrowOnly {
-    display: none;
-  }
-
-  .wideOnly {
-    display: inline;
   }
 }
 

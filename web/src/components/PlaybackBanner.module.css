@@ -1,0 +1,26 @@
+.banner {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.banner strong {
+  color: var(--text);
+}
+
+.warn {
+  background: var(--warn-soft);
+  border-color: rgba(245, 196, 81, 0.35);
+  color: var(--text-soft);
+}
+
+.warn strong {
+  color: var(--warn);
+}

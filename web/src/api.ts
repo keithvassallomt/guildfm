@@ -8,6 +8,7 @@ export type Permission =
   | "manage_playlists"
   | "create_stations"
   | "switch_source"
+  | "transport"
   | "control_playback"
   | "announce"
   | "manage_users"
@@ -51,6 +52,8 @@ export type PlaybackState = {
     /** Whether GuildFM put this track on, rather than someone else. */
     ours: boolean;
   } | null;
+  /** What Previous does now, or null when it's unavailable (greyed out). */
+  previous: "back" | "restart" | null;
   group_volume: number | null;
   rooms: Room[];
   /** Whether playback hours are open now, and when that next changes. */
@@ -120,7 +123,10 @@ export type QueueEntry = {
   id: number;
   state: "waiting" | "next" | "playing";
   track: SearchTrack;
-  requested_by: { id: number; display_name: string };
+  /** Null for songs from the playing playlist. */
+  requested_by: { id: number; display_name: string } | null;
+  /** The playlist a song came from, if it did. */
+  playlist: string | null;
   requested_at: string;
   up: number;
   down: number;
@@ -133,10 +139,20 @@ export type QueueEntry = {
   played_at: string | null;
 };
 
+export type QueueSource = {
+  playlist_id: number;
+  name: string;
+  upcoming: { track: SearchTrack; down: number; my_down: boolean }[];
+  /** Thumbs down needed to skip one of the upcoming songs. */
+  skip_at: number;
+};
+
 export type QueueState = {
   playing: QueueEntry | null;
   next: QueueEntry | null;
   waiting: QueueEntry[];
+  /** The playlist filling the gaps between requests. */
+  source: QueueSource | null;
   activity: { text: string; at: string }[];
   mine: number;
   request_cap: number;
@@ -179,4 +195,62 @@ export type SettingsState = {
   voices: string[];
   timezones: string[];
   hours: { open: boolean; next_change: string | null };
+};
+
+export type Playlist = {
+  id: number;
+  name: string;
+  kind: "custom" | "imported" | "best_voted";
+  shuffle: boolean;
+  tracks: number;
+  made_by: string | null;
+  playing: boolean;
+};
+
+/** A playlist as a source on the Now Playing screen. */
+export type PlaylistTile = {
+  id: number;
+  name: string;
+  kind: Playlist["kind"];
+  tracks: number;
+  shuffle: boolean;
+  /** Album art from its first few songs. */
+  covers: string[];
+  last_played_at: string | null;
+  /** The playlist filling the gaps between requests. */
+  filling: boolean;
+  /** The current song came from it. */
+  on_air: boolean;
+};
+
+export type SourceKind = "queue" | "library" | "radio";
+
+export type NowState = {
+  /** Where the current song came from, if GuildFM put it on. */
+  on_air: SourceKind | null;
+  /** Nothing fills the gaps between requests. */
+  requests_only: boolean;
+  /** Last played first. */
+  playlists: PlaylistTile[];
+};
+
+export type Play = {
+  id: number;
+  track: SearchTrack;
+  played_at: string;
+  requested_by: { id: number; display_name: string } | null;
+  playlist: string | null;
+  upvotes: number;
+  downvotes: number;
+};
+
+export type History = {
+  /** Newest first. */
+  plays: Play[];
+  /** Earlier plays today, fetched with ?before=<the last play's id>. */
+  more: boolean;
+};
+
+export type PlaylistDetail = Playlist & {
+  items: (SearchTrack & { position: number; upvotes: number })[];
 };

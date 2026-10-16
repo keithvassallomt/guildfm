@@ -4,21 +4,22 @@ import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
 import { Icon } from "../components/Icon";
-import { Logo } from "../components/Logo";
+import { PlaybackBanner } from "../components/PlaybackBanner";
+import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
-import { ago, chipLabel, opensAgain, statusTones } from "../live/status";
-import { clock, usePlayback, usePosition } from "../live/usePlayback";
+import { ago, chipLabel, credit, statusTones } from "../live/status";
+import { usePlayback } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
 import { type SearchChanges, SongSearch } from "../search/SongSearch";
 import styles from "./Page.module.css";
 import q from "./QueuePage.module.css";
-import { type Act, Requests } from "./QueueRequests";
+import { type Act, Requests, Upcoming } from "./QueueRequests";
 
 
 export function QueuePage() {
   const { can } = useAuth();
-  const { queue, apply } = useQueue();
+  const { queue, apply, refresh } = useQueue();
   const { state: playback, receivedAt } = usePlayback();
   const { show, toast } = useToast();
   const curator = can("manage_queue");
@@ -36,18 +37,13 @@ export function QueuePage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>
-          <span className={styles.narrowOnly}>
-            <Logo />
-          </span>
-          <span className={styles.wideOnly}>Queue</span>
-        </h1>
+        <h1 className={styles.title}>Queue</h1>
         {playback && (
           <StatusChip tone={statusTones[playback.status]}>{chipLabel(playback)}</StatusChip>
         )}
       </header>
 
-      <Banner playback={playback} />
+      <PlaybackBanner playback={playback} />
 
       <div className={q.layout}>
         <div className={q.now}>
@@ -84,6 +80,23 @@ export function QueuePage() {
           )}
           {queue && queue.waiting.length > 0 && (
             <Requests entries={queue.waiting} curator={curator} act={act} />
+          )}
+          {queue?.source && (
+            <Upcoming
+              source={queue.source}
+              onThumb={async (track_id, down) => {
+                try {
+                  const { skipped } = await api<{ skipped: boolean }>("POST", "/source/vote", {
+                    track_id,
+                    down,
+                  });
+                  if (skipped) show("That song will be skipped this time round");
+                } catch (caught) {
+                  show(errorText(caught));
+                }
+                refresh();
+              }}
+            />
           )}
         </section>
         <section className={`${styles.section} ${q.activity}`} aria-labelledby="activity">
@@ -140,43 +153,16 @@ function QuickSearch({ open, onClose, queue, onQueue }: QuickSearchProps) {
         query={search.q}
         artist={search.artist}
         onChange={update}
-        queue={queue}
-        onQueue={onQueue}
+        addTo={{ to: "queue", queue, onQueue }}
         autoFocus
       />
     </Dialog>
   );
 }
 
-function Banner({ playback }: { playback: PlaybackState | null }) {
-  const messages: Partial<Record<string, [string, string]>> = {
-    stopped: ["The music is stopped", "Requests still queue up, and play once it starts again."],
-    overridden: [
-      "Someone's playing something from the Sonos app",
-      "GuildFM carries on when an admin takes the speakers back.",
-    ],
-    offline: ["Can't reach the speakers", "Requests still queue up in the meantime."],
-  };
-  if (playback?.status === "stopped" && playback.hours?.open === false) {
-    messages.stopped = [
-      "Outside playback hours",
-      `${opensAgain(playback.hours)} Requests still queue up until then.`,
-    ];
-  }
-  const message = playback && messages[playback.status];
-  if (!message) return null;
-  return (
-    <div className={`${q.banner} ${playback.status === "stopped" ? "" : q.warn}`} role="status">
-      <strong>{message[0]}</strong>
-      {message[1]}
-    </div>
-  );
-}
-
 type NowProps = { playback: PlaybackState | null; receivedAt: number; entry: QueueEntry | null };
 
 function NowPlaying({ playback, receivedAt, entry }: NowProps) {
-  const position = usePosition(playback, receivedAt);
   const track = playback?.track;
   if (!track) {
     return (
@@ -204,18 +190,10 @@ function NowPlaying({ playback, receivedAt, entry }: NowProps) {
         </div>
       </div>
       {track.duration > 0 && (
-        <div className={q.progress}>
-          <div className={q.bar}>
-            <div className={q.fill} style={{ width: `${(100 * position) / track.duration}%` }} />
-          </div>
-          <div className={q.times}>
-            <span>{clock(position)}</span>
-            <span>{clock(track.duration)}</span>
-          </div>
-        </div>
+        <Progress track={track} playing={playback.status === "playing"} receivedAt={receivedAt} />
       )}
       {queued && entry && (
-        <span className={q.requested}>Requested by {entry.mine ? "you" : entry.requested_by.display_name}</span>
+        <span className={q.requested}>{credit(entry)}</span>
       )}
     </section>
   );
@@ -233,7 +211,7 @@ function UpNext({ entry }: { entry: QueueEntry }) {
         <div className={q.text}>
           <span className={q.title}>{entry.track.title}</span>
           <span className={q.meta}>
-            {entry.track.artists} · Requested by {entry.mine ? "you" : entry.requested_by.display_name}
+            {entry.track.artists} · {credit(entry)}
           </span>
         </div>
         <span className={q.lockedNote}>Locked in, already sent to the speakers</span>

@@ -1,4 +1,4 @@
-import type { PlaybackState, PlaybackStatus } from "../api";
+import type { PlaybackState, PlaybackStatus, QueueEntry } from "../api";
 
 export const statusLabels: Record<PlaybackStatus, string> = {
   playing: "On air",
@@ -42,4 +42,12 @@ export function opensAgain(hours: { next_change: string | null }): string {
 export function chipLabel(state: PlaybackState): string {
   if (state.status === "stopped" && state.hours?.open === false) return "Closed";
   return statusLabels[state.status];
+}
+
+/** Who a queued song is from: "Requested by Priya", "Requested by you", or "From Fridays". */
+export function credit(entry: QueueEntry): string {
+  if (entry.requested_by) {
+    return `Requested by ${entry.mine ? "you" : entry.requested_by.display_name}`;
+  }
+  return entry.playlist ? `From ${entry.playlist}` : "From a playlist";
 }

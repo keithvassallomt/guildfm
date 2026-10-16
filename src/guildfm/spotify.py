@@ -23,6 +23,8 @@ API = "https://api.spotify.com/v1"
 ACCOUNTS = "https://accounts.spotify.com"
 SCOPES = "playlist-read-private playlist-read-collaborative"
 PAGE = 10  # the most results a development-mode app may ask for at once
+IMPORT_PAGE = 50  # playlist items Spotify returns at once
+IMPORT_LIMIT = 1000  # the most tracks GuildFM imports from one playlist
 STATE_SECONDS = 10 * 60  # how long a "connect Spotify" link stays valid
 # Spotify asks people to reconnect about six months after they first connected.
 RECONNECT_SECONDS = 182 * 24 * 60 * 60
@@ -38,6 +40,10 @@ class SpotifyBusy(SpotifyError):
 
 class SpotifyNotFound(SpotifyError):
     """Spotify doesn't have the thing asked for."""
+
+
+class SpotifyForbidden(SpotifyError):
+    """Spotify won't share it with GuildFM, such as a playlist the account doesn't own."""
 
 
 class NotConnected(SpotifyError):
@@ -144,8 +150,12 @@ class SpotifyClient:
             if response.status_code == 401 and user_token is None and attempt == 0:
                 self._app_token = None  # expired early; get a new one and try once more
                 continue
-            if response.status_code in (400, 404) and path.startswith("/tracks/"):
-                raise SpotifyNotFound("Spotify doesn't have that track.")
+            if response.status_code == 404 or (
+                response.status_code == 400 and path.startswith("/tracks/")
+            ):
+                raise SpotifyNotFound("Spotify doesn't have that.")
+            if response.status_code == 403:
+                raise SpotifyForbidden("Spotify won't share that with GuildFM.")
             if response.status_code == 429:
                 wait = response.headers.get("Retry-After", "a few")
                 raise SpotifyBusy(f"Spotify is busy. Try again in {wait} seconds.")
@@ -187,6 +197,37 @@ class SpotifyClient:
             return _track(await self._get(f"/tracks/{track_id}", {"market": self._market}))
         except SpotifyNotFound:
             return None
+
+    async def playlist(self, db: AsyncSession, playlist_id: str) -> tuple[str, list[SpotifyTrack]]:
+        """A playlist's name and tracks, read with the connected account. Spotify only allows
+        this for playlists that account owns or collaborates on."""
+        token = await self.user_token(db)
+        try:
+            about = await self._get(
+                f"/playlists/{playlist_id}", {"fields": "name"}, user_token=token
+            )
+            tracks: list[SpotifyTrack] = []
+            for offset in range(0, IMPORT_LIMIT, IMPORT_PAGE):
+                page = await self._get(
+                    f"/playlists/{playlist_id}/items",
+                    {"limit": IMPORT_PAGE, "offset": offset, "market": self._market},
+                    user_token=token,
+                )
+                for row in page["items"]:
+                    # Spotify renamed "track" to "item" in 2026; accept either.
+                    item = row.get("item") or row.get("track")
+                    if item and item.get("type", "track") == "track" and item.get("id"):
+                        tracks.append(_track(item))
+                if not page.get("next"):
+                    break
+        except SpotifyNotFound:
+            raise SpotifyNotFound("Spotify doesn't have that playlist.") from None
+        except SpotifyForbidden:
+            raise SpotifyForbidden(
+                "Spotify won't share that playlist. GuildFM can only import playlists the "
+                "connected account owns or collaborates on."
+            ) from None
+        return about["name"], tracks
 
     # Connecting a person's account
 

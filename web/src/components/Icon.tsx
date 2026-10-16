@@ -2,6 +2,18 @@ import type { ReactNode } from "react";
 
 const paths = {
   queue: <path d="M4 6h16M4 12h16M4 18h10" />,
+  now: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="2.5" />
+    </>
+  ),
+  radio: (
+    <>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="7" />
@@ -72,6 +84,12 @@ const paths = {
     <>
       <path d="M5 5l10 7-10 7z" fill="currentColor" />
       <path d="M19 5v14" />
+    </>
+  ),
+  previous: (
+    <>
+      <path d="M19 5L9 12l10 7z" fill="currentColor" />
+      <path d="M5 5v14" />
     </>
   ),
   stop: <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none" />,

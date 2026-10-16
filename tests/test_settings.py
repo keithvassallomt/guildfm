@@ -26,9 +26,10 @@ def test_changing_a_setting(client: TestClient) -> None:
     assert body["values"]["downvote_threshold"] == -3
 
 
-def test_new_settings_take_effect(client: TestClient) -> None:
+def test_new_settings_take_effect(client: TestClient, people) -> None:
     sign_in(client, *ADMIN)
     client.patch("/api/settings", json={"request_cap": 1}).raise_for_status()
+    sign_in(client, *people["user"])
     client.post("/api/queue", json={"track_id": spotify_id("fm1")}).raise_for_status()
     response = client.post("/api/queue", json={"track_id": spotify_id("fm2")})
     assert response.status_code == 409

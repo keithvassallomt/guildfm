@@ -1,3 +1,5 @@
+from urllib.parse import parse_qs, urlparse
+
 from fastapi.testclient import TestClient
 
 ADMIN = ("admin", "admin-password")
@@ -26,3 +28,11 @@ def read_speakers(client: TestClient) -> None:
     """Read the (fake) speakers once and let the queue react, as the app does every second."""
     client.portal.call(client.app.state.playback.poll)
     client.portal.call(client.app.state.queue.keep_fed)
+
+
+def connect_spotify(client: TestClient) -> str:
+    """Go through Spotify's sign-in as an admin. Returns the page Spotify sends people back to."""
+    sign_in(client, *ADMIN)
+    url = client.post("/api/spotify/connect").json()["url"]
+    state = parse_qs(urlparse(url).query)["state"][0]
+    return client.get("/auth/spotify/callback", params={"code": "abc", "state": state}).text

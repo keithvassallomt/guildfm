@@ -87,15 +87,82 @@ class EntryState(StrEnum):
     PLAYING = "playing"
 
 
+class PlaylistKind(StrEnum):
+    CUSTOM = "custom"  # made in GuildFM
+    IMPORTED = "imported"  # copied from a Spotify playlist
+    BEST_VOTED = "best_voted"  # the one GuildFM keeps itself
+
+
+class Playlist(Base):
+    __tablename__ = "playlists"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[PlaylistKind] = mapped_column(
+        Enum(PlaylistKind, native_enum=False, length=16, values_callable=enum_values)
+    )
+    spotify_id: Mapped[str | None] = mapped_column(String(64), default=None)
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    created_at: Mapped[float]
+    shuffle: Mapped[bool] = mapped_column(default=False)
+    # Where it left off when something else was put on: its order, cursor, skipped songs and
+    # thumbs down, as in SourceState. Putting it back on carries on from there.
+    resume: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+
+    creator: Mapped[User | None] = relationship(lazy="joined")
+
+
+class PlaylistTrack(Base):
+    __tablename__ = "playlist_tracks"
+
+    playlist_id: Mapped[int] = mapped_column(
+        ForeignKey("playlists.id", ondelete="CASCADE"), primary_key=True
+    )
+    track_id: Mapped[str] = mapped_column(ForeignKey("tracks.id"), primary_key=True)
+    position: Mapped[int]
+    added_at: Mapped[float]
+    # For Best Voted: the most upvotes the track has had as a request.
+    upvotes: Mapped[int] = mapped_column(default=0)
+
+    track: Mapped[Track] = relationship(lazy="joined")
+
+
+class SourceState(Base):
+    """The playlist filling the gaps between requests, and how far through it GuildFM is.
+    There's at most one row, with id 1."""
+
+    __tablename__ = "playback_source"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    playlist_id: Mapped[int] = mapped_column(ForeignKey("playlists.id", ondelete="CASCADE"))
+    # This time round's order of track ids: shuffled, or as listed.
+    order: Mapped[list[str]] = mapped_column(JSON)
+    cursor: Mapped[int] = mapped_column(default=0)
+    # Tracks thumbed down enough to skip this time round, and who thumbed them down.
+    skipped: Mapped[list[str]] = mapped_column(JSON, default=list)
+    downvotes: Mapped[dict[str, list[int]]] = mapped_column(JSON, default=dict)
+
+    playlist: Mapped[Playlist] = relationship(lazy="joined")
+
+
 class QueueEntry(Base):
-    """A request in the queue. Deleting its requester deletes it."""
+    """A song in the queue: someone's request, or the next from the playing playlist.
+    Deleting the requester deletes their requests."""
 
     __tablename__ = "queue"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # Unique: a song can only be in the queue once.
     track_id: Mapped[str] = mapped_column(ForeignKey("tracks.id"), unique=True)
-    requested_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # None for songs from the playing playlist.
+    requested_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), default=None
+    )
+    playlist_id: Mapped[int | None] = mapped_column(
+        ForeignKey("playlists.id", ondelete="SET NULL"), default=None
+    )
     added_at: Mapped[float]
     state: Mapped[EntryState] = mapped_column(
         Enum(EntryState, native_enum=False, length=16, values_callable=enum_values),
@@ -105,7 +172,8 @@ class QueueEntry(Base):
     pinned_position: Mapped[int | None] = mapped_column(default=None)
 
     track: Mapped[Track] = relationship(lazy="joined")
-    requester: Mapped[User] = relationship(lazy="joined")
+    requester: Mapped[User | None] = relationship(lazy="joined")
+    playlist: Mapped[Playlist | None] = relationship(lazy="joined")
 
 
 class Vote(Base):
@@ -123,7 +191,7 @@ class Vote(Base):
 
 
 class Play(Base):
-    """A track GuildFM played, kept for "recently played" and the Best Voted playlist."""
+    """A track GuildFM played, kept for the play history, "recently played" and Best Voted."""
 
     __tablename__ = "plays"
 
@@ -132,6 +200,14 @@ class Play(Base):
     requested_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
+    # The playlist it came from, when it wasn't a request.
+    playlist_id: Mapped[int | None] = mapped_column(
+        ForeignKey("playlists.id", ondelete="SET NULL"), default=None, index=True
+    )
     played_at: Mapped[float] = mapped_column(index=True)
     upvotes: Mapped[int] = mapped_column(default=0)
     downvotes: Mapped[int] = mapped_column(default=0)
+
+    track: Mapped[Track] = relationship(lazy="joined")
+    requester: Mapped[User | None] = relationship(lazy="joined")
+    playlist: Mapped[Playlist | None] = relationship(lazy="joined")

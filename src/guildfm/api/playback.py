@@ -9,10 +9,11 @@ from pydantic import BaseModel, Field
 from guildfm.auth import ActiveUser, require
 from guildfm.models import User
 from guildfm.permissions import Permission
-from guildfm.playback import NothingToPlay, NotInControl, PlaybackController
+from guildfm.playback import CantGoBack, NothingToPlay, NotInControl, PlaybackController
 from guildfm.speakers import SpeakersRefused, SpeakersUnavailable
 
 router = APIRouter(prefix="/playback")
+Transport = Annotated[User, require(Permission.TRANSPORT)]
 Controls = Annotated[User, require(Permission.CONTROL_PLAYBACK)]
 
 
@@ -33,6 +34,10 @@ async def speakers_errors():
         raise HTTPException(409, "GuildFM isn't driving the speakers. Press Play first.") from None
     except NothingToPlay:
         raise HTTPException(409, "There's nothing to play yet.") from None
+    except CantGoBack:
+        raise HTTPException(
+            409, "The next song is already lined up, so there's no going back."
+        ) from None
     except SpeakersRefused as error:
         raise HTTPException(409, str(error)) from None
     except SpeakersUnavailable as error:
@@ -45,7 +50,7 @@ async def state(_: ActiveUser, request: Request) -> dict[str, Any]:
 
 
 @router.post("/play")
-async def play(_: Controls, request: Request) -> dict[str, Any]:
+async def play(_: Transport, request: Request) -> dict[str, Any]:
     """Play, at any time: outside playback hours this overrides the schedule until Stop or the
     next closing time."""
     async with speakers_errors():
@@ -54,17 +59,25 @@ async def play(_: Controls, request: Request) -> dict[str, Any]:
 
 
 @router.post("/pause")
-async def pause(_: Controls, request: Request) -> dict[str, Any]:
+async def pause(_: Transport, request: Request) -> dict[str, Any]:
     async with speakers_errors():
         await controller(request).pause()
     return controller(request).state()
 
 
 @router.post("/skip")
-async def skip(_: Controls, request: Request) -> dict[str, Any]:
+async def skip(_: Transport, request: Request) -> dict[str, Any]:
     """Skip the current song. The next request is lined up first, so the music carries on."""
     async with speakers_errors():
         await request.app.state.queue.skip()
+    return controller(request).state()
+
+
+@router.post("/previous")
+async def previous(_: Transport, request: Request) -> dict[str, Any]:
+    """Go back a song, or start this one again if it's more than a few seconds in."""
+    async with speakers_errors():
+        await request.app.state.queue.previous()
     return controller(request).state()
 
 
