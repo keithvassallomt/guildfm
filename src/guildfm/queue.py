@@ -12,7 +12,7 @@ from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from sqlalchemy import case, delete, func, select, update
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from guildfm.live import LiveHub
@@ -129,21 +129,27 @@ class QueueEngine:
         self.activity.appendleft({"text": text, "at": self._clock()})
 
     async def recover(self) -> None:
-        """After a restart GuildFM isn't driving the speakers, so nothing is locked in. A locked
-        request goes back to the top of the vote; a locked playlist song is let go."""
+        """After a restart. Songs still on the speakers GuildFM picked back up stay as they were.
+        Anything else is no longer playing or locked in: a locked request goes back to the top of
+        the vote, and a locked playlist song is let go."""
+        playing, lined_up = self._controller.current_key, self._controller.upcoming_keys
         async with self._sessions() as db:
             await best_voted(db)
-            await db.execute(delete(QueueEntry).where(QueueEntry.state == EntryState.PLAYING))
-            await db.execute(
-                delete(QueueEntry).where(
-                    QueueEntry.state == EntryState.NEXT, QueueEntry.requested_by.is_(None)
-                )
+            entries = await db.scalars(
+                select(QueueEntry).where(QueueEntry.state != EntryState.WAITING)
             )
-            await db.execute(
-                update(QueueEntry)
-                .where(QueueEntry.state == EntryState.NEXT)
-                .values(state=EntryState.WAITING, pinned_position=1)
-            )
+            for entry in entries.unique().all():
+                key = self.item(entry).key
+                if entry.state == EntryState.PLAYING:
+                    if key != playing:
+                        await db.delete(entry)
+                elif key in lined_up:
+                    continue
+                elif entry.requested_by is None:
+                    await give_back(db, entry.track_id)
+                    await db.delete(entry)
+                else:
+                    entry.state, entry.pinned_position = EntryState.WAITING, 1
             await db.commit()
 
     async def _lock_head(self, db: AsyncSession) -> QueueEntry | None:

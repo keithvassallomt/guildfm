@@ -164,6 +164,7 @@ Done when: a station with a DJ plays for an hour, announces a request by name, a
 
 ## Stage 11: Hardening and handover
 Goal: GuildFM runs unattended on the office machine.
+- [x] After a restart, GuildFM carries on driving the speakers if they're still playing its queue (done early, after trying Stage 8)
 - [ ] Graceful failure: speakers offline, Spotify token expired, OpenAI errors (music keeps playing, the DJ goes quiet)
 - [ ] Logging and a simple status view for admins
 - [ ] Run as a service on the always-on machine (systemd, or Docker with host networking), with SQLite backups

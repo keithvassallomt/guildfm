@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -55,17 +55,28 @@ def spotify() -> FakeSpotify:
 
 
 @pytest.fixture
-def client(
+def start(
     settings: Settings, speakers: FakeSpeakers, spotify: FakeSpotify, clock: Clock
-) -> Iterator[TestClient]:
-    api = SpotifyClient(
-        client_id="test",
-        client_secret="test",
-        redirect_uri=settings.spotify_redirect_uri,
-        market="GB",
-        http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
-    )
-    with TestClient(create_app(settings, speakers, api, poll=False, now=clock)) as client:
+) -> Callable[[], TestClient]:
+    """Starts GuildFM, use it with `with`. Starting it again is a restart: same data, same
+    speakers."""
+
+    def start() -> TestClient:
+        api = SpotifyClient(
+            client_id="test",
+            client_secret="test",
+            redirect_uri=settings.spotify_redirect_uri,
+            market="GB",
+            http=httpx2.AsyncClient(transport=httpx2.MockTransport(spotify)),
+        )
+        return TestClient(create_app(settings, speakers, api, poll=False, now=clock))
+
+    return start
+
+
+@pytest.fixture
+def client(start: Callable[[], TestClient]) -> Iterator[TestClient]:
+    with start() as client:
         yield client
 
 

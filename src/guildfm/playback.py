@@ -3,14 +3,19 @@
 GuildFM is either driving the speakers (it put the music in the Sonos queue and is in control)
 or it isn't. While driving, anything else showing up on the speakers means someone took over
 from the Sonos or Spotify app; GuildFM then steps aside until an admin presses Play.
+
+GuildFM notes down what it put on the speakers, so after a restart it can tell whether they're
+still playing its queue and carry on driving them.
 """
 
 import asyncio
+import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from guildfm.live import LiveHub
@@ -18,6 +23,7 @@ from guildfm.speakers import (
     QueueItem,
     Room,
     Snapshot,
+    SpeakersRefused,
     SpeakersUnavailable,
     SpeakerSystem,
     track_key,
@@ -65,10 +71,12 @@ class PlaybackController:
         speakers: SpeakerSystem,
         hub: LiveHub,
         clock: Callable[[], float] = time.monotonic,
+        memory: Path | None = None,
     ) -> None:
         self._speakers = speakers
         self._hub = hub
         self._clock = clock
+        self._memory = memory  # where GuildFM notes what it put on the speakers
         self._lock = asyncio.Lock()
 
         self._snapshot: Snapshot | None = None
@@ -92,6 +100,54 @@ class PlaybackController:
         self.source: Source | None = None
         # Whether playback hours are open and when that next changes, kept up by the scheduler.
         self.hours: dict[str, Any] | None = None
+
+    # Remembering what's on the speakers, for after a restart
+
+    def _remember(self) -> None:
+        if self._memory is None:
+            return
+        notes = {"driving": self._in_control, "items": [asdict(item) for item in self._items]}
+        draft = self._memory.with_suffix(".tmp")
+        draft.write_text(json.dumps(notes))
+        draft.replace(self._memory)
+
+    async def pick_up(self) -> bool:
+        """At startup: if the speakers are still playing the queue GuildFM put on them before a
+        restart, carry on driving them rather than starting out stopped. The same song has to be
+        playing at the same place in the queue, so a queue built in the Sonos app isn't mistaken
+        for GuildFM's. True when it picked them up."""
+        try:
+            notes = json.loads(self._memory.read_text()) if self._memory else None
+        except OSError, ValueError:
+            notes = None
+        if not notes or not notes.get("driving") or not notes.get("items"):
+            return False
+        try:
+            snapshot = await self._call(self._speakers.snapshot, True)
+        except SpeakersUnavailable, SpeakersRefused:
+            return False
+        # Taken as the starting point, so the next reading doesn't count as a change of song.
+        self._snapshot, self._rooms = snapshot, snapshot.rooms
+        items = [QueueItem(**item) for item in notes["items"]]
+        position = snapshot.queue_position
+        if not (snapshot.playing_our_queue and snapshot.track and position):
+            return False
+        if position > len(items) or items[position - 1].key != track_key(snapshot.track.uri):
+            return False
+        self._items, self._position, self._in_control = items, position, True
+        log.info("Picked the speakers back up where GuildFM left them")
+        return True
+
+    @property
+    def current_key(self) -> str | None:
+        """The song on the speakers, while GuildFM is driving them."""
+        track = self._snapshot.track if self._snapshot else None
+        return track_key(track.uri) if self._in_control and track else None
+
+    @property
+    def upcoming_keys(self) -> set[str]:
+        """The songs GuildFM has lined up after the current one."""
+        return {item.key for item in self._items[self._position :]} if self._in_control else set()
 
     # Reading the speakers
 
@@ -157,6 +213,7 @@ class PlaybackController:
             self._in_control = False
             self._overridden = True
             self._mismatches = 0
+            self._remember()
 
     @property
     def in_control(self) -> bool:
@@ -257,6 +314,7 @@ class PlaybackController:
             await self._call(self._speakers.take_over, remaining)
             self._items, self._position = remaining, 1
         self._in_control, self._overridden = True, False
+        self._remember()
         self._settle()
         await self.poll()
 
@@ -288,6 +346,7 @@ class PlaybackController:
         if self._snapshot and self._snapshot.transport in ACTIVE:
             await self._call(self._speakers.pause)
         self._in_control, self._overridden = False, False
+        self._remember()
         await self.poll()
 
     async def queue_next(self, item: QueueItem) -> None:
@@ -295,6 +354,7 @@ class PlaybackController:
         self._require_control()
         position = await self._call(self._speakers.add_next, item)
         self._items.insert(position - 1, item)
+        self._remember()
 
     async def unqueue(self, item: QueueItem) -> None:
         """Take `item` back off the speakers, if it's still to come."""
@@ -304,6 +364,7 @@ class PlaybackController:
             if self._items[index].key == item.key:
                 await self._call(self._speakers.remove, index + 1)
                 del self._items[index]
+                self._remember()
                 return
 
     async def play_now(self, item: QueueItem) -> None:
@@ -316,6 +377,7 @@ class PlaybackController:
             await self._call(self._speakers.take_over, [item])
             self._items, self._position = [item], 1
         self._in_control, self._overridden = True, False
+        self._remember()
         self._settle()
         await self.poll()
 

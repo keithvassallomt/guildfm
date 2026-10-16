@@ -84,6 +84,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - If someone changes the music from the Sonos or Spotify app, the outside change wins. GuildFM stops everything it is doing (queue, playlist, station, DJ and announcements), the same as pressing Stop, and leaves the speakers alone.
 - The dashboard shows that GuildFM has been overridden. Pressing Play takes control back and continues what was playing before.
 - If the Arc is switched to the TV, it just drops out of the group. GuildFM carries on in the other rooms.
+- If GuildFM restarts while the speakers are still playing its queue, it carries on where it was. Anything else on the speakers after a restart is left alone until someone presses Play.
 
 ## Playlists
 - Curators and admins can create playlists in GuildFM, or import them from Spotify by pasting a playlist link.

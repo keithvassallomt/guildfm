@@ -43,6 +43,7 @@ def create_app(
         app.state.sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
         async with app.state.sessionmaker() as db:
             await seed_admin(db, settings)
+        await app.state.playback.pick_up()
         app.state.queue = QueueEngine(
             app.state.sessionmaker,
             app.state.playback,
@@ -70,7 +71,9 @@ def create_app(
     app.state.settings = settings
     app.state.live = LiveHub()
     app.state.playback = PlaybackController(
-        speakers or SocoSystem(settings.sonos_host_list), app.state.live
+        speakers or SocoSystem(settings.sonos_host_list),
+        app.state.live,
+        memory=settings.data_dir / "speakers.json",
     )
     app.state.spotify = spotify or SpotifyClient(
         client_id=settings.spotify_client_id,
