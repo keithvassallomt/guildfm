@@ -512,6 +512,19 @@ class PlaybackController:
         self._items.insert(position - 1, item)
         self._remember()
 
+    async def play_again(self, item: QueueItem) -> bool:
+        """Have stopped speakers try the lined-up `item` once more. False if it isn't on them
+        any more."""
+        self._require_control()
+        ahead = range(self._position, len(self._items))
+        index = next((i for i in ahead if self._items[i].key == item.key), None)
+        if index is None:
+            return False
+        await self._call(self._speakers.play_position, index + 1)
+        self._settle()
+        await self.poll()
+        return True
+
     async def queue_before(self, item: QueueItem, key: str, kind: str) -> bool:
         """Line the clip `item` up to play just before the song `key`, which is lined up after
         the current track. `kind` is "dj" or "jingle". False if that song isn't lined up."""

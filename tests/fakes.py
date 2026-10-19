@@ -59,6 +59,7 @@ class FakeSpeakers:
         self.refusing_clips: set[str] = set()  # rooms that turn overlay clips down
         self.queue_refuses_clips = False  # MP3s from GuildFM can't go in the queue
         self.crossfade = False
+        self.wont_start: str | None = None  # a song's key that never starts, however often tried
         self.played: list[QueueItem] = []  # what played to the end from the queue, in order
 
     # Things that happen in the office
@@ -182,6 +183,9 @@ class FakeSpeakers:
 
     def play_position(self, position: int) -> None:
         self._check()
+        if self.queue[position - 1].key == self.wont_start:
+            self.next_song_fails()
+            return
         self.position = position
         self.track_position = 0
         self.transport = "PLAYING"
@@ -439,7 +443,10 @@ class FakeSpotify:
         offset, limit = int(params["offset"]), int(params["limit"])
         assert limit <= 10, "development-mode apps can't ask for more than 10"
         start = max(0, offset - self.overlap) if offset else 0
-        page = matches[start : start + limit]
+        page = [
+            t | {"is_playable": t["id"] not in self.unplayable}
+            for t in matches[start : start + limit]
+        ]
         result = {
             "tracks": {"items": page, "next": "more" if offset + limit < len(matches) else None}
         }

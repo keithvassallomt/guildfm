@@ -48,16 +48,30 @@ def started(client: TestClient, speakers: FakeSpeakers, *names: str) -> None:
     client.post("/api/playback/play").raise_for_status()
 
 
+def test_a_song_that_doesnt_start_gets_a_second_try(client: TestClient, speakers) -> None:
+    started(client, speakers, "fm1", "fm2", "fm3")
+    line_up_next(client, speakers)
+    speakers.next_song_fails()
+    read_speakers(client)
+    read_speakers(client)
+    assert speakers.transport == "STOPPED"  # a moment's grace
+    read_speakers(client)
+    assert (speakers.queue[speakers.position - 1].key, speakers.transport) == (
+        key("fm2"),
+        "PLAYING",
+    )
+    assert playing(client) == "Song 2"
+
+
 def test_a_lined_up_song_that_wont_play_is_skipped(client: TestClient, speakers) -> None:
     started(client, speakers, "fm1", "fm2", "fm3")
     line_up_next(client, speakers)
     assert queue(client)["next"]["track"]["title"] == "Song 2"
+    speakers.wont_start = key("fm2")
 
     speakers.next_song_fails()
-    read_speakers(client)
-    read_speakers(client)
-    assert queue(client)["next"]["track"]["title"] == "Song 2"  # a moment's grace
-    read_speakers(client)
+    for _ in range(6):
+        read_speakers(client)
     assert playing(client) == "Song 3"
     assert speakers.transport == "PLAYING"
     assert key("fm2") not in keys(speakers)

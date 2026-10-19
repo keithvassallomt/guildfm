@@ -37,11 +37,11 @@ def test_search_pages_past_spotifys_limit_of_ten(client: TestClient, people) -> 
     assert first["next_offset"] == 20
 
     second = client.get("/api/search", params={"q": "fleetwood", "offset": 20}).json()
-    assert len(second["tracks"]) == 3
+    assert len(second["tracks"]) == 2  # three more, one of which can't play here
     assert second["next_offset"] is None
     assert second["artists"] == []
     ids = [t["id"] for t in first["tracks"] + second["tracks"]]
-    assert len(set(ids)) == 23
+    assert len(set(ids)) == 22
 
 
 def test_search_leaves_out_tracks_spotify_repeats(client: TestClient, people, spotify) -> None:
@@ -167,3 +167,12 @@ def test_who_can_see_and_connect_the_account(client: TestClient, people, who, vi
     sign_in(client, *people[who])
     assert client.get("/api/spotify/account").status_code == view
     assert client.post("/api/spotify/connect").status_code == change
+
+
+def test_songs_that_cant_play_here_are_left_out_of_search(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    titles = [
+        t["title"] for t in client.get("/api/search", params={"q": "song 2"}).json()["tracks"]
+    ]
+    assert "Song 20" in titles
+    assert "Song 21" not in titles  # Spotify says it can't play here

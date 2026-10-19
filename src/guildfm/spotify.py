@@ -245,8 +245,12 @@ class SpotifyClient:
 
         results = await asyncio.gather(*(page(number) for number in range(pages)))
         # Spotify's pages overlap now and then, repeating a track. Each one appears once.
+        # Songs that can't play here are left out, as for albums and playlists.
         found = {
-            item["id"]: item for result in results for item in result["tracks"]["items"] if item
+            item["id"]: item
+            for result in results
+            for item in result["tracks"]["items"]
+            if item and item.get("is_playable", True)
         }
         first = results[0]
         return SearchResults(
@@ -306,7 +310,8 @@ class SpotifyClient:
                 for row in page["items"]:
                     # Spotify renamed "track" to "item" in 2026; accept either.
                     item = row.get("item") or row.get("track")
-                    if item and item.get("type", "track") == "track" and item.get("id"):
+                    playable = item and item.get("is_playable", True)
+                    if playable and item.get("type", "track") == "track" and item.get("id"):
                         tracks.append(_track(item))
                 if not page.get("next"):
                     break

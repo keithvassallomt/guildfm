@@ -70,6 +70,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - A track that is already in the queue cannot be added again.
 - Tracks played recently show a warning badge (for example, "played 2 hours ago") in search and in the queue, but can still be added.
 - Explicit tracks are blocked by default: hidden from search, refused as requests, and left out of albums and AI stations. Admins can allow them in settings.
+- Songs Spotify says can't play in the UK are left out everywhere: search, albums, imported playlists, and so AI stations' picks.
 - Curators and admins can add a whole album to the queue: albums show up in their search, and opening one lists its songs, with a button to queue them all (or the ones not already queued). They go in as that person's requests, in the album's order, and don't count towards the cap. Votes move them like any other request. Songs already in the queue stay where they are, and explicit ones are left out when they're turned off. The DJ names the requester on the album's first song only, and the queue marks the songs as part of a whole album.
 - Curators can manage the queue without voting: override votes, reorder tracks, and remove any track. Curators and admins reorder by dragging a request (press and hold on a phone), or with the up and down arrows. A request's actions (the arrows, and remove) are tucked behind a small arrow on its right, which slides them out when tapped.
 - Votes reorder everything after the next track. GuildFM hands the next track to Sonos shortly before it plays, so that one is locked.
@@ -96,7 +97,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - If the Arc is switched to the TV, it just drops out of the group. GuildFM carries on in the other rooms.
 - If GuildFM restarts while the speakers are still playing its queue, it carries on where it was. Anything else on the speakers after a restart is left alone until someone presses Play.
 - GuildFM keeps its own place on the speakers. Their queue holds a few songs that have played (for Previous), the song on now and what's lined up after it; anything else comes off. When the speakers stop, Sonos goes back to the start of its queue, but GuildFM carries on from its own place.
-- A lined-up song that won't play is skipped after a few seconds, and the next one plays. The activity on the Queue screen says so.
+- A lined-up song the speakers don't start gets a second try after a few seconds, often enough after a hiccup, so the song the DJ just introduced still plays. If it doesn't start then either, it's skipped and the next one plays, and the activity on the Queue screen says so.
 
 ### Monitor mode
 - An admin can switch on monitor mode in Settings, to try GuildFM out without the office hearing. GuildFM then plays in browsers instead of on the Sonos speakers.

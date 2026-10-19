@@ -49,8 +49,8 @@ from guildfm.speakers import spotify_track_id as track_id_in
 log = logging.getLogger(__name__)
 
 LEAD_SECONDS = 30  # how long before a song ends the next request goes to the speakers
-# Readings of stopped speakers with a song lined up before GuildFM gives up on that song: it
-# couldn't play.
+# Readings of stopped speakers with a song lined up before GuildFM tries it again, and after a
+# second try, gives up on it: it couldn't play.
 STALLED_READINGS = 3
 PREPARE_MINUTES = 10  # how soon before a line-up's show its station picks its first songs
 ACTIVITY_KEPT = 30
@@ -143,6 +143,7 @@ class QueueEngine:
         # That first song's entry, and the minute its show ends.
         self._opener: tuple[int, int] | None = None
         self._stalls = 0  # readings of stopped speakers with a song lined up
+        self._retried: int | None = None  # the lined-up entry the speakers were asked to retry
         # Serialises changes to the queue, so a vote and a hand-over to the speakers can't
         # interleave. The API takes it too.
         self.lock = asyncio.Lock()
@@ -308,12 +309,20 @@ class QueueEngine:
         async with self.lock, self._sessions() as db:
             lined_up = await in_state(db, EntryState.NEXT)
             if lined_up and status == Status.IDLE:
-                # The speakers stopped with a song lined up, so it couldn't play. After a few
-                # readings, GuildFM lets it go and carries on.
+                # The speakers stopped with a song lined up, so it couldn't play, often just a
+                # hiccup. After a few readings GuildFM has them try it again, and if they stop
+                # again, it lets the song go and carries on.
                 self._stalls += 1
                 if self._stalls < STALLED_READINGS:
                     return
                 self._stalls = 0
+                if self._retried != lined_up.id:
+                    self._retried = lined_up.id
+                    log.info(
+                        "%s didn't start on the speakers; trying it again", lined_up.track.title
+                    )
+                    if await controller.play_again(self.item(lined_up)):
+                        return
                 await self._let_go(db, lined_up)
                 lined_up = None
             # Anything else after the current song had played, and the speakers went back to it.
