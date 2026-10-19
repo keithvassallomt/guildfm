@@ -17,7 +17,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 7: Playlists
 - [x] Stage 8: Now Playing
 - [x] Stage 9: Announcements
-- [ ] Stage 10: AI radio
+- [x] Stage 10: AI radio
 - [ ] Stage 11: Hardening and handover
 - [x] Stage 12: Line-ups
 
