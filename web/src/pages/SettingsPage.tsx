@@ -1,6 +1,14 @@
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { Link } from "react-router";
-import { api, errorText, type Hours, type SettingsState, type SettingsValues, VOICES } from "../api";
+import {
+  api,
+  errorText,
+  type Hours,
+  type PlaybackState,
+  type SettingsState,
+  type SettingsValues,
+  VOICES,
+} from "../api";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { Icon } from "../components/Icon";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -284,6 +292,7 @@ export function SettingsPage() {
 
             <SpotifyConnection />
             <SonosStatus />
+            <MonitorMode />
           </div>
         </div>
       )}
@@ -417,18 +426,66 @@ function SonosStatus() {
             <span className={s.rowHint}>
               {!state
                 ? "Checking..."
-                : state.status === "offline"
+                : state.monitor
+                  ? "Not in use while monitor mode is on."
+                  : state.status === "offline"
                   ? (state.error ?? "Can't reach the speakers.")
                   : `${state.rooms.length} speakers on the office network, led by ${state.coordinator}`}
             </span>
           </span>
           {state && (
             <span className={state.status === "offline" ? s.badgeWarn : s.badge}>
-              {state.status === "offline" ? "Offline" : "Online"}
+              {state.monitor ? "Not in use" : state.status === "offline" ? "Offline" : "Online"}
             </span>
           )}
         </div>
       </div>
     </section>
+  );
+}
+
+/** Monitor mode: GuildFM plays in browsers instead of on the speakers. It takes effect at once,
+ * so it doesn't go through the settings' save. */
+function MonitorMode() {
+  const { state, apply } = usePlayback();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const id = useId();
+
+  const turn = async (on: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      apply(await api<PlaybackState>("PUT", "/playback/monitor", { on }));
+    } catch (caught) {
+      setError(errorText(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Section title="Monitor mode">
+      <div className={s.row}>
+        <RowText
+          id={id}
+          label="Play in a browser instead"
+          hint="Try things out without the office hearing: GuildFM plays in your browser rather than on the Sonos speakers."
+        />
+        <Toggle
+          checked={state?.monitor ?? false}
+          onChange={turn}
+          labelledBy={id}
+          disabled={!state || busy}
+        />
+      </div>
+      <p className={styles.muted}>
+        Turning it on stops the music on the Sonos speakers, and GuildFM waits for Play. Songs
+        become beeps, each as long as the real song; the DJ, jingles and announcements play for
+        real. Press Listen here, at the top of any page, to hear it in that browser. Turning it
+        off goes back to the speakers, again waiting for Play.
+      </p>
+      <FormError message={error} />
+    </Section>
   );
 }

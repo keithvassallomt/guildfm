@@ -97,6 +97,19 @@ async def test_play_takes_back_control_where_it_left_off(controller, speakers, s
     assert controller.status == Status.PLAYING
 
 
+async def test_a_takeover_still_shows_after_a_restart(speakers, steady, tmp_path) -> None:
+    memory = tmp_path / "speakers.json"
+    controller = PlaybackController(speakers, LiveHub(), clock=steady, memory=memory)
+    await controller.play_now(TRACK)
+    await outside_takeover(controller, speakers, steady)
+
+    restarted = PlaybackController(speakers, LiveHub(), clock=steady, memory=memory)
+    assert await restarted.pick_up() is False
+    await restarted.poll()
+    assert restarted.status == Status.OVERRIDDEN
+    assert restarted.in_control is False
+
+
 async def test_pausing_from_the_sonos_app_isnt_a_takeover(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
     steady.advance(5)

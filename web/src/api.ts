@@ -71,6 +71,8 @@ export type PlaybackState = {
   rooms: Room[];
   /** Whether playback hours are open now, and when that next changes. */
   hours: { open: boolean; next_change: string | null } | null;
+  /** Monitor mode: GuildFM plays in browsers instead of on the speakers. */
+  monitor: boolean;
 };
 
 export class ApiError extends Error {

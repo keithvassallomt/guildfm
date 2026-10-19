@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useParams, useSearchParam
 import type { Permission } from "./api";
 import styles from "./App.module.css";
 import { useAuth } from "./auth/AuthProvider";
+import { MonitorBar } from "./components/MonitorBar";
 import { Navigation } from "./components/Navigation";
 import { QuickControls } from "./components/QuickControls";
 import { LiveProvider } from "./live/LiveProvider";
@@ -36,6 +37,7 @@ function Shell() {
     >
       <Navigation />
       <main className={styles.main}>
+        {can("control_playback") && <MonitorBar />}
         <Outlet />
       </main>
       {quick && <QuickControls />}

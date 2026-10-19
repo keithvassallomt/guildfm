@@ -187,6 +187,7 @@ def _empty(playlist_id: int | None = None, station_id: int | None = None) -> Sou
         cursor=0,
         skipped=[],
         downvotes={},
+        dj_memory=None,
     )
 
 

@@ -23,7 +23,9 @@ from guildfm.housekeeping import Housekeeping
 from guildfm.jingles import JinglePlayer
 from guildfm.live import LiveHub, live_socket
 from guildfm.logs import Recent, to_console
+from guildfm.monitor import MonitorRelay, MonitorSystem
 from guildfm.playback import PlaybackController
+from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine
 from guildfm.radio import Radio
 from guildfm.schedule import Scheduler
@@ -44,6 +46,7 @@ def create_app(
     speech: SpeechClient | None = None,
     ai: AIClient | None = None,
     awareness: Awareness | None = None,
+    monitor: MonitorSystem | None = None,
 ) -> FastAPI:
     """Build the app. Tests pass fakes, so nothing touches the office speakers, Spotify, OpenAI
     or the weather, turn off `poll` so they decide when the speakers are read and announcements
@@ -62,6 +65,9 @@ def create_app(
         app.state.sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
         async with app.state.sessionmaker() as db:
             await seed_admin(db, settings)
+            monitoring = await get_pref(db, "monitor")
+        if monitoring:
+            await app.state.playback.use(app.state.monitor, monitoring=True)
         await app.state.playback.pick_up()
         clock = {"clock": now} if now else {}
         app.state.radio = Radio(
@@ -103,13 +109,11 @@ def create_app(
             app.state.ai,
             app.state.speech,
             app.state.awareness,
-            app.state.radio,
             **clock,
         )
         app.state.jingles = JinglePlayer(
             app.state.sessionmaker,
             app.state.announcer,
-            app.state.radio,
             settings.data_dir / "media",
         )
         # The jingle first, so it plays before anything the DJ says in the same pause.
@@ -122,6 +126,7 @@ def create_app(
                 app.state.announcer.run(),
                 app.state.covers.fill_in(),
                 app.state.housekeeping.run(),
+                app.state.monitor_relay.run(),
             )
             if poll
             else ()
@@ -145,10 +150,13 @@ def create_app(
     app = FastAPI(title="GuildFM", version=__version__, lifespan=lifespan)
     app.state.settings = settings
     app.state.live = LiveHub()
+    app.state.sonos = speakers or SocoSystem(settings.sonos_host_list)
+    app.state.monitor = monitor or MonitorSystem()
     app.state.playback = PlaybackController(
-        speakers or SocoSystem(settings.sonos_host_list),
-        app.state.live,
-        memory=settings.data_dir / "speakers.json",
+        app.state.sonos, app.state.live, memory=settings.data_dir / "speakers.json"
+    )
+    app.state.monitor_relay = MonitorRelay(
+        app.state.monitor, app.state.live, lambda: app.state.playback.monitoring
     )
     app.state.spotify = spotify or SpotifyClient(
         client_id=settings.spotify_client_id,

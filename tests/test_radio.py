@@ -114,7 +114,7 @@ def test_hearing_the_dj(client: TestClient, people, openai: FakeOpenAI) -> None:
 # Picking songs
 
 
-def test_the_ai_picks_and_spotify_finds_them(client: TestClient, openai: FakeOpenAI) -> None:
+def test_the_ai_picks_and_spotify_finds_them(client: TestClient, openai, settings) -> None:
     openai.picks = FLEETWOOD
     sign_in(client, *ADMIN)
     put_on(client, make_station(client))
@@ -125,7 +125,9 @@ def test_the_ai_picks_and_spotify_finds_them(client: TestClient, openai: FakeOpe
     source = queue(client)["source"]
     assert (source["kind"], source["name"]) == ("station", "Lunchtime Grooves")
     assert upcoming(client) == ["Song 1", "Song 2", "Song 3"]
-    assert client.app.state.radio.notes[spotify_id("fm1")] == "Note 1"
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        query = "SELECT note FROM pick_notes WHERE track_id = ?"
+        assert db.execute(query, (spotify_id("fm1"),)).fetchone() == ("Note 1",)
 
 
 def test_picks_leave_out_whats_recent_queued_or_explicit(

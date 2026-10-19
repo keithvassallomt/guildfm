@@ -285,6 +285,9 @@ class SourceState(Base):
     # Tracks thumbed down enough to skip this time round, and who thumbed them down.
     skipped: Mapped[list[str]] = mapped_column(JSON, default=list)
     downvotes: Mapped[dict[str, list[int]]] = mapped_column(JSON, default=dict)
+    # For a station with a DJ: songs since the DJ last talked, when that was, and where it
+    # talked and what it said lately. None until it's first asked, each time the station comes on.
+    dj_memory: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
 
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
     station: Mapped[Station | None] = relationship(lazy="joined")
@@ -365,6 +368,18 @@ class Play(Base):
     requester: Mapped[User | None] = relationship(lazy="joined")
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
     station: Mapped[Station | None] = relationship(lazy="joined")
+
+
+class PickNote(Base):
+    """Why the AI picked a song for a station, for the DJ to mention, and the kind of jingle it
+    wants before it, if any. Kept for the newest few hundred picks."""
+
+    __tablename__ = "pick_notes"
+
+    track_id: Mapped[str] = mapped_column(ForeignKey("tracks.id"), primary_key=True)
+    note: Mapped[str] = mapped_column(String(500))
+    ident: Mapped[str | None] = mapped_column(String(16), default=None)  # "system" or "station"
+    picked_at: Mapped[float] = mapped_column(index=True)
 
 
 class AnnounceMode(StrEnum):

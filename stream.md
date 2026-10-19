@@ -93,6 +93,12 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - If the Arc is switched to the TV, it just drops out of the group. GuildFM carries on in the other rooms.
 - If GuildFM restarts while the speakers are still playing its queue, it carries on where it was. Anything else on the speakers after a restart is left alone until someone presses Play.
 
+### Monitor mode
+- An admin can switch on monitor mode in Settings, to try GuildFM out without the office hearing. GuildFM then plays in browsers instead of on the Sonos speakers.
+- Songs become beeps, each lasting as long as the real song, with a different note per song. The DJ, jingles and announcements play for real, announcements whatever rooms they were for, and the beeps go quiet under anything said over them. Everything else (the queue, votes, stations, the DJ's timing, playback hours) works as it does on the speakers.
+- Turning it on stops the music on the speakers, and GuildFM waits for Play, carrying on from the same song. Turning it off does the same the other way round. It stays on through a restart.
+- While it's on, admins see a bar at the top of every page with "Listen here", which plays it in that browser (browsers only play sound after a click). Any number of browsers can listen at once.
+
 ## Playlists
 - Curators and admins can create playlists in GuildFM, or import them from Spotify by pasting a playlist link.
 - Whole albums can go into a playlist too. When adding songs to a playlist, albums show up in the search alongside songs and artists; opening one lists its songs, to add all of them or just some. Pasting an album link into the import box makes a playlist named after the album, in track order. Songs that can't play in the UK are left out, and so are explicit ones when they aren't allowed.
@@ -155,7 +161,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Admins upload system idents (GuildFM's own) under Admin, Jingles. Curators upload a station's station idents in its editor, once it's saved. They're MP3s of up to a minute, and can be previewed on the device, not the speakers.
 - Any AI station can play system idents, and each plays its own station idents. AI picks plays system idents only. Each station has a "Play jingles" switch, on by default.
 - The AI that picks a station's songs also marks the odd one to have an ident before it, and which kind, aiming for about one song in four, at a change of mood or the start of a new run. It's only offered the kinds there are to play.
-- A jingle plays in the pause between songs, never over music: the music pauses, the jingle plays, then anything the DJ says between songs, then the next song. If that song starts before there's a pause, the jingle is let go.
+- A jingle plays between songs, never over music: the song plays to its end, then the jingle, then anything the DJ says between songs, then the next song. If that song starts before the jingle is lined up, the jingle is let go.
 - Never at two song changes in a row, and never the same jingle twice running when there's another of its kind. Requests don't get jingles, and announcements still go first.
 - Deleting a station deletes its station idents.
 - The originals are in `assets/jingles`: two system idents, and six station idents for Xennials' Delight (which replaced its first three). Uploads are levelled to about -14 LUFS, like the voices; the ones in use also had silence trimmed off the end first.
@@ -211,6 +217,7 @@ GuildFM runs unattended on an always-on machine in the office. How to set it up 
 - Playback schedule.
 - Weather location (default: Carlisle, Cumbria, UK).
 - Announcement voice.
+- Monitor mode (default: off). See Playback.
 
 ## Technical Notes
 - **Stack**: Python backend (FastAPI), SQLite database, TypeScript front end (mobile first), live updates over websockets.
@@ -220,9 +227,9 @@ Findings from feasibility testing on 13 October 2026, on the office network.
 - **Speakers**: six Sonos speakers, all on S2 firmware, normally grouped as one: Downstairs (Arc), Upstairs Lounge (One), Entrance (One), Kitchen (One SL), Pod (One SL), Donut Shop (One).
 - **Playing tracks** (tested, works): Spotify is linked in the Sonos app. GuildFM controls the speakers directly over the local network and adds Spotify tracks to the Sonos queue, and the speakers stream them from Spotify themselves.
 - **Announcements and DJ over music** (tested, works): each speaker plays an MP3 served by GuildFM as an overlay clip, lowering the music and restoring it afterwards.
-- **Rooms in step**: each room takes its own clip command over its own connection, and some speakers take about a tenth of a second longer to connect than others, which sounded like reverb. GuildFM connects to every room first, then sends them all together (within about a millisecond, measured 16 October 2026). That took away most of it. A little is left, from each speaker fetching and starting the clip itself; left as it is for now. Ways to go further: measure each room's start delay and send to the faster ones later, or play between-song clips through the Sonos queue, which the group plays in step.
+- **Rooms in step**: each room takes its own clip command over its own connection, and some speakers take about a tenth of a second longer to connect than others, which sounded like reverb. GuildFM connects to every room first, then sends them all together (within about a millisecond, measured 16 October 2026). That took away most of it. A little is left, from each speaker fetching and starting the clip itself, so the DJ and jingles between songs now go through the Sonos queue instead (19 October 2026), which the group plays in step. Overlay clips are still used for announcements and for the DJ over the start of a song, and those keep the little that's left. A way to go further there: measure each room's start delay and send to the faster ones later.
 - **Loudness**: text to speech comes out around -22 LUFS, well under the music. With ffmpeg installed, GuildFM evens every voice clip and uploaded jingle out to about -14 LUFS (`AUDIO_LOUDNESS` in `.env`), which takes under half a second a clip. Without ffmpeg they play as they come.
-- **Clips between tracks**: not used. An MP3 in the Sonos queue would play in every room in the group, not just the chosen ones, so between songs GuildFM pauses the music and plays an overlay clip instead.
+- **Clips between tracks** (tested, works, no gap either side): the DJ's lines and jingles between songs go into the Sonos queue just before the song they come before, so every room plays them in step, and come back out once played. They play in the rooms playing the music, which GuildFM normally keeps as every room. Announcements don't use it, since an MP3 in the queue plays in every room in the group, not just the chosen ones: between songs, GuildFM pauses the music and plays an overlay clip instead, and does the same for the DJ or a jingle if the speakers won't take it into the queue.
 - **Search**: needs a Spotify developer app (free). The Spotify account that owns it needs Premium.
 - **Playlist import**: Spotify only lets a development-mode app read playlists that the Spotify account connected to GuildFM owns or collaborates on. Spotify's own editorial playlists and other people's playlists can't be imported directly. This is accepted: the workaround is to copy the playlist into one of the connected account's own playlists in the Spotify app, then import the copy.
 - **Outside control**: GuildFM listens to the speakers' change events over the local network, so it can tell when someone else changes the music.

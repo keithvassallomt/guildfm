@@ -99,7 +99,15 @@ async def rehearse(
                 if note:
                     up_next += f" Why it was picked: {note}"
                 where, script = await write_line(
-                    ai, persona, context, before, up_next, [], list(lately), list(said)
+                    ai,
+                    persona,
+                    context,
+                    before,
+                    up_next,
+                    [],
+                    list(lately),
+                    list(said),
+                    aware=station.global_awareness,
                 )
                 lately.append(where)
                 said.append(script)

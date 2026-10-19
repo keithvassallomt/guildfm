@@ -131,7 +131,8 @@ class QueueEngine:
         controller.source = self._first_up
 
     def item(self, entry: QueueEntry) -> QueueItem:
-        return spotify_item(entry.track_id, sid=self._sid, sn=self._sn)
+        seconds = entry.track.duration_ms / 1000
+        return spotify_item(entry.track_id, sid=self._sid, sn=self._sn, seconds=seconds)
 
     async def changed(self) -> None:
         """Tell every browser to fetch the queue again (each sees its own votes)."""
@@ -208,7 +209,8 @@ class QueueEngine:
         )
         db.add(entry)
         await db.commit()
-        return await db.get(QueueEntry, entry.id)
+        # Read back with its track, which a new entry doesn't have loaded.
+        return await db.get(QueueEntry, entry.id, populate_existing=True)
 
     async def _run_out(self, db: AsyncSession) -> SourceState:
         """Nothing is left to fill the gaps: put the default station on, if that's the setting

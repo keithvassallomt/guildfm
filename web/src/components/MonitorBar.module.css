@@ -1,0 +1,35 @@
+.bar {
+  max-width: 1120px;
+  margin: 12px 16px 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--down-soft);
+  border: 1px solid var(--down);
+  color: var(--down);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.text {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-soft);
+}
+
+.text strong {
+  color: var(--text);
+}
+
+@media (min-width: 768px) {
+  .bar {
+    max-width: calc(1120px - 80px);
+    margin: 20px 40px 0;
+  }
+}

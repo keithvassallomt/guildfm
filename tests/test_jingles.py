@@ -52,24 +52,30 @@ def put_on(client: TestClient, station: dict) -> None:
 
 
 def song_change(client: TestClient, speakers: FakeSpeakers) -> None:
-    """The next song is lined up, the current one nears its end, any pause plays out, and the
-    next song starts."""
+    """The next song is lined up, the current one nears its end, any pause or clips in the
+    queue play out, and the next song starts."""
     before = speakers.position
     speakers.track_position = 190
     read_speakers(client)
     client.portal.call(client.app.state.dj.settle)
+    client.portal.call(client.app.state.announcer.tick)
     speakers.track_position = 198
     read_speakers(client)
     client.portal.call(client.app.state.announcer.tick)
     if speakers.position == before:  # no pause, so the song plays to the end
         speakers.song_ends()
     read_speakers(client)
+    while speakers.on_clip():
+        speakers.song_ends()
+        read_speakers(client)
 
 
 def heard(speakers: FakeSpeakers) -> list[str]:
-    """The clips that played, in order, as heard in one room."""
+    """The clips that played, in order: from the queue, then any heard in one room."""
+    queued = [item.uri for item in speakers.played if item.uri.startswith("http")]
     room = speakers.clips[0].room if speakers.clips else None
-    return [clip.url.split("/media/", 1)[1] for clip in speakers.clips if clip.room == room]
+    rooms = [clip.url for clip in speakers.clips if clip.room == room]
+    return [url.split("/media/", 1)[1] for url in queued + rooms]
 
 
 def test_admins_look_after_system_idents(client: TestClient) -> None:
@@ -136,9 +142,10 @@ def test_the_ai_marks_songs_and_the_jingle_plays_before_the_dj(client, openai, s
     jingle, line = heard(speakers)
     assert own["url"].endswith(jingle)
     assert line.startswith("speech/")
-    # Both in the pause between songs, then Song 2 starts.
-    assert {clip.music for clip in speakers.clips} == {"PAUSED_PLAYBACK"}
+    # Both from the queue between the songs, then Song 2, and the queue holds just songs again.
+    assert speakers.clips == []
     assert (speakers.position, speakers.transport) == (2, "PLAYING")
+    assert not any(item.uri.startswith("http") for item in speakers.queue)
 
 
 def test_never_at_two_song_changes_in_a_row(client, openai, speakers) -> None:
@@ -164,7 +171,8 @@ def test_a_jingle_never_plays_over_music(client, openai, speakers) -> None:
     speakers.song_ends()
     read_speakers(client)
     client.portal.call(client.app.state.announcer.tick)
-    assert speakers.clips == []
+    assert heard(speakers) == []
+    assert not any(item.uri.startswith("http") for item in speakers.queue)
 
 
 def song_fields(openai: FakeOpenAI) -> dict:
@@ -188,7 +196,7 @@ def test_no_idents_with_jingles_turned_off(client, openai: FakeOpenAI, speakers)
     put_on(client, make_station(client, jingles=False))
     assert "ident" not in song_fields(openai)
     song_change(client, speakers)
-    assert speakers.clips == []
+    assert heard(speakers) == []
 
 
 def test_requests_dont_get_jingles(client, openai, speakers, people) -> None:
@@ -199,7 +207,7 @@ def test_requests_dont_get_jingles(client, openai, speakers, people) -> None:
     sign_in(client, *people["user"])
     client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
     song_change(client, speakers)  # the request is next
-    assert speakers.clips == []
+    assert heard(speakers) == []
 
 
 def test_the_hour_preview_shows_the_jingles(client: TestClient, openai: FakeOpenAI) -> None:

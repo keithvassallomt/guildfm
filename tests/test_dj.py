@@ -78,6 +78,27 @@ def test_the_dj_talks_when_the_station_comes_on_then_every_few_songs(client, ope
     assert len(lines(openai)) == 2
 
 
+def test_the_dj_talks_again_when_the_station_comes_back_on(client, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    station = on_air(client, openai, talk_every=3)
+    line_up_next(client, speakers)
+    assert len(lines(openai)) == 1
+    speakers.song_ends()
+    read_speakers(client)
+    client.delete("/api/source").raise_for_status()
+    client.post(f"/api/stations/{station['id']}/play").raise_for_status()
+    client.portal.call(client.app.state.radio.settle)
+    line_up_next(client, speakers)
+    assert len(lines(openai)) == 2
+
+
+def test_the_weather_is_only_now_and_then_even_on_the_first_line(client, openai, speakers):
+    sign_in(client, *ADMIN)
+    on_air(client, openai, global_awareness=True)
+    line_up_next(client, speakers)
+    assert "Bring up the weather, the time or the news only now and then" in lines(openai)[0]
+
+
 def test_between_songs(client: TestClient, openai: FakeOpenAI, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai)
@@ -87,15 +108,46 @@ def test_between_songs(client: TestClient, openai: FakeOpenAI, speakers) -> None
     assert (voiced["voice"], voiced["input"]) == ("ash", "That was Song 1. Here's Song 2.")
     assert "Speak as Della" in voiced["instructions"]
 
+    # Into the Sonos queue just before Song 2, so every room plays it in step, with no pause.
     tick(client)
-    assert speakers.clips == []  # half a minute of Song 1 to go
-    speakers.track_position = 198
+    song_1, line, song_2 = speakers.queue
+    assert "/media/speech/" in line.uri
+    assert "<dc:title>Della</dc:title>" in line.metadata
+    speakers.song_ends()
     read_speakers(client)
+    assert client.get("/api/playback").json()["dj_talking"] is True
+    speakers.song_ends()
+    read_speakers(client)
+    # Once it has played, it comes back out, so Previous goes back to Song 1.
+    assert speakers.queue == [song_1, song_2]
+    assert (speakers.position, speakers.transport) == (2, "PLAYING")
+    assert client.get("/api/playback").json()["dj_talking"] is False
+    assert client.get("/api/queue").json()["playing"]["track"]["title"] == "Song 2"
+    assert speakers.clips == []
+    # The DJ isn't an announcement, so it stays out of the announcements log.
+    assert client.get("/api/announcements").json()["recent"] == []
+
+
+def test_between_songs_with_a_pause_if_the_queue_wont_take_it(client, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
+    speakers.queue_refuses_clips = True
+    line_up_next(client, speakers)
     tick(client)
     assert {clip.music for clip in speakers.clips} == {"PAUSED_PLAYBACK"}
     assert (speakers.position, speakers.transport) == (2, "PLAYING")
-    # The DJ isn't an announcement, so it stays out of the announcements log.
-    assert client.get("/api/announcements").json()["recent"] == []
+
+
+def test_a_line_between_songs_comes_off_with_its_song(client, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
+    line_up_next(client, speakers)
+    tick(client)
+    assert len(speakers.queue) == 3
+    client.delete("/api/source").raise_for_status()  # Song 2 comes back off the speakers
+    assert len(speakers.queue) == 1
 
 
 def test_over_the_start_of_the_next_song(client: TestClient, openai, speakers) -> None:

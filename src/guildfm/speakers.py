@@ -79,6 +79,9 @@ class QueueItem:
 
     uri: str
     metadata: str
+    # How long it lasts, when GuildFM knows. Only monitor mode needs it: the speakers find out
+    # for themselves.
+    seconds: float | None = field(default=None, compare=False)
 
     @property
     def key(self) -> str:
@@ -106,7 +109,7 @@ _DIDL = (
 )
 
 
-def spotify_item(track_id: str, *, sid: int, sn: int) -> QueueItem:
+def spotify_item(track_id: str, *, sid: int, sn: int, seconds: float | None = None) -> QueueItem:
     """A Spotify track, played by the speakers through the Spotify account linked in Sonos."""
     encoded = f"spotify%3atrack%3a{track_id}"
     service = sid * 256 + 7
@@ -117,18 +120,21 @@ def spotify_item(track_id: str, *, sid: int, sn: int) -> QueueItem:
         f"SA_RINCON{service}_X_#Svc{service}-0-Token</desc></item>"
     )
     uri = f"x-sonos-spotify:{encoded}?sid={sid}&flags=8232&sn={sn}"
-    return QueueItem(uri=uri, metadata=_DIDL.format(item=item))
+    return QueueItem(uri=uri, metadata=_DIDL.format(item=item), seconds=seconds)
 
 
-def clip_item(url: str, title: str) -> QueueItem:
-    """An MP3 that the speakers fetch from GuildFM, such as an announcement between songs."""
+def clip_item(
+    url: str, title: str, artist: str = "GuildFM", seconds: float | None = None
+) -> QueueItem:
+    """An MP3 that the speakers fetch from GuildFM, such as the DJ between songs. The title and
+    artist are what the Sonos app shows while it plays."""
     item = (
         '<item id="guildfm-clip" parentID="" restricted="true">'
-        f"<dc:title>{escape(title)}</dc:title>"
+        f"<dc:title>{escape(title)}</dc:title><dc:creator>{escape(artist)}</dc:creator>"
         "<upnp:class>object.item.audioItem.musicTrack</upnp:class>"
         f'<res protocolInfo="http-get:*:audio/mpeg:*">{escape(url)}</res></item>'
     )
-    return QueueItem(uri=url, metadata=_DIDL.format(item=item))
+    return QueueItem(uri=url, metadata=_DIDL.format(item=item), seconds=seconds)
 
 
 class SpeakerSystem(Protocol):
@@ -140,6 +146,7 @@ class SpeakerSystem(Protocol):
     def set_room_volume(self, uid: str, volume: int) -> None: ...
     def take_over(self, items: list[QueueItem]) -> None: ...
     def add_next(self, item: QueueItem) -> int: ...
+    def add_at(self, item: QueueItem, position: int) -> int: ...
     def remove(self, position: int) -> None: ...
     def play_position(self, position: int) -> None: ...
     def play_clip(
@@ -313,6 +320,10 @@ class SocoSystem:
             return self._enqueue(item, int(current) + 1 if current.isdigit() else 0)
 
         return self._guard(apply)
+
+    def add_at(self, item: QueueItem, position: int) -> int:
+        """Put `item` in the queue at `position`, moving what was there down one."""
+        return self._guard(lambda: self._enqueue(item, position))
 
     def remove(self, position: int) -> None:
         self._guard(lambda: self._coordinator.remove_from_queue(position - 1))

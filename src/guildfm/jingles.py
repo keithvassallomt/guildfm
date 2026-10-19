@@ -19,7 +19,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.announcements import Announcer, Spoken
-from guildfm.models import JINGLES, AnnounceMode, Jingle, JingleKind, QueueEntry
+from guildfm.models import JINGLES, AnnounceMode, Jingle, JingleKind, PickNote, QueueEntry
 from guildfm.playlists import current_source
 from guildfm.speech import Clip, mp3_seconds
 
@@ -111,10 +111,9 @@ class Rotation:
 
 
 class JinglePlayer:
-    def __init__(self, sessionmaker, announcer: Announcer, radio, media_dir: Path) -> None:
+    def __init__(self, sessionmaker, announcer: Announcer, media_dir: Path) -> None:
         self._sessions = sessionmaker
         self._announcer = announcer
-        self._radio = radio  # knows which songs the AI marked for an ident
         self._media = media_dir
         self._rotation = Rotation()
 
@@ -135,7 +134,8 @@ class JinglePlayer:
                 return None
             marked = None
             if station.jingles and entry.requested_by is None:
-                marked = self._radio.idents.get(entry.track_id)
+                picked = await db.get(PickNote, entry.track_id)
+                marked = picked.ident if picked else None
             jingles = await playable(db, station.id) if marked else []
         jingle = self._rotation.next(marked, jingles)
         if jingle is None:
@@ -149,6 +149,7 @@ class JinglePlayer:
             dj=True,
             for_key=key,
             jingle=True,
+            title=jingle.name,
         )
         self._announcer.say(spoken)
         return spoken

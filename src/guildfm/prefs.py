@@ -31,6 +31,7 @@ DEFAULTS: dict[str, Any] = {
     "timezone": "Europe/London",
     "weather_location": "Carlisle, Cumbria, UK",
     "announcement_voice": "cedar",
+    "monitor": False,  # monitor mode: playing in browsers instead of on the speakers
 }
 
 

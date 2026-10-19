@@ -10,6 +10,7 @@ from guildfm.ai import AIClient
 from guildfm.awareness import Awareness
 from guildfm.config import Settings
 from guildfm.main import create_app
+from guildfm.monitor import MonitorSystem
 from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
 from tests.fakes import FakeElevenLabs, FakeOpenAI, FakeSpeakers, FakeSpotify, FakeWeather
@@ -35,6 +36,27 @@ def settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 def speakers() -> FakeSpeakers:
     return FakeSpeakers()
+
+
+class Ticker:
+    """The monitor's clock, in seconds. Tests move it on by hand."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+@pytest.fixture
+def ticker() -> Ticker:
+    return Ticker()
+
+
+@pytest.fixture
+def monitor(ticker: Ticker) -> MonitorSystem:
+    """Monitor mode's stand-in for the speakers, on a clock the tests move."""
+    return MonitorSystem(clock=ticker)
 
 
 class Clock:
@@ -87,6 +109,7 @@ def start(
     weather: FakeWeather,
     elevenlabs: FakeElevenLabs,
     clock: Clock,
+    monitor: MonitorSystem,
 ) -> Callable[[], TestClient]:
     """Starts GuildFM, use it with `with`. Starting it again is a restart: same data, same
     speakers."""
@@ -123,6 +146,7 @@ def start(
             speech=speech,
             ai=ai,
             awareness=awareness,
+            monitor=monitor,
         )
         return TestClient(app)
 

@@ -18,20 +18,19 @@ import asyncio
 import logging
 import re
 import time
-from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.ai import AIClient, AIError, object_schema
 from guildfm.awareness import Awareness
 from guildfm.jingles import kinds, playable
-from guildfm.models import Play, QueueEntry, Station, StationKind, Track
+from guildfm.models import PickNote, Play, QueueEntry, Station, StationKind, Track
 from guildfm.playlists import best_voted, current_source, tracks_of
 from guildfm.prefs import get_pref
 from guildfm.spotify import SpotifyClient, SpotifyError, SpotifyTrack, remember
@@ -156,10 +155,6 @@ class Radio:
         self._monotonic = monotonic
         self._task: asyncio.Task | None = None
         self._failed_at: dict[int, float] = {}  # station id: when a batch last found nothing
-        # Why the AI picked each song, for the DJ to mention. Newest last.
-        self.notes: OrderedDict[str, str] = OrderedDict()
-        # The songs the AI wants an ident before, and which kind. Newest last.
-        self.idents: OrderedDict[str, str] = OrderedDict()
         # Run after a batch is added, so the queue can line the first one up.
         self.on_picked: list[Callable[[], Awaitable[None]]] = []
 
@@ -241,16 +236,17 @@ class Radio:
             source.order = source.order[keep:] + ids
             source.cursor -= keep
             station.picked = (station.picked + ids)[-REMEMBERED:]
+            # Why each was picked and any ident before it, kept so they survive a restart.
+            now = self._clock().timestamp()
+            for pick in chosen:
+                await db.merge(
+                    PickNote(
+                        track_id=pick.track.id, note=pick.note, ident=pick.ident, picked_at=now
+                    )
+                )
+            newest = select(PickNote.track_id).order_by(PickNote.picked_at.desc()).limit(NOTES_KEPT)
+            await db.execute(delete(PickNote).where(PickNote.track_id.not_in(newest)))
             await db.commit()
-        for pick in chosen:
-            self.notes[pick.track.id] = pick.note
-            self.notes.move_to_end(pick.track.id)
-            if pick.ident:
-                self.idents[pick.track.id] = pick.ident
-                self.idents.move_to_end(pick.track.id)
-        for kept in (self.notes, self.idents):
-            while len(kept) > NOTES_KEPT:
-                kept.popitem(last=False)
         return len(chosen)
 
     async def replay(self, station_id: int) -> int:

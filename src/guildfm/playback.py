@@ -6,6 +6,9 @@ from the Sonos or Spotify app; GuildFM then steps aside until an admin presses P
 
 GuildFM notes down what it put on the speakers, so after a restart it can tell whether they're
 still playing its queue and carry on driving them.
+
+The DJ's lines and jingles between songs go into the Sonos queue too, just before the song they
+come before, so every room plays them in step. Once played, they come back out.
 """
 
 import asyncio
@@ -88,8 +91,12 @@ class PlaybackController:
 
         self._in_control = False
         self._overridden = False
+        # Moved to other speakers since GuildFM last drove them, so Play takes them over afresh.
+        self._switched = False
         self._items: list[QueueItem] = []  # GuildFM's part of the Sonos queue, in order
         self._position = 1  # where in `_items` the speakers last were, 1-based
+        # Clips in `_items`, by key: what each is ("dj" or "jingle"), and the song it comes before.
+        self._clips: dict[str, tuple[str, str]] = {}
         self._grace_until = 0.0
         self._mismatches = 0
 
@@ -106,13 +113,20 @@ class PlaybackController:
         self.announcing = False
         self.dj_talking = False
         self.jingle = False
+        # Playing in browsers instead of on the speakers (monitor mode).
+        self.monitoring = False
 
     # Remembering what's on the speakers, for after a restart
 
     def _remember(self) -> None:
         if self._memory is None:
             return
-        notes = {"driving": self._in_control, "items": [asdict(item) for item in self._items]}
+        notes = {
+            "driving": self._in_control,
+            "overridden": self._overridden,
+            "items": [asdict(item) for item in self._items],
+            "clips": self._clips,
+        }
         draft = self._memory.with_suffix(".tmp")
         draft.write_text(json.dumps(notes))
         draft.replace(self._memory)
@@ -121,12 +135,16 @@ class PlaybackController:
         """At startup: if the speakers are still playing the queue GuildFM put on them before a
         restart, carry on driving them rather than starting out stopped. The same song has to be
         playing at the same place in the queue, so a queue built in the Sonos app isn't mistaken
-        for GuildFM's. True when it picked them up."""
+        for GuildFM's. True when it picked them up. A takeover from the Sonos app, before the
+        restart or while GuildFM was down, still counts as one afterwards."""
         try:
             notes = json.loads(self._memory.read_text()) if self._memory else None
         except OSError, ValueError:
             notes = None
-        if not notes or not notes.get("driving") or not notes.get("items"):
+        if not notes:
+            return False
+        self._overridden = bool(notes.get("overridden"))
+        if not notes.get("driving") or not notes.get("items"):
             return False
         try:
             snapshot = await self._call(self._speakers.snapshot, True)
@@ -136,11 +154,24 @@ class PlaybackController:
         self._snapshot, self._rooms = snapshot, snapshot.rooms
         items = [QueueItem(**item) for item in notes["items"]]
         position = snapshot.queue_position
-        if not (snapshot.playing_our_queue and snapshot.track and position):
-            return False
-        if position > len(items) or items[position - 1].key != track_key(snapshot.track.uri):
+        track = snapshot.track
+        if not (
+            snapshot.playing_our_queue
+            and track
+            and position
+            and position <= len(items)
+            and items[position - 1].key == track_key(track.uri)
+        ):
+            # Something else is on the speakers, put there while GuildFM was down.
+            ours = snapshot.playing_our_queue and (
+                track is None or track_key(track.uri) in {item.key for item in items}
+            )
+            if not ours:
+                self._overridden = True
+                self._remember()
             return False
         self._items, self._position, self._in_control = items, position, True
+        self._clips = {key: tuple(clip) for key, clip in notes.get("clips", {}).items()}
         log.info("Picked the speakers back up where GuildFM left them")
         return True
 
@@ -186,6 +217,7 @@ class PlaybackController:
         if snapshot.rooms:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
+        await self._drop_played_clips()
 
         before = previous.track.uri if previous and previous.track else None
         after = snapshot.track.uri if snapshot.track else None
@@ -219,6 +251,24 @@ class PlaybackController:
             self._in_control = False
             self._overridden = True
             self._mismatches = 0
+            self._remember()
+
+    async def _drop_played_clips(self) -> None:
+        """Take clips the speakers have played back out of their queue, so it holds just songs
+        again and Previous goes back a song rather than to the DJ."""
+        if not self._in_control:
+            return
+        before = range(min(self._position - 1, len(self._items)))
+        played = [index for index in before if self._items[index].key in self._clips]
+        for index in reversed(played):
+            try:
+                await self._call(self._speakers.remove, index + 1)
+            except SpeakersUnavailable, SpeakersRefused:
+                log.warning("Couldn't take a clip that has played out of the queue", exc_info=True)
+                break
+            self._clips.pop(self._items.pop(index).key, None)
+            self._position -= 1
+        if played:
             self._remember()
 
     @property
@@ -276,6 +326,7 @@ class PlaybackController:
     def state(self) -> dict[str, Any]:
         snapshot = self._snapshot
         track = snapshot.track if snapshot else None
+        clip = self._clips.get(self.current_key or "")
         return {
             "status": self.status.value,
             "error": self._error,
@@ -296,11 +347,12 @@ class PlaybackController:
             },
             "previous": self.previous_action,
             "announcing": self.announcing,
-            "dj_talking": self.dj_talking,
-            "jingle": self.jingle,
+            "dj_talking": self.dj_talking or (clip is not None and clip[0] == "dj"),
+            "jingle": self.jingle or (clip is not None and clip[0] == "jingle"),
             "group_volume": snapshot.group_volume if snapshot else None,
             "rooms": [asdict(room) for room in self._rooms],
             "hours": self.hours,
+            "monitor": self.monitoring,
         }
 
     async def publish(self) -> None:
@@ -332,7 +384,7 @@ class PlaybackController:
         """Resume, or take the speakers back and carry on from where GuildFM left off."""
         # After a Stop, the speakers may still hold GuildFM's queue, paused where it was.
         untouched = bool(self._snapshot and self._items and self._is_ours(self._snapshot))
-        if self._in_control or untouched:
+        if self._in_control or (untouched and not self._switched):
             await self._call(self._speakers.play)
         else:
             remaining = self._items[self._position - 1 :]
@@ -342,7 +394,9 @@ class PlaybackController:
                 raise NothingToPlay
             await self._call(self._speakers.take_over, remaining)
             self._items, self._position = remaining, 1
-        self._in_control, self._overridden = True, False
+            keys = {item.key for item in remaining}
+            self._clips = {key: clip for key, clip in self._clips.items() if key in keys}
+        self._in_control, self._overridden, self._switched = True, False, False
         self._remember()
         self._settle()
         await self.poll()
@@ -389,6 +443,31 @@ class PlaybackController:
         self._remember()
         await self.poll()
 
+    async def use(self, speakers: SpeakerSystem, monitoring: bool) -> None:
+        """Play through `speakers` from now on: the Sonos system, or the monitor that plays in
+        browsers. Whatever GuildFM was playing stops, and Play carries on from the same song in
+        the new place."""
+        if self._in_control and self._snapshot and self._snapshot.transport in ACTIVE:
+            try:
+                await self._call(self._speakers.pause)
+            except SpeakersUnavailable, SpeakersRefused:
+                log.warning("Couldn't pause the speakers on the way out", exc_info=True)
+        async with self._lock:  # so no call to the old speakers is still under way
+            self._speakers = speakers
+        self.monitoring = monitoring
+        self._in_control = self._overridden = False
+        self._switched = True
+        self._snapshot, self._rooms, self._error, self._mismatches = None, [], None, 0
+        self._remember()
+        # The starting point, read without counting as a change of song.
+        try:
+            snapshot = await self._call(self._speakers.snapshot, True)
+        except SpeakersUnavailable as error:
+            self._error = str(error)
+        else:
+            self._snapshot, self._read_at, self._rooms = snapshot, self._clock(), snapshot.rooms
+        await self.publish()
+
     async def queue_next(self, item: QueueItem) -> None:
         """Line `item` up to play after the current track."""
         self._require_control()
@@ -396,14 +475,36 @@ class PlaybackController:
         self._items.insert(position - 1, item)
         self._remember()
 
+    async def queue_before(self, item: QueueItem, key: str, kind: str) -> bool:
+        """Line the clip `item` up to play just before the song `key`, which is lined up after
+        the current track. `kind` is "dj" or "jingle". False if that song isn't lined up."""
+        self._require_control()
+        upcoming = range(self._position, len(self._items))
+        index = next((i for i in upcoming if self._items[i].key == key), None)
+        if index is None:
+            return False
+        position = await self._call(self._speakers.add_at, item, index + 1)
+        self._items.insert(position - 1, item)
+        self._clips[item.key] = (kind, key)
+        self._remember()
+        return True
+
     async def unqueue(self, item: QueueItem) -> None:
-        """Take `item` back off the speakers, if it's still to come."""
+        """Take `item` back off the speakers, if it's still to come, with any clips lined up to
+        play just before it."""
         self._require_control()
         # Everything after the current track, latest first.
         for index in range(len(self._items) - 1, self._position - 1, -1):
             if self._items[index].key == item.key:
-                await self._call(self._speakers.remove, index + 1)
-                del self._items[index]
+                first = index
+                while (
+                    first > self._position
+                    and self._clips.get(self._items[first - 1].key, ("", ""))[1] == item.key
+                ):
+                    first -= 1
+                for doomed in range(index, first - 1, -1):
+                    await self._call(self._speakers.remove, doomed + 1)
+                    self._clips.pop(self._items.pop(doomed).key, None)
                 self._remember()
                 return
 
@@ -415,8 +516,8 @@ class PlaybackController:
             await self._call(self._speakers.play_position, position)
         else:
             await self._call(self._speakers.take_over, [item])
-            self._items, self._position = [item], 1
-        self._in_control, self._overridden = True, False
+            self._items, self._position, self._clips = [item], 1, {}
+        self._in_control, self._overridden, self._switched = True, False, False
         self._remember()
         self._settle()
         await self.poll()
@@ -424,8 +525,10 @@ class PlaybackController:
     async def play_clip(self, uids: list[str] | None, url: str) -> list[str]:
         """Play the MP3 at `url` over whatever is on, in the rooms with `uids`, or every room for
         None, each at its own volume. Rooms on the TV are left out. Rooms go at the same time,
-        outside the lock, so polling carries on. Returns the names of the rooms it played in."""
-        rooms = [r for r in self._rooms if not r.on_tv and (uids is None or r.uid in uids)]
+        outside the lock, so polling carries on. Returns the names of the rooms it played in.
+        In monitor mode the browser plays it, whichever rooms it was for."""
+        everywhere = uids is None or self.monitoring
+        rooms = [r for r in self._rooms if not r.on_tv and (everywhere or r.uid in uids)]
         if not rooms:
             raise SpeakersUnavailable("None of its rooms can play it: they're off or on the TV.")
         # The rooms connect, then start together, so they're in step.

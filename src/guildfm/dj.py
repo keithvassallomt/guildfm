@@ -10,11 +10,13 @@ aiming for a mix. Lines go through the announcer, so announcements always go fir
 
 import asyncio
 import logging
+import math
 import time
-from collections import Counter, deque
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select
@@ -23,11 +25,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from guildfm.ai import AIClient, AIError, object_schema
 from guildfm.announcements import Announcer, Spoken
 from guildfm.awareness import Awareness, clock_line
-from guildfm.models import AnnounceMode, DJStyle, EntryState, Play, QueueEntry, TalkUnit, Track
+from guildfm.models import (
+    AnnounceMode,
+    DJStyle,
+    EntryState,
+    PickNote,
+    Play,
+    QueueEntry,
+    TalkUnit,
+    Track,
+)
 from guildfm.playlists import current_source
 from guildfm.prefs import get_pref
 from guildfm.queue import in_state, tallies
-from guildfm.radio import Radio
 from guildfm.speech import SpeechClient, SpeechError, is_eleven
 
 log = logging.getLogger(__name__)
@@ -91,6 +101,23 @@ def _listed(items: list[str]) -> str:
 
 def _times(count: int) -> str:
     return {1: "once", 2: "twice"}.get(count, f"{count} times")
+
+
+async def album_under_way(db: AsyncSession, entry: QueueEntry) -> bool:
+    """For a song from an album queued whole: whether a song from that album has started since
+    its requester queued it. Read from the play history, so a restart doesn't forget, and the
+    same album queued again another day gets its shout-out again."""
+    played = await db.scalar(
+        select(func.count())
+        .select_from(Play)
+        .join(Track, Play.track_id == Track.id)
+        .where(
+            Play.requested_by == entry.requested_by,
+            Play.played_at >= entry.added_at,
+            Track.album == entry.track.album,
+        )
+    )
+    return bool(played)
 
 
 async def history(
@@ -186,9 +213,12 @@ async def write_line(
     remarks: list[str],
     lately: list[str],
     said: list[str],
+    *,
+    aware: bool,
 ) -> tuple[str, str]:
     """What the DJ says before the next song, and where: "over_intro" or "between". `lately`
-    is where it talked the last few times, and `said` what it said."""
+    is where it talked the last few times, and `said` what it said. `aware` says whether the
+    context has the weather and the news as well as the time."""
     parts = [context]
     if before:
         parts.append(f"Just played: {before}.")
@@ -197,10 +227,11 @@ async def write_line(
         parts.append(" ".join(remarks))
     if said:
         parts.append(
-            "What you said the last few times, oldest first. Don't repeat yourself: bring up the "
-            "weather, the time or the news only now and then, and vary how you start.\n"
-            + "\n".join(f"- {line}" for line in said)
+            "What you said the last few times, oldest first. Don't repeat yourself, and vary how "
+            "you start.\n" + "\n".join(f"- {line}" for line in said)
         )
+    topics = "the weather, the time or the news" if aware else "the time"
+    parts.append(f"Bring up {topics} only now and then, not every time.")
     if lately:
         parts.append("Where you talked lately: " + ", ".join(lately) + ".")
     parts.append(WHERE)
@@ -242,26 +273,15 @@ class DJ:
         ai: AIClient,
         speech: SpeechClient,
         awareness: Awareness,
-        radio: Radio,
         *,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
-        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self._sessions = sessionmaker
         self._announcer = announcer
         self._ai = ai
         self._speech = speech
         self._awareness = awareness
-        self._radio = radio
         self._clock = clock
-        self._monotonic = monotonic
-        # For each station: songs lined up since the DJ last talked, and when that was.
-        self._since: dict[int, tuple[int, float]] = {}
-        self._where: deque[str] = deque(maxlen=RECENT_MODES)
-        self._said: dict[int, deque[str]] = {}  # each station's last few lines
-        # Albums queued whole that the DJ has seen start, by requester and album. Only the
-        # first song of one is a shout-out.
-        self._albums: set[tuple[int | None, str]] = set()
         self._tasks: set[asyncio.Task] = set()
 
     async def close(self) -> None:
@@ -308,26 +328,28 @@ class DJ:
                 else None
             )
             remarks = await history(db, entry, station.announce_requests, named)
+            picked = await db.get(PickNote, entry.track_id)
+            note = picked.note if picked else None
             album = entry.track.album if entry.album_id else None
-            starts_album = bool(album) and (entry.requested_by, entry.album_id) not in self._albums
-            if album:
-                self._albums.add((entry.requested_by, entry.album_id))
+            starts_album = bool(album) and not await album_under_way(db, entry)
             zone = ZoneInfo(await get_pref(db, "timezone"))
             location = await get_pref(db, "weather_location")
             persona, voice = Persona.of(station), station.voice
             every, unit, aware = station.talk_every, station.talk_unit, station.global_awareness
             announcing, station_id = station.announce_requests, station.id
+            memory = source.dj_memory or {}
 
         # Talks on the first song after the station comes on, then as often as it says, and
         # for a request: for an album queued whole, on its first song only.
         shout_out = bool(named) and (not album or starts_album)
-        songs, last = self._since.get(station_id, (every - 1, float("-inf")))
-        songs += 1
-        if not (due(songs, (self._monotonic() - last) / 60, every, unit) or shout_out):
-            self._since[station_id] = (songs, last)
+        songs = memory.get("songs", every - 1) + 1
+        now = self._clock().astimezone(zone)
+        talked_at = memory.get("talked_at")
+        minutes = math.inf if talked_at is None else (now.timestamp() - talked_at) / 60
+        if not (due(songs, minutes, every, unit) or shout_out):
+            await self._remember(station_id, {**memory, "songs": songs})
             return None
 
-        now = self._clock().astimezone(zone)
         # The DJ always knows the time, so it doesn't say good morning at four.
         context = await self._awareness.context(location, now) if aware else clock_line(now)
         up_next = f"Up next: {after}."
@@ -339,12 +361,11 @@ class DJ:
                 up_next += f" It's from the album {album}, which {named or 'someone'} put on."
         elif requester and announcing:
             up_next += f" {named} requested it: say their name." if named else " It's a request."
-        note = self._radio.notes.get(entry.track_id)
         if note and not requester:
             up_next += f" Why it was picked: {note}"
-        said = self._said.setdefault(station_id, deque(maxlen=RECENT_LINES))
+        lately, said = memory.get("where", []), memory.get("said", [])
         where, script = await write_line(
-            self._ai, persona, context, before, up_next, remarks, list(self._where), list(said)
+            self._ai, persona, context, before, up_next, remarks, lately, said, aware=aware
         )
         if not script:
             return None
@@ -352,10 +373,25 @@ class DJ:
             script, voice, voice_instructions(persona.dj, persona.personality)
         )
 
-        self._since[station_id] = (0, self._monotonic())
-        self._where.append(where)
-        said.append(script)
+        await self._remember(
+            station_id,
+            {
+                "songs": 0,
+                "talked_at": now.timestamp(),
+                "where": [*lately, where][-RECENT_MODES:],
+                "said": [*said, script][-RECENT_LINES:],
+            },
+        )
         mode = AnnounceMode.OVER if where == "over_intro" else AnnounceMode.AFTER
-        spoken = Spoken(script, clip, None, mode, dj=True, for_key=key)
+        spoken = Spoken(script, clip, None, mode, dj=True, for_key=key, title=persona.dj)
         self._announcer.say(spoken)
         return spoken
+
+    async def _remember(self, station_id: int, memory: dict[str, Any]) -> None:
+        """Keep what the DJ knows on the source, so a restart doesn't lose it. Let go if the
+        station went off meanwhile."""
+        async with self._sessions() as db:
+            source = await current_source(db)
+            if source and source.station_id == station_id:
+                source.dj_memory = memory
+                await db.commit()

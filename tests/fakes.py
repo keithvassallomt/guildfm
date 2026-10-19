@@ -57,6 +57,8 @@ class FakeSpeakers:
         self.track_position = 3  # seconds into the current queued track, out of 200
         self.clips: list[PlayedClip] = []
         self.refusing_clips: set[str] = set()  # rooms that turn overlay clips down
+        self.queue_refuses_clips = False  # MP3s from GuildFM can't go in the queue
+        self.played: list[QueueItem] = []  # what played to the end from the queue, in order
 
     # Things that happen in the office
 
@@ -112,11 +114,18 @@ class FakeSpeakers:
 
     def song_ends(self) -> None:
         """The speakers move on to the next thing in their queue, as at the end of a song."""
+        if self.position:
+            self.played.append(self.queue[self.position - 1])
         if self.position and self.position < len(self.queue):
             self.position += 1
             self.track_position = 0
         else:
             self.transport = "STOPPED"
+
+    def on_clip(self) -> bool:
+        """Whether an MP3 from GuildFM is playing from the queue, such as the DJ."""
+        ours = self.media_uri == QUEUE_URI.format(uid=COORDINATOR)
+        return ours and bool(self.position) and self.queue[self.position - 1].uri.startswith("http")
 
     def set_group_volume(self, volume: int) -> None:
         self._check()
@@ -142,6 +151,15 @@ class FakeSpeakers:
         self._check()
         position = (self.position or 0) + 1
         self.queue.insert(position - 1, item)
+        return position
+
+    def add_at(self, item: QueueItem, position: int) -> int:
+        self._check()
+        if self.queue_refuses_clips and item.uri.startswith("http"):
+            raise SpeakersRefused("The speakers wouldn't do that (ERROR_PLAYBACK).")
+        self.queue.insert(position - 1, item)
+        if self.position and position <= self.position:
+            self.position += 1
         return position
 
     def remove(self, position: int) -> None:

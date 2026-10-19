@@ -79,3 +79,34 @@ def test_the_dj_names_the_requester_once_per_album(client, openai: FakeOpenAI, s
     )
     next_song(client, speakers)  # Go Your Own Way: not a shout-out, and not time to talk
     assert len(lines(openai)) == 2
+
+
+def test_the_dj_doesnt_name_them_again_after_a_restart(start, openai: FakeOpenAI, speakers):
+    with start() as client:
+        sign_in(client, *ADMIN)
+        on_air(client, openai, talk_every=10)
+        next_song(client, speakers)  # the DJ says hello with Song 2
+        queue_album(client, RUMOURS).raise_for_status()
+        next_song(client, speakers)  # Dreams, the album's first song: a shout-out
+        assert len(lines(openai)) == 2
+
+    with start() as client:
+        next_song(client, speakers)  # Go Your Own Way, after a restart
+    assert len(lines(openai)) == 2
+
+
+def test_the_same_album_queued_again_gets_another_shout_out(client, openai, speakers, people):
+    sign_in(client, *ADMIN)
+    on_air(client, openai, talk_every=10)
+    next_song(client, speakers)  # the DJ says hello with Song 2
+    sign_in(client, *people["curator"])
+    queue_album(client, RUMOURS).raise_for_status()
+    next_song(client, speakers)  # Dreams: a shout-out
+    next_song(client, speakers)  # Go Your Own Way
+    next_song(client, speakers)  # back to the station
+    assert len(lines(openai)) == 2
+
+    queue_album(client, RUMOURS).raise_for_status()
+    next_song(client, speakers)  # Dreams again, queued afresh: another shout-out
+    assert len(lines(openai)) == 3
+    assert "Curator put on the whole of the album Rumours, starting with this." in lines(openai)[-1]

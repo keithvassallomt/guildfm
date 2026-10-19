@@ -98,6 +98,9 @@ def _service(key: str, name: str, health: Health, purpose: str) -> ServiceOut:
 def _speakers(request: Request) -> ServiceOut:
     playback = request.app.state.playback
     state = playback.state()
+    if playback.monitoring:
+        detail = "Not in use while monitor mode is on: GuildFM plays in browsers instead."
+        return ServiceOut(key="speakers", name="Sonos speakers", state="off", detail=detail)
     if state["error"]:
         return ServiceOut(
             key="speakers", name="Sonos speakers", state="failing", detail=state["error"]

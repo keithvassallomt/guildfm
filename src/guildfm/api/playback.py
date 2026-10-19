@@ -3,22 +3,31 @@
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.auth import ActiveUser, require
+from guildfm.db import get_session
 from guildfm.models import User
 from guildfm.permissions import Permission
 from guildfm.playback import CantGoBack, NothingToPlay, NotInControl, PlaybackController
+from guildfm.prefs import set_pref
 from guildfm.speakers import SpeakersRefused, SpeakersUnavailable
 
 router = APIRouter(prefix="/playback")
 Transport = Annotated[User, require(Permission.TRANSPORT)]
 Controls = Annotated[User, require(Permission.CONTROL_PLAYBACK)]
+Admin = Annotated[User, require(Permission.CHANGE_SETTINGS)]
+Db = Annotated[AsyncSession, Depends(get_session)]
 
 
 class VolumeIn(BaseModel):
     volume: int = Field(ge=0, le=100)
+
+
+class MonitorIn(BaseModel):
+    on: bool
 
 
 def controller(request: Request) -> PlaybackController:
@@ -101,3 +110,22 @@ async def room_volume(uid: str, body: VolumeIn, _: Controls, request: Request) -
     async with speakers_errors():
         await controller(request).set_room_volume(uid, body.volume)
     return controller(request).state()
+
+
+@router.get("/monitor")
+async def monitor_state(_: Controls, request: Request) -> dict[str, Any]:
+    """What the monitor is playing, for a browser that has just started listening."""
+    return request.app.state.monitor.state()
+
+
+@router.put("/monitor")
+async def monitor(body: MonitorIn, _: Admin, request: Request, db: Db) -> dict[str, Any]:
+    """Monitor mode on or off: GuildFM plays in browsers instead of on the Sonos speakers, or
+    back on them. Whatever was playing stops, and GuildFM waits for Play."""
+    playback = controller(request)
+    if body.on != playback.monitoring:
+        request.app.state.schedule.stopped_by_hand()
+        app = request.app.state
+        await playback.use(app.monitor if body.on else app.sonos, monitoring=body.on)
+    await set_pref(db, "monitor", body.on)
+    return playback.state()
