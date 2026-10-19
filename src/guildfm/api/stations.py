@@ -6,7 +6,7 @@ on every station they host."""
 
 import time
 from datetime import UTC, datetime
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -105,16 +105,11 @@ class HourIn(StationIn):
     station_id: int | None = None
 
 
-class LineOut(BaseModel):
-    where: Literal["over_intro", "between"]  # over the start of the song, or before it
-    script: str
-
-
 class SlotOut(BaseModel):
     track: TrackOut
     note: str  # why the AI picked it
     starts_at: datetime
-    line: LineOut | None  # what the DJ says before this song or over its start
+    line: str | None  # what the DJ says before this song
     jingle: JingleOut | None  # played in the pause before this song
 
 
@@ -265,7 +260,7 @@ async def preview_hour(body: HourIn, _: Maker, request: Request) -> HourOut:
                 track=TrackOut.of(slot.track),
                 note=slot.note,
                 starts_at=slot.starts_at,
-                line=LineOut(where=slot.line.where, script=slot.line.script) if slot.line else None,
+                line=slot.line,
                 jingle=JingleOut.of(slot.jingle) if slot.jingle else None,
             )
             for slot in slots

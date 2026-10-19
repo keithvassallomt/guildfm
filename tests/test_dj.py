@@ -102,7 +102,7 @@ def test_the_weather_is_only_now_and_then_even_on_the_first_line(client, openai,
 def test_between_songs(client: TestClient, openai: FakeOpenAI, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai)
-    openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
+    openai.line = {"script": "That was Song 1. Here's Song 2."}
     line_up_next(client, speakers)
     voiced = openai.requests[-1]
     assert (voiced["voice"], voiced["input"]) == ("ash", "That was Song 1. Here's Song 2.")
@@ -131,7 +131,7 @@ def test_between_songs(client: TestClient, openai: FakeOpenAI, speakers) -> None
 def test_between_songs_with_a_pause_if_the_queue_wont_take_it(client, openai, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai)
-    openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
+    openai.line = {"script": "That was Song 1. Here's Song 2."}
     speakers.queue_refuses_clips = True
     line_up_next(client, speakers)
     tick(client)
@@ -142,7 +142,7 @@ def test_between_songs_with_a_pause_if_the_queue_wont_take_it(client, openai, sp
 def test_a_line_between_songs_comes_off_with_its_song(client, openai, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai)
-    openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
+    openai.line = {"script": "That was Song 1. Here's Song 2."}
     line_up_next(client, speakers)
     tick(client)
     assert len(speakers.queue) == 3
@@ -150,26 +150,26 @@ def test_a_line_between_songs_comes_off_with_its_song(client, openai, speakers) 
     assert len(speakers.queue) == 1
 
 
-def test_over_the_start_of_the_next_song(client: TestClient, openai, speakers) -> None:
+def test_a_line_too_late_for_the_queue_is_let_go(client: TestClient, openai, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai)
-    openai.line = {"mode": "over_intro", "script": "Here's Song 2."}
     line_up_next(client, speakers)
-    speakers.track_position = 198
+    speakers.track_position = 198  # two seconds left: too late to go in the queue
     read_speakers(client)
     tick(client)
-    assert speakers.clips == []  # waits for Song 2 to start
     speakers.song_ends()
     read_speakers(client)
     tick(client)
-    assert {clip.music for clip in speakers.clips} == {"PLAYING"}
+    # Never over the music, which would echo from room to room.
+    assert speakers.clips == []
+    assert not any("/media/" in item.uri for item in speakers.queue)
     assert speakers.position == 2
 
 
 def test_a_line_for_a_song_that_doesnt_come_is_dropped(client, openai, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai)
-    openai.line = {"mode": "over_intro", "script": "Here's Song 2."}
+    openai.line = {"script": "Here's Song 2."}
     line_up_next(client, speakers)
     client.delete("/api/source").raise_for_status()  # Song 2 comes back off the speakers
     speakers.song_ends()

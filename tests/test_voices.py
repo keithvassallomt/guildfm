@@ -42,7 +42,7 @@ def test_openai_voices_dont_read_tags_out(client: TestClient, openai: FakeOpenAI
 
 def test_a_dj_with_an_elevenlabs_voice_can_use_tags(client, openai, elevenlabs, speakers) -> None:
     sign_in(client, *ADMIN)
-    openai.line = {"mode": "between", "script": "[chuckles] Song 1, lovely. Here's Song 2."}
+    openai.line = {"script": "[chuckles] Song 1, lovely. Here's Song 2."}
     on_air(client, openai, voice=GUILDBERT)
     line_up_next(client, speakers)
     instructions = openai.asked_for("dj_line")[0]["instructions"]

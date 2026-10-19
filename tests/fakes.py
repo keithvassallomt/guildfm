@@ -216,7 +216,7 @@ class FakeOpenAI:
         self.seconds = 3.0  # how long each clip it makes lasts
         self.asked: list[dict] = []  # the text model
         self.picks: list[dict] = []  # songs it suggests for a station
-        self.line = {"mode": "between", "script": "That was lovely. Here's another."}
+        self.line = {"script": "That was lovely. Here's another."}
         self.news = "Nothing notable in music news this week."
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint

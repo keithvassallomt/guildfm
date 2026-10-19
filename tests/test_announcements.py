@@ -241,15 +241,61 @@ def test_a_room_that_refuses_doesnt_stop_the_others(client: TestClient, speakers
     assert recent(client)[0]["problem"] is None
 
 
-def test_between_songs(client: TestClient, speakers: FakeSpeakers, naps) -> None:
+def test_between_songs_in_every_room(client: TestClient, speakers: FakeSpeakers, naps) -> None:
     playing(client, speakers)
-    response = client.post(
-        "/api/announcements/now", json={"text": "Lunch is ready.", "mode": "after"}
-    )
+    response = client.post("/api/announcements/now", json={"text": "Lunch is ready."})
+    assert response.json() == {"waits": True}  # after the current song unless asked
+
+    tick(client)
+    # Into the Sonos queue straight after Song 1, so the rooms play it in step. The music plays
+    # on meanwhile.
+    uris = [item.uri for item in speakers.queue]
+    assert "/media/speech/" in uris[1] and spotify_id("fm2") in uris[2]
+    assert speakers.clips == [] and speakers.transport == "PLAYING"
+    assert recent(client)[0]["problem"] is None
+
+    speakers.song_ends()
+    read_speakers(client)
+    assert client.get("/api/playback").json()["announcing"] is True
+    speakers.song_ends()
+    read_speakers(client)
+    assert client.get("/api/queue").json()["playing"]["track"]["title"] == "Song 2"
+
+
+def test_a_song_lined_up_later_goes_after_it(client: TestClient, speakers, naps) -> None:
+    playing(client, speakers, songs=1)
+    client.post("/api/announcements/now", json={"text": "Lunch is ready."})
+    tick(client)
+    client.post("/api/queue", json={"track_id": spotify_id("fm2")}).raise_for_status()
+    read_speakers(client)  # Song 2 is lined up
+    uris = [item.uri for item in speakers.queue]
+    assert "/media/speech/" in uris[1] and spotify_id("fm2") in uris[2]
+
+
+def test_an_announcement_goes_ahead_of_the_dj(client: TestClient, speakers, naps) -> None:
+    playing(client, speakers)
+    announcer = client.app.state.announcer
+    line = client.portal.call(announcer.speak, "Coming up, Song 2.")
+    (song_2,) = client.app.state.playback.upcoming_keys
+    spoken = Spoken("Coming up, Song 2.", line, None, AnnounceMode.AFTER, dj=True, for_key=song_2)
+    announcer.say(spoken)
+    tick(client)  # the DJ's line goes in first
+    client.post("/api/announcements/now", json={"text": "Lunch is ready."})
+    tick(client)
+    uris = [item.uri for item in speakers.queue]
+    assert "/media/speech/" in uris[1] and line.path.name not in uris[1]
+    assert line.path.name in uris[2] and spotify_id("fm2") in uris[3]
+
+
+def test_between_songs_in_chosen_rooms(client: TestClient, speakers: FakeSpeakers, naps) -> None:
+    playing(client, speakers)
+    body = {"text": "Lunch is ready.", "mode": "after", "rooms": [KITCHEN]}
+    response = client.post("/api/announcements/now", json=body)
     assert response.json() == {"waits": True}
 
     tick(client)  # ten seconds of the song left: it waits
     assert speakers.clips == []
+    assert not any("/media/" in item.uri for item in speakers.queue)
 
     near_the_end(client, speakers)
     tick(client)
@@ -294,14 +340,16 @@ def test_announcements_go_before_the_dj(client: TestClient, speakers, naps) -> N
     playing(client, speakers)
     announcer = client.app.state.announcer
     line = client.portal.call(announcer.speak, "Coming up, Fleetwood Mac.")
-    announcer.say(Spoken("Coming up, Fleetwood Mac.", line, None, AnnounceMode.OVER, dj=True))
+    (song_2,) = client.app.state.playback.upcoming_keys
+    spoken = Spoken("Coming up, Song 2.", line, None, AnnounceMode.AFTER, dj=True, for_key=song_2)
+    announcer.say(spoken)
     client.post("/api/announcements/now", json={"text": "Fire drill.", "mode": "over"})
-    played = lambda: [c.url.rsplit("/", 1)[-1] for c in speakers.clips[::3]]  # noqa: E731
+    queued = lambda: any(line.path.name in item.uri for item in speakers.queue)  # noqa: E731
 
     tick(client)
-    assert played() != [line.path.name]
+    assert speakers.clips and not queued()
     tick(client)
-    assert played()[1] == line.path.name
+    assert queued()  # between the songs, from the Sonos queue
     # The DJ's lines don't go in the announcements log.
     assert [entry["text"] for entry in recent(client)] == ["Fire drill."]
 

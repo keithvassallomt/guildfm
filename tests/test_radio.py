@@ -364,7 +364,7 @@ def preview(client: TestClient, **fields):
 
 def test_an_hour_of_songs_and_what_the_dj_says(client, openai: FakeOpenAI, settings) -> None:
     openai.picks = HOUR_OF_SONGS
-    openai.line = {"mode": "between", "script": "Here's another."}
+    openai.line = {"script": "Here's another."}
     sign_in(client, *ADMIN)
     station = make_station(client)
     hour = preview(client, station_id=station["id"], dj=True, dj_name="Della", talk_every=4).json()
@@ -378,11 +378,10 @@ def test_an_hour_of_songs_and_what_the_dj_says(client, openai: FakeOpenAI, setti
     # The DJ talks on the first song, then every 4th.
     talks = [index for index, slot in enumerate(slots) if slot["line"]]
     assert talks == [0, 4, 8, 12, 16]
-    assert slots[4]["line"] == {"where": "between", "script": "Here's another."}
+    assert slots[4]["line"] == "Here's another."
     second = openai.asked_for("dj_line")[1]["input"]
     assert "It's Tuesday 13 October, 10:13, morning." in second
     assert 'Just played: "Song 4" by Fleetwood Mac.' in second
-    assert "Where you talked lately: between." in second
     assert "Don't repeat yourself" in second and "- Here's another." in second
 
     # Nothing was kept: the station has no picks, and nothing is on.
@@ -394,13 +393,12 @@ def test_an_hour_of_songs_and_what_the_dj_says(client, openai: FakeOpenAI, setti
 
 def test_an_hour_with_the_dj_talking_every_few_minutes(client, openai: FakeOpenAI) -> None:
     openai.picks = HOUR_OF_SONGS
-    openai.line = {"mode": "over_intro", "script": "Here's one."}
+    openai.line = {"script": "Here's one."}
     sign_in(client, *ADMIN)
     slots = preview(client, dj=True, dj_name="Della", talk_every=10, talk_unit="minutes").json()[
         "slots"
     ]
     assert [index for index, slot in enumerate(slots) if slot["line"]] == [0, 3, 6, 9, 12, 15]
-    assert slots[3]["line"]["where"] == "over_intro"
 
 
 def test_an_hour_without_a_dj(client, openai: FakeOpenAI, people) -> None:

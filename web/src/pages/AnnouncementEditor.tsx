@@ -55,6 +55,12 @@ type Form = {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** Whether each room plays it by itself, slightly out of step with the others: over the music
+ * in every room, or in more than one chosen room either way. Between songs in every room, it
+ * goes through the Sonos queue, which the rooms play in step. */
+const echoes = ({ mode, rooms }: Form) =>
+  rooms.length > 1 || (mode === "over" && rooms.length === 0);
+
 /** Starts as "now"; scheduling suggests the next hour today. */
 function blank(text = ""): Form {
   const next = new Date(Date.now() + 60 * 60 * 1000);
@@ -241,6 +247,7 @@ export function AnnouncementEditor() {
                 value={form.mode}
                 onChange={(mode) => change({ mode })}
               />
+              {echoes(form) && <p className={a.echo}>There may be a slight echo between rooms.</p>}
             </Group>
 
             {!form.now && <Repeats form={form} onChange={change} />}

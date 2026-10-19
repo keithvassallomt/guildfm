@@ -243,6 +243,14 @@ label.legend {
   color: var(--muted);
 }
 
+/* Each room plays the clip by itself, so they can be slightly out of step. */
+.echo {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--warn);
+}
+
 .pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

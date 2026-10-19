@@ -4,8 +4,10 @@ for requests, in the station's personality and voice.
 GuildFM asks the DJ about each song as it's lined up on the speakers, about half a minute before
 the current one ends. The DJ talks every so many songs or minutes, as the station says, and for
 every request while announcing requests is on, unless the person who asked opted out. The AI
-writes the line and chooses whether it goes over the start of the song or in a pause before it,
-aiming for a mix. Lines go through the announcer, so announcements always go first.
+writes the line, which plays between the songs from the Sonos queue, so every room hears it in
+step. It never goes over music: Sonos plays a clip over the music one room at a time, with no way
+to start the rooms together, so they echo. Lines go through the announcer, so announcements
+always go first.
 """
 
 import asyncio
@@ -42,7 +44,6 @@ from guildfm.speech import SpeechClient, SpeechError, is_eleven
 
 log = logging.getLogger(__name__)
 
-RECENT_MODES = 4  # where the DJ talked lately, so the AI can mix it up
 RECENT_LINES = 3  # what the DJ said lately, so it doesn't repeat itself
 HISTORY_DAYS = 7  # how far back the DJ looks at what's played and who asked for it
 
@@ -74,15 +75,8 @@ STYLES = {
         "song. Keep it brief all the same."
     ),
 }
-WHERE = (
-    "Choose where it goes. over_intro talks over the first seconds of the next song, so keep it "
-    "to one or two short sentences, under 12 seconds. between plays in a short pause before the "
-    "next song and can run a little longer, under 25 seconds. Aim for a mix of the two."
-)
-LINE = object_schema(
-    mode={"type": "string", "enum": ["over_intro", "between"]},
-    script={"type": "string"},
-)
+WHERE = "It plays between the songs, before the next one starts: keep it under 25 seconds."
+LINE = object_schema(script={"type": "string"})
 
 
 def _ago(seconds: float) -> str:
@@ -211,14 +205,12 @@ async def write_line(
     before: Song | None,
     up_next: str,
     remarks: list[str],
-    lately: list[str],
     said: list[str],
     *,
     aware: bool,
-) -> tuple[str, str]:
-    """What the DJ says before the next song, and where: "over_intro" or "between". `lately`
-    is where it talked the last few times, and `said` what it said. `aware` says whether the
-    context has the weather and the news as well as the time."""
+) -> str:
+    """What the DJ says before the next song. `said` is what it said the last few times.
+    `aware` says whether the context has the weather and the news as well as the time."""
     parts = [context]
     if before:
         parts.append(f"Just played: {before}.")
@@ -232,8 +224,6 @@ async def write_line(
         )
     topics = "the weather, the time or the news" if aware else "the time"
     parts.append(f"Bring up {topics} only now and then, not every time.")
-    if lately:
-        parts.append("Where you talked lately: " + ", ".join(lately) + ".")
     parts.append(WHERE)
     instructions = INSTRUCTIONS.format(
         dj=persona.dj,
@@ -243,7 +233,7 @@ async def write_line(
         style=STYLES[persona.style],
     )
     line = await ai.json(instructions, "\n\n".join(parts), "dj_line", LINE)
-    return line["mode"], line["script"].strip()
+    return line["script"].strip()
 
 
 def due(songs: int, minutes: float, every: int, unit: TalkUnit) -> bool:
@@ -372,9 +362,9 @@ class DJ:
             up_next += f" {named} requested it: say their name." if named else " It's a request."
         if note and not requester:
             up_next += f" Why it was picked: {note}"
-        lately, said = memory.get("where", []), memory.get("said", [])
-        where, script = await write_line(
-            self._ai, persona, context, before, up_next, remarks, lately, said, aware=aware
+        said = memory.get("said", [])
+        script = await write_line(
+            self._ai, persona, context, before, up_next, remarks, said, aware=aware
         )
         if not script:
             return None
@@ -387,12 +377,12 @@ class DJ:
             {
                 "songs": 0,
                 "talked_at": now.timestamp(),
-                "where": [*lately, where][-RECENT_MODES:],
                 "said": [*said, script][-RECENT_LINES:],
             },
         )
-        mode = AnnounceMode.OVER if where == "over_intro" else AnnounceMode.AFTER
-        spoken = Spoken(script, clip, None, mode, dj=True, for_key=key, title=persona.dj)
+        spoken = Spoken(
+            script, clip, None, AnnounceMode.AFTER, dj=True, for_key=key, title=persona.dj
+        )
         self._announcer.say(spoken)
         return spoken
 

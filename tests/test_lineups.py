@@ -264,7 +264,7 @@ def test_a_show_opens_with_its_ident_and_its_dj(client: TestClient, openai, spea
     put_on(client, lineup)
     client.post("/api/playback/play").raise_for_status()
 
-    openai.line = {"mode": "between", "script": "Lunchtime Grooves, with me until eleven."}
+    openai.line = {"script": "Lunchtime Grooves, with me until eleven."}
     at(clock, 10, 14, 55)
     line_up_next(client, speakers)  # the show's first songs are picked, then the first lined up
     client.portal.call(client.app.state.dj.settle)

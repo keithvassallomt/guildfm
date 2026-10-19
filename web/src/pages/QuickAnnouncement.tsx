@@ -8,6 +8,7 @@ import { PreviewButton } from "../components/PreviewButton";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { FormError } from "../components/TextField";
 import { isEleven, useVoices, voiceName } from "../components/useVoices";
+import a from "./Announcements.module.css";
 import styles from "./Page.module.css";
 import q from "./QuickAnnouncement.module.css";
 
@@ -92,6 +93,7 @@ export function QuickAnnouncement({ open, onClose, onSent }: Props) {
           value={mode}
           onChange={setMode}
         />
+        {mode === "over" && <p className={a.echo}>There may be a slight echo between rooms.</p>}
         <p className={styles.muted}>
           {voice ? `Read out in ${voiceName(voice, voices)}. ` : ""}
           Plays once, in every room.{" "}

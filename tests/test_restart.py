@@ -82,7 +82,7 @@ def test_why_songs_were_picked_and_their_jingles_survive_a_restart(start, speake
         for n in range(1, 13)
     ]
     openai.picks[1]["ident"] = "system"  # a jingle before Song 2
-    openai.line = {"mode": "between", "script": "Here's Song 2."}
+    openai.line = {"script": "Here's Song 2."}
     with start() as client:
         sign_in(client, *ADMIN)
         client.post(
@@ -117,7 +117,7 @@ def test_the_dj_remembers_what_it_said_after_a_restart(start, speakers, openai) 
     openai.picks = [
         {"title": f"Song {n}", "artist": "Fleetwood Mac", "note": f"Note {n}"} for n in range(1, 13)
     ]
-    openai.line = {"mode": "over_intro", "script": "First up, Song 2."}
+    openai.line = {"script": "First up, Song 2."}
     with start() as client:
         sign_in(client, *ADMIN)
         body = {

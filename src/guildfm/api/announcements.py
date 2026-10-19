@@ -42,7 +42,8 @@ class NowIn(BaseModel):
     text: Text
     # The rooms it plays in, or None for every room.
     rooms: Annotated[list[RoomRef], Field(min_length=1, max_length=20)] | None = None
-    mode: AnnounceMode
+    # After the current song unless asked: for every room, the rooms play it in step.
+    mode: AnnounceMode = AnnounceMode.AFTER
 
 
 class ScheduleIn(NowIn):

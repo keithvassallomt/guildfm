@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 from guildfm.ai import AIClient
 from guildfm.announcements import GAP_SECONDS
 from guildfm.awareness import Awareness, clock_line
-from guildfm.dj import RECENT_LINES, RECENT_MODES, Persona, Song, due, write_line
+from guildfm.dj import RECENT_LINES, Persona, Song, due, write_line
 from guildfm.jingles import Rotation, kinds, playable
 from guildfm.models import EntryState, Jingle, Station
 from guildfm.prefs import get_pref
@@ -27,20 +27,13 @@ ASKED = 20  # songs asked for: enough for an hour of most music
 
 
 @dataclass(frozen=True)
-class Line:
-    where: str  # "over_intro" or "between"
-    script: str
-
-
-@dataclass(frozen=True)
 class Slot:
-    """A song in the hour, with the jingle before it and what the DJ says before it or over its
-    start, if anything."""
+    """A song in the hour, with the jingle and what the DJ says before it, if anything."""
 
     track: SpotifyTrack
     note: str  # why the AI picked it
     starts_at: datetime
-    line: Line | None
+    line: str | None
     jingle: Jingle | None = None
 
 
@@ -73,7 +66,6 @@ async def rehearse(
 
     now = radio.now()
     persona = Persona.of(station)
-    lately: deque[str] = deque(maxlen=RECENT_MODES)
     said: deque[str] = deque(maxlen=RECENT_LINES)
     # As for real: the DJ talks on the first song, then as often as the station says.
     songs, last = station.talk_every - 1, float("-inf")
@@ -98,21 +90,19 @@ async def rehearse(
                 up_next = f"Up next: {Song(track.title, track.artists)}."
                 if note:
                     up_next += f" Why it was picked: {note}"
-                where, script = await write_line(
+                script = await write_line(
                     ai,
                     persona,
                     context,
                     before,
                     up_next,
                     [],
-                    list(lately),
                     list(said),
                     aware=station.global_awareness,
                 )
-                lately.append(where)
                 said.append(script)
                 songs, last = 0, elapsed
-                line = Line(where, script) if script else None
+                line = script or None
         slots.append(Slot(track, note, starts_at, line, jingle))
         before = Song(track.title, track.artists)
         elapsed += track.duration_ms / 1000

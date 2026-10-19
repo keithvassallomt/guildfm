@@ -129,7 +129,7 @@ def test_the_ai_marks_songs_and_the_jingle_plays_before_the_dj(client, openai, s
     station = make_station(client, dj=True, dj_name="Guildbert")
     own = upload(client, "Guildbert", station_id=station["id"]).json()
     openai.picks = songs(s2="station")
-    openai.line = {"mode": "between", "script": "That was Song 1. Here's Song 2."}
+    openai.line = {"script": "That was Song 1. Here's Song 2."}
     put_on(client, station)
 
     asked = openai.asked_for("picks")[0]

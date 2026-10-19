@@ -98,7 +98,8 @@ class PlaybackController:
         self._switched = False
         self._items: list[QueueItem] = []  # GuildFM's part of the Sonos queue, in order
         self._position = 1  # where in `_items` the speakers last were, 1-based
-        # Clips in `_items`, by key: what each is ("dj" or "jingle"), and the song it comes before.
+        # Clips in `_items`, by key: what each is ("dj", "jingle" or "announcement"), and the song
+        # it comes before ("" for an announcement, which goes straight after the current track).
         self._clips: dict[str, tuple[str, str]] = {}
         self._grace_until = 0.0
         self._mismatches = 0
@@ -376,7 +377,7 @@ class PlaybackController:
                 "playing": snapshot.transport in ACTIVE,
             },
             "previous": self.previous_action,
-            "announcing": self.announcing,
+            "announcing": self.announcing or (clip is not None and clip[0] == "announcement"),
             "dj_talking": self.dj_talking or (clip is not None and clip[0] == "dj"),
             "jingle": self.jingle or (clip is not None and clip[0] == "jingle"),
             "group_volume": snapshot.group_volume if snapshot else None,
@@ -505,11 +506,31 @@ class PlaybackController:
             self._snapshot, self._read_at, self._rooms = snapshot, self._clock(), snapshot.rooms
         await self.publish()
 
+    def _next_slot(self) -> int:
+        """Where the next thing goes on the speakers: straight after the current track and any
+        announcements waiting to play after it."""
+        index = self._position
+        while (
+            index < len(self._items)
+            and self._clips.get(self._items[index].key, ("", ""))[0] == "announcement"
+        ):
+            index += 1
+        return index + 1
+
     async def queue_next(self, item: QueueItem) -> None:
-        """Line `item` up to play after the current track."""
+        """Line `item` up to play after the current track, and after any announcement waiting."""
         self._require_control()
-        position = await self._call(self._speakers.add_at, item, self._position + 1)
+        position = await self._call(self._speakers.add_at, item, self._next_slot())
         self._items.insert(position - 1, item)
+        self._remember()
+
+    async def queue_announcement(self, item: QueueItem) -> None:
+        """Line the clip `item` up to play straight after the current track, ahead of the next
+        song and its jingle and DJ, and after any announcement already waiting there."""
+        self._require_control()
+        position = await self._call(self._speakers.add_at, item, self._next_slot())
+        self._items.insert(position - 1, item)
+        self._clips[item.key] = ("announcement", "")
         self._remember()
 
     async def play_again(self, item: QueueItem) -> bool:

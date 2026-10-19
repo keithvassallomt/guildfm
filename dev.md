@@ -149,6 +149,7 @@ Goal: admins type an announcement and the office hears it, now or on schedule.
 - [x] Delivery: overlay clip in each chosen room, or between songs. Between songs, GuildFM pauses the music just before the song ends, plays the clip, then starts the next song, since a clip in the Sonos queue would play in every room (decided while building)
 - [x] Announcements always take precedence over the DJ (the DJ's lines queue behind them from Stage 10)
 - [x] Announcements and New announcement screens wired up: on/off switch, "Play now", editing and deleting
+- [x] Announcements for every room after the current song go through the Sonos queue, straight after the song and ahead of any jingle or DJ, so every room plays them in step. After the current song is the default, and the editor and the quick announcement warn of a slight echo over the music or in more than one chosen room (added after Stage 10)
 
 Done when: a recurring announcement plays in two chosen rooms between songs, and doesn't play while GuildFM is stopped.
 
@@ -177,6 +178,7 @@ Goal: curators create stations with an AI DJ that picks songs and talks between 
 - [x] Station editor from backlog.md: "Paint another" paints from the name and description in the editor, saved or not, and saving those doesn't paint another; leaving with unsaved changes asks first (added after building the stage)
 - [x] Crossfade between songs, a switch on each station, off by default: while the station fills the gaps, on its own or as a line-up's show, GuildFM has the speakers crossfade, and turns it off for anything else. Asked for after Keith heard the quiet at the ends and starts of songs, which GuildFM can't trim itself (added after building the stage)
 - [x] The DJ and jingles between songs go into the Sonos queue just before their song, so every room plays them in step, after Keith still heard a little reverb from overlay clips. They come back out once played; announcements and the DJ over the start of a song stay overlay clips (added after building the stage)
+- [x] The DJ only talks between songs, after Keith heard the echo on a line over the start of a song: Sonos plays an overlay clip room by room with no start time to give, so those can't be in step. The AI no longer chooses where, a line that isn't ready before its song starts is let go, and the hour preview shows every line between songs (added after building the stage)
 
 Done when: a station with a DJ plays for an hour, announces a request by name, and mentions the Carlisle weather.
 

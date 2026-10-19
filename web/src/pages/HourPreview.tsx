@@ -94,16 +94,10 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
                   </li>
                 )}
                 {station.dj && (
-                  <>
-                    <li>
-                      <span className={h.keyBetween} aria-hidden="true" />
-                      The DJ between songs: the music pauses
-                    </li>
-                    <li>
-                      <span className={h.keyOver} aria-hidden="true" />
-                      The DJ over the start of a song: the music dips
-                    </li>
-                  </>
+                  <li>
+                    <span className={h.keyBetween} aria-hidden="true" />
+                    The DJ between songs: the music pauses
+                  </li>
                 )}
               </ul>
             )}
@@ -115,12 +109,12 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
                       <JingleLine jingle={slot.jingle} />
                     </li>
                   )}
-                  {slot.line?.where === "between" && (
+                  {slot.line && (
                     <li className={h.betweenRow}>
-                      <DJLine script={slot.line.script} label="Between songs" voice={voice} />
+                      <DJLine script={slot.line} label="Between songs" voice={voice} />
                     </li>
                   )}
-                  <SongRow slot={slot} voice={voice} />
+                  <SongRow slot={slot} />
                 </Fragment>
               ))}
             </ol>
@@ -134,7 +128,7 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
   );
 }
 
-function SongRow({ slot, voice }: { slot: HourSlot; voice: Voice }) {
+function SongRow({ slot }: { slot: HourSlot }) {
   const { track } = slot;
   return (
     <li className={h.song}>
@@ -154,20 +148,17 @@ function SongRow({ slot, voice }: { slot: HourSlot; voice: Voice }) {
             {slot.note && <span className={h.note}>{slot.note}</span>}
           </span>
         </div>
-        {slot.line?.where === "over_intro" && (
-          <DJLine script={slot.line.script} label="Over the start of this song" voice={voice} over />
-        )}
       </div>
     </li>
   );
 }
 
-type LineProps = { script: string; label: string; voice: Voice; over?: boolean };
+type LineProps = { script: string; label: string; voice: Voice };
 
-function DJLine({ script, label, voice, over = false }: LineProps) {
+function DJLine({ script, label, voice }: LineProps) {
   const [error, setError] = useState<string | null>(null);
   return (
-    <div className={`${h.line} ${over ? h.over : h.between}`}>
+    <div className={`${h.line} ${h.between}`}>
       <span className={h.lineLabel}>
         <Icon name="announce" size={15} />
         {label}

@@ -493,13 +493,13 @@ export type Station = StationFields & {
   last_played_at: string | null;
 };
 
-/** A song in a station's previewed hour, with what the DJ says before it or over its start. */
+/** A song in a station's previewed hour, with the jingle and what the DJ says before it. */
 export type HourSlot = {
   track: SearchTrack;
   /** Why the AI picked it. */
   note: string;
   starts_at: string;
-  line: { where: "over_intro" | "between"; script: string } | null;
+  line: string | null;
   /** Played in the pause before this song. */
   jingle: Jingle | null;
 };

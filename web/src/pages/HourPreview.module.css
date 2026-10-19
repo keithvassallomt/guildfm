@@ -41,8 +41,7 @@
 
 .keySong,
 .keyJingle,
-.keyBetween,
-.keyOver {
+.keyBetween {
   width: 12px;
   height: 12px;
   border-radius: 4px;
@@ -60,10 +59,6 @@
 
 .keyBetween {
   background: var(--accent);
-}
-
-.keyOver {
-  background: var(--down);
 }
 
 .run {
@@ -161,11 +156,6 @@
   border: 1px solid rgba(255, 138, 61, 0.35);
 }
 
-.over {
-  background: var(--down-soft);
-  border: 1px solid rgba(141, 180, 255, 0.35);
-}
-
 .jingle {
   background: var(--warn-soft);
   border: 1px solid rgba(245, 196, 81, 0.35);
@@ -205,10 +195,6 @@
 
 .between .lineLabel {
   color: var(--accent);
-}
-
-.over .lineLabel {
-  color: var(--down);
 }
 
 .script {

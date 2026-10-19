@@ -1,20 +1,22 @@
 """Announcements: an admin types one, and the office hears it, now or on a schedule.
 
-Each is read out in the announcement voice from settings and played as an overlay clip in each
-chosen room. If that's an ElevenLabs voice and ElevenLabs fails (out of credits, say), OpenAI
-reads it out instead: the message matters more than the voice. Over the music, the music goes
-quiet and comes back up. Between songs, GuildFM pauses the music just before the current song
-ends, plays the clip, then starts the next song. (A clip in the Sonos queue would play in every
-room in the group, not just the chosen ones.)
+Each is read out in the announcement voice from settings. If that's an ElevenLabs voice and
+ElevenLabs fails (out of credits, say), OpenAI reads it out instead: the message matters more than
+the voice. Over the music, it plays as an overlay clip in each chosen room: the music goes quiet
+and comes back up. Between songs, one for every room goes into the Sonos queue straight after the
+current song, so the rooms play it in step. One for chosen rooms can't, since a clip in the queue
+plays in every room in the group: GuildFM pauses the music just before the current song ends,
+plays an overlay clip in those rooms, then starts the next song.
 
 Announcements only play while GuildFM is driving the speakers: not after Stop, an outside
 takeover or closing time. Scheduled ones also keep to playback hours. One that comes due while
 GuildFM can't play it is let go, and shows in the log as missed.
 
 Everything spoken goes through one line, and announcements always go first, so the DJ's lines
-and jingles (stage 10) wait for them. Between songs, the DJ and jingles go into the Sonos queue
-instead, just before their song: they're for every room anyway, and the rooms play their queue
-in step, where clips sent to each room start a few milliseconds apart and sound echoey.
+and jingles (stage 10) wait for them. The DJ and jingles only ever play between songs, from the
+Sonos queue, just before their song: they're for every room anyway, and the rooms play their
+queue in step, where clips sent to each room start a few milliseconds apart and sound echoey.
+One that can't go in the queue in time is let go.
 """
 
 import asyncio
@@ -127,12 +129,10 @@ class Spoken:
     clip: Clip
     rooms: list[dict[str, str]] | None  # [{"uid", "name"}], or None for every room
     mode: AnnounceMode
-    dj: bool = False  # the DJ's lines wait for any announcement, and aren't logged
-    # The song a DJ line introduces. Over the music, it waits for that song to start; between
-    # songs, it plays before it. Once that song has been and gone, the line is dropped.
+    dj: bool = False  # the DJ's lines and jingles wait for any announcement, and aren't logged
+    # The song a DJ line or jingle plays before. They never go over music, so once that song
+    # has started, they're dropped.
     for_key: str | None = None
-    # A jingle only ever plays in the pause before its song, never over music, so it's dropped
-    # once that song has started.
     jingle: bool = False
     title: str | None = None  # what the Sonos app shows while it plays from the queue
 
@@ -324,7 +324,7 @@ class Announcer:
             s
             for s in self._pending
             if (s.for_key in (None, current) or s.for_key in upcoming)
-            and not (s.jingle and s.for_key == current)
+            and not (s.dj and s.for_key == current)
         ]
         # Announcements first; the DJ waits until there are none left.
         group = [spoken for spoken in self._pending if not spoken.dj] or list(self._pending)
@@ -332,26 +332,24 @@ class Announcer:
         left = controller.seconds_left()
 
         def now(spoken: Spoken) -> bool:
-            if spoken.jingle:
+            if spoken.dj:
                 return False  # only ever between songs
-            if spoken.for_key is not None and spoken.for_key == current:
-                return True  # its song is on: over the start of it
             if spoken.mode == AnnounceMode.OVER:
-                return spoken.for_key is None
+                return True
             return not playing or left is None  # no song ending to wait for
 
         ready = [spoken for spoken in group if now(spoken)]
-        # The DJ's lines and jingles for the song lined up next go into the Sonos queue.
+        # The DJ's lines and jingles for the song lined up next go into the Sonos queue, and so
+        # do announcements for every room between songs, ahead of them.
         queued = [
             spoken
             for spoken in group
-            if spoken.dj and spoken.mode == AnnounceMode.AFTER and spoken.for_key in upcoming
+            if spoken.mode == AnnounceMode.AFTER
+            and (spoken.for_key in upcoming if spoken.dj else spoken.rooms is None)
         ]
-        # A jingle waits for the music to be playing towards the end of a song.
+        # An announcement between songs pauses the music towards the end of a song.
         between = [
-            spoken
-            for spoken in group
-            if spoken.mode == AnnounceMode.AFTER and (playing or not spoken.jingle)
+            spoken for spoken in group if spoken.mode == AnnounceMode.AFTER and not spoken.dj
         ]
         if ready:
             self._take(ready)
@@ -399,25 +397,38 @@ class Announcer:
         return f"http://{address}:{self._port}/media/{spoken.clip.media_path}"
 
     async def _queue(self, items: list[Spoken]) -> list[Spoken]:
-        """Put the DJ's lines and jingles in the Sonos queue, each just before its song, so the
-        rooms play them in step. Returns any the speakers wouldn't take, to play the old way."""
+        """Put clips in the Sonos queue so the rooms play them in step: the DJ's lines and
+        jingles each just before its song, and announcements straight after the current song,
+        ahead of them. Returns any the speakers wouldn't take, to play the old way."""
         controller = self._controller
         try:
             address = await controller.own_address()
         except SpeakersUnavailable, SpeakersRefused:
             return items
+        queued: list[Spoken] = []
+        refused: list[Spoken] = []
         for index, spoken in enumerate(items):
-            kind = "jingle" if spoken.jingle else "dj"
-            url, title = self._url(address, spoken), spoken.title or "GuildFM"
-            item = clip_item(url, title, seconds=spoken.clip.seconds)
+            url, seconds = self._url(address, spoken), spoken.clip.seconds
             try:
-                await controller.queue_before(item, spoken.for_key, kind)
+                if spoken.dj:
+                    kind = "jingle" if spoken.jingle else "dj"
+                    item = clip_item(url, spoken.title or "GuildFM", seconds=seconds)
+                    await controller.queue_before(item, spoken.for_key, kind)
+                else:
+                    item = clip_item(url, "Announcement", seconds=seconds)
+                    await controller.queue_announcement(item)
             except NotInControl:
-                return []
+                problem = MISSED.get(controller.status, MISSED[Status.STOPPED])
+                await self._record([(spoken, problem) for spoken in items[index:]])
+                break
             except (SpeakersUnavailable, SpeakersRefused) as error:
                 log.warning("The Sonos queue wouldn't take a clip, so it pauses instead: %s", error)
-                return items[index:]
-        return []
+                refused = items[index:]
+                break
+            queued.append(spoken)
+        # In the log once it's on the speakers' queue: it plays when the song ends.
+        await self._record([(spoken, None) for spoken in queued])
+        return refused
 
     async def _between_songs(self, items: list[Spoken]) -> None:
         """Pause just before the current song ends, play the clips, then start the next song

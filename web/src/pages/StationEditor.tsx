@@ -635,8 +635,8 @@ function DJ({ form, stationId, onChange, onError }: DJProps) {
             onChange={(announce_requests) => onChange({ announce_requests })}
           />
           <p className={styles.muted}>
-            The DJ chooses whether to talk over the start of a song or between songs, and mixes
-            both. Announcements always go first.
+            The DJ talks between songs, so every room hears it in step. Announcements always go
+            first.
           </p>
         </>
       )}
