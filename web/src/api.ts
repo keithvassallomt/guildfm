@@ -7,6 +7,7 @@ export type Permission =
   | "manage_queue"
   | "manage_playlists"
   | "create_stations"
+  | "plan_lineups"
   | "switch_source"
   | "transport"
   | "control_playback"
@@ -291,6 +292,8 @@ export type PlaylistTile = {
   filling: boolean;
   /** The current song came from it. */
   on_air: boolean;
+  /** The line-up that's on is playing it. */
+  in_lineup: boolean;
 };
 
 /** A DJ, who can host any number of stations. */
@@ -303,7 +306,7 @@ export type DJProfile = {
   stations: { id: number; name: string }[];
 };
 
-export type SourceKind = "queue" | "library" | "radio";
+export type SourceKind = "queue" | "library" | "radio" | "lineups";
 
 /** A station as a source on the Now Playing screen. */
 export type StationTile = {
@@ -321,6 +324,47 @@ export type StationTile = {
   filling: boolean;
   /** The current song came from it. */
   on_air: boolean;
+  /** The line-up that's on is playing it. */
+  in_lineup: boolean;
+};
+
+/** A stretch of a line-up's day, in minutes after midnight: a show or a playlist. */
+export type LineupSlot = {
+  start: number;
+  end: number;
+  kind: "show" | "playlist";
+  station_id: number | null;
+  playlist_id: number | null;
+  name: string;
+  /** The station's cover, or the playlist's first album cover. */
+  art_url: string | null;
+  /** A show's DJ, null without one. */
+  dj_name: string | null;
+  /** A playlist's own length, in minutes. */
+  minutes: number | null;
+};
+
+/** The day line-ups plan: the earliest opening and latest closing in the playback hours. */
+export type LineupDay = { start: number; end: number };
+
+/** A line-up as a source on the Now Playing screen. */
+export type LineupTile = {
+  id: number;
+  name: string;
+  art_url: string | null;
+  slots: LineupSlot[];
+  last_on_at: string | null;
+  /** It's the source now. */
+  on: boolean;
+};
+
+export type Lineup = LineupTile & { description: string; made_by: string | null };
+
+/** What the line-up editor offers: the day, and the shows and playlists to put on it. */
+export type LineupChoices = {
+  day: LineupDay;
+  shows: { id: number; name: string; art_url: string | null; dj_name: string | null }[];
+  playlists: { id: number; name: string; covers: string[]; minutes: number }[];
 };
 
 export type NowState = {
@@ -332,6 +376,13 @@ export type NowState = {
   playlists: PlaylistTile[];
   /** Last played first. */
   stations: StationTile[];
+  /** The one on first, then the most recently on. */
+  lineups: LineupTile[];
+  day: LineupDay;
+  /** The time in the office when this was sent, in minutes after midnight. */
+  minute: number;
+  /** What fills a gap in a line-up. */
+  gap: string;
 };
 
 export type Play = {

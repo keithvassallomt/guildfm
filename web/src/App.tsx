@@ -12,6 +12,8 @@ import { AnnouncementEditor } from "./pages/AnnouncementEditor";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { ChoosePasswordPage } from "./pages/ChoosePasswordPage";
 import { JinglesPage } from "./pages/JinglesPage";
+import { LineupEditor } from "./pages/LineupEditor";
+import { LineupsPage } from "./pages/LineupsPage";
 import { NowPlayingPage } from "./pages/NowPlayingPage";
 import { PlaylistPage } from "./pages/PlaylistPage";
 import { PlaylistsPage } from "./pages/PlaylistsPage";
@@ -96,6 +98,30 @@ export function App() {
             element={
               <Allowed permission="switch_source">
                 <RadioPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="lineups"
+            element={
+              <Allowed permission="switch_source">
+                <LineupsPage />
+              </Allowed>
+            }
+          />
+          <Route
+            path="lineups/new"
+            element={
+              <Allowed permission="plan_lineups">
+                <LineupEditor />
+              </Allowed>
+            }
+          />
+          <Route
+            path="lineups/:id"
+            element={
+              <Allowed permission="plan_lineups">
+                <LineupEditor />
               </Allowed>
             }
           />

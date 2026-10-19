@@ -7,6 +7,9 @@ recently, picked by the station lately, already queued, or explicit while that's
 left out. Votes never reach the AI, so a station's taste stays its own. With jingles to play, the
 AI also marks the odd song to have an ident before it (see jingles.py).
 
+A station with a show coming up in a line-up picks its first songs a few minutes ahead and keeps
+them until it comes on, so the show starts without waiting for the AI.
+
 When the AI can't pick (OpenAI or Spotify is down, or out of credit), the station carries on with
 songs heard before, so the music doesn't stop, and the AI is asked again when those run low.
 
@@ -154,6 +157,7 @@ class Radio:
         self._clock = clock
         self._monotonic = monotonic
         self._task: asyncio.Task | None = None
+        self._preparing: asyncio.Task | None = None  # picking ahead of a show
         self._failed_at: dict[int, float] = {}  # station id: when a batch last found nothing
         # Run after a batch is added, so the queue can line the first one up.
         self.on_picked: list[Callable[[], Awaitable[None]]] = []
@@ -163,14 +167,16 @@ class Radio:
 
     async def close(self) -> None:
         """Stop picking, before the database closes."""
-        if self._task:
-            self._task.cancel()
-            await asyncio.gather(self._task, return_exceptions=True)
+        tasks = [task for task in (self._task, self._preparing) if task]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def settle(self) -> None:
         """Wait for a batch that's being picked. For tests."""
-        if self._task:
-            await self._task
+        for task in (self._task, self._preparing):
+            if task:
+                await task
 
     async def top_up(self) -> None:
         """If a station is the source and running low, pick more in the background."""
@@ -236,18 +242,52 @@ class Radio:
             source.order = source.order[keep:] + ids
             source.cursor -= keep
             station.picked = (station.picked + ids)[-REMEMBERED:]
-            # Why each was picked and any ident before it, kept so they survive a restart.
-            now = self._clock().timestamp()
-            for pick in chosen:
-                await db.merge(
-                    PickNote(
-                        track_id=pick.track.id, note=pick.note, ident=pick.ident, picked_at=now
-                    )
-                )
-            newest = select(PickNote.track_id).order_by(PickNote.picked_at.desc()).limit(NOTES_KEPT)
-            await db.execute(delete(PickNote).where(PickNote.track_id.not_in(newest)))
+            await self._keep_notes(db, chosen)
             await db.commit()
         return len(chosen)
+
+    async def _keep_notes(self, db: AsyncSession, chosen: list[Pick]) -> None:
+        """Why each was picked and any ident before it, kept so they survive a restart."""
+        now = self._clock().timestamp()
+        for pick in chosen:
+            await db.merge(
+                PickNote(track_id=pick.track.id, note=pick.note, ident=pick.ident, picked_at=now)
+            )
+        newest = select(PickNote.track_id).order_by(PickNote.picked_at.desc()).limit(NOTES_KEPT)
+        await db.execute(delete(PickNote).where(PickNote.track_id.not_in(newest)))
+
+    def prepare(self, station_id: int) -> None:
+        """Pick a station's first songs ahead of its show in a line-up, in the background, unless
+        it has some waiting already."""
+        if self._preparing is None or self._preparing.done():
+            self._preparing = asyncio.create_task(self._prepare(station_id))
+
+    async def _prepare(self, station_id: int) -> None:
+        try:
+            async with self._sessions() as db:
+                station = await db.get(Station, station_id)
+                if station is None or station.ready:
+                    return
+                idents = kinds(await playable(db, station_id)) if station.jingles else ()
+                taste = Taste.of(station, idents)
+            chosen = await self.candidates(taste, BATCH, set())
+            if not chosen:
+                return
+            async with self._sessions() as db:
+                await remember(db, [pick.track for pick in chosen])
+                station = await db.get(Station, station_id)
+                if station is None:
+                    return
+                ids = [pick.track.id for pick in chosen]
+                station.ready = ids
+                station.picked = (station.picked + ids)[-REMEMBERED:]
+                await self._keep_notes(db, chosen)
+                await db.commit()
+            log.info("%s picked its first songs ahead of its show", taste.name)
+        except AIError as error:
+            log.warning("A station couldn't pick ahead of its show: %s", error)
+        except Exception:
+            log.exception("Picking ahead of a show failed")
 
     async def replay(self, station_id: int) -> int:
         """For when the AI can't pick: songs heard before, so the music carries on. The

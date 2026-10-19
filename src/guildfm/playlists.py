@@ -1,6 +1,7 @@
 """Playlists, the Best Voted playlist GuildFM keeps itself, and the source.
 
-The source fills the gaps between requests: a playlist or an AI station. A playlist has its own
+The source fills the gaps between requests: a playlist or an AI station, or a line-up putting
+those on by the clock (see lineups.py), which the source notes beside them. A playlist has its own
 order each time round (shuffled, or as listed), and one that's switched away from keeps its
 place, carrying on from there when it's put back on. A station's order is the songs it has
 picked so far, topped up as they play (see radio.py). Either way, songs thumbed down enough are
@@ -141,9 +142,12 @@ async def _set_aside(db: AsyncSession) -> None:
         }
 
 
-async def play_playlist(db: AsyncSession, playlist: Playlist) -> SourceState:
-    """Make `playlist` the source. It carries on where it left off if it was switched away
-    from part way through, otherwise it starts from the top (or a fresh shuffle)."""
+async def play_playlist(
+    db: AsyncSession, playlist: Playlist, *, lineup_id: int | None = None
+) -> SourceState:
+    """Make `playlist` the source, for the line-up with `lineup_id` if it's one's slot. It
+    carries on where it left off if it was switched away from part way through, otherwise it
+    starts from the top (or a fresh shuffle)."""
     await _set_aside(db)
     ids = [entry.track_id for entry in await tracks_of(db, playlist.id)]
     saved = playlist.resume
@@ -172,18 +176,26 @@ async def play_playlist(db: AsyncSession, playlist: Playlist) -> SourceState:
             cursor=cursor,
             skipped=skipped,
             downvotes=downvotes,
+            lineup_id=lineup_id,
+            dj_memory=None,
         )
     )
     await db.commit()
     return source
 
 
-def _empty(playlist_id: int | None = None, station_id: int | None = None) -> SourceState:
+def _empty(
+    playlist_id: int | None = None,
+    station_id: int | None = None,
+    lineup_id: int | None = None,
+    order: list[str] | None = None,
+) -> SourceState:
     return SourceState(
         id=1,
         playlist_id=playlist_id,
         station_id=station_id,
-        order=[],
+        lineup_id=lineup_id,
+        order=order or [],
         cursor=0,
         skipped=[],
         downvotes={},
@@ -191,10 +203,14 @@ def _empty(playlist_id: int | None = None, station_id: int | None = None) -> Sou
     )
 
 
-async def play_station(db: AsyncSession, station: Station) -> SourceState:
-    """Make `station` the source. It has nothing picked yet; radio.py tops it up."""
+async def play_station(
+    db: AsyncSession, station: Station, *, lineup_id: int | None = None
+) -> SourceState:
+    """Make `station` the source, for the line-up with `lineup_id` if it's one's show. It starts
+    with any songs it picked ahead of its show, or nothing yet, and radio.py tops it up."""
     await _set_aside(db)
-    source = await db.merge(_empty(station_id=station.id))
+    ready, station.ready = list(station.ready), []
+    source = await db.merge(_empty(station_id=station.id, lineup_id=lineup_id, order=ready))
     await db.commit()
     return source
 
@@ -222,7 +238,7 @@ async def current_source(db: AsyncSession) -> SourceState | None:
 async def requests_only(db: AsyncSession) -> bool:
     """Whether someone chose to have nothing fill the gaps between requests."""
     source = await db.get(SourceState, 1)
-    return source is not None and not (source.playlist_id or source.station_id)
+    return source is not None and not (source.playlist_id or source.station_id or source.lineup_id)
 
 
 async def _still_in(db: AsyncSession, source: SourceState) -> set[str] | None:
@@ -268,10 +284,12 @@ async def upcoming(db: AsyncSession, queued: set[str], count: int = UPCOMING) ->
 async def take_next(db: AsyncSession, queued: set[str], *, restart: bool) -> str | None:
     """The source's next song, moving past it. At the end of a playlist, start it over if
     `restart`, otherwise stop playing it. A station that's run out of picks stays on, waiting
-    for more. None when there's nothing to take."""
+    for more. In a line-up a playlist always starts over, and stays on until its slot ends.
+    None when there's nothing to take."""
     source = await current_source(db)
     if source is None:
         return None
+    in_lineup = source.lineup_id is not None
     played = await _played_lately(db, source)
     for attempt in range(2):
         still_in = await _still_in(db, source)
@@ -285,7 +303,7 @@ async def take_next(db: AsyncSession, queued: set[str], *, restart: bool) -> str
         if still_in is None:
             await db.commit()
             return None
-        if attempt == 0 and restart and still_in:
+        if attempt == 0 and (restart or in_lineup) and still_in:
             source.order = _order(
                 [entry.track_id for entry in await tracks_of(db, source.playlist_id)],
                 source.playlist.shuffle,
@@ -293,6 +311,9 @@ async def take_next(db: AsyncSession, queued: set[str], *, restart: bool) -> str
             source.cursor, source.skipped, source.downvotes = 0, [], {}
             continue
         break
+    if in_lineup:
+        await db.commit()
+        return None
     await db.delete(source)
     await db.commit()
     return None

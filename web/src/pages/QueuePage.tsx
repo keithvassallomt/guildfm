@@ -5,11 +5,12 @@ import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
 import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
+import { LogoCover } from "../components/LogoCover";
 import { PlaybackBanner } from "../components/PlaybackBanner";
 import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
-import { ago, chipLabel, statusTones } from "../live/status";
+import { ago, chipLabel, ownClip, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
 import { type SearchChanges, SongSearch } from "../search/SongSearch";
@@ -183,7 +184,11 @@ function NowPlaying({ playback, receivedAt, entry }: NowProps) {
   return (
     <section className={q.card} aria-label="Now playing">
       <div className={q.nowTop}>
-        <Art url={queued?.art_url ?? track.art_url} size="large" />
+        {ownClip(playback) ? (
+          <LogoCover className={`${q.art} ${q.artLarge}`} />
+        ) : (
+          <Art url={queued?.art_url ?? track.art_url} size="large" />
+        )}
         <div className={q.text}>
           <span className={q.label}>{label}</span>
           <span className={q.nowTitle}>{queued?.title ?? (track.title || "Untitled")}</span>

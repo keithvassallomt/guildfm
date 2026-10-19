@@ -294,24 +294,25 @@ class DJ:
         """Wait for lines being written. For tests."""
         await asyncio.gather(*self._tasks)
 
-    async def lined_up(self, entry_id: int, key: str) -> None:
+    async def lined_up(self, entry_id: int, key: str, opens: int | None = None) -> None:
         """A song was lined up on the speakers: maybe say something about it. Writing and
         voicing the line takes a few seconds, so it happens in the background."""
-        task = asyncio.create_task(self._talk_safely(entry_id, key))
+        task = asyncio.create_task(self._talk_safely(entry_id, key, opens))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
-    async def _talk_safely(self, entry_id: int, key: str) -> None:
+    async def _talk_safely(self, entry_id: int, key: str, opens: int | None) -> None:
         try:
-            await self.talk(entry_id, key)
+            await self.talk(entry_id, key, opens)
         except (AIError, SpeechError) as error:
             log.warning("The DJ couldn't say anything this time: %s", error)
         except Exception:
             log.exception("The DJ failed")
 
-    async def talk(self, entry_id: int, key: str) -> Spoken | None:
-        """Say something about the song lined up as `entry_id`, if it's time to. Returns the
-        line queued, if any."""
+    async def talk(self, entry_id: int, key: str, opens: int | None = None) -> Spoken | None:
+        """Say something about the song lined up as `entry_id`, if it's time to. A song that
+        `opens` a line-up's show, which runs until that minute, always gets a line opening the
+        show. Returns the line queued, if any."""
         async with self._sessions() as db:
             source = await current_source(db)
             station = source.station if source and source.station_id else None
@@ -338,6 +339,7 @@ class DJ:
             every, unit, aware = station.talk_every, station.talk_unit, station.global_awareness
             announcing, station_id = station.announce_requests, station.id
             memory = source.dj_memory or {}
+            lineup = source.lineup.name if source.lineup else None
 
         # Talks on the first song after the station comes on, then as often as it says, and
         # for a request: for an album queued whole, on its first song only.
@@ -346,13 +348,20 @@ class DJ:
         now = self._clock().astimezone(zone)
         talked_at = memory.get("talked_at")
         minutes = math.inf if talked_at is None else (now.timestamp() - talked_at) / 60
-        if not (due(songs, minutes, every, unit) or shout_out):
+        if not (due(songs, minutes, every, unit) or shout_out or opens is not None):
             await self._remember(station_id, {**memory, "songs": songs})
             return None
 
         # The DJ always knows the time, so it doesn't say good morning at four.
         context = await self._awareness.context(location, now) if aware else clock_line(now)
         up_next = f"Up next: {after}."
+        if opens is not None:
+            until = f"{opens // 60:02d}:{opens % 60:02d}"
+            part = f", part of the {lineup} line-up," if lineup else ""
+            up_next = (
+                f"Your show, {persona.station}{part} starts now and runs until {until}. Open it: "
+                "welcome everyone, and say what's on and until when. " + up_next
+            )
         if requester and announcing and album:
             if starts_album:
                 up_next += f" {named or 'Someone'} put on the whole of the album {album}, "

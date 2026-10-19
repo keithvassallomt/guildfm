@@ -79,14 +79,18 @@
 
 .page[data-paused="true"] .bars span,
 .page[data-paused="true"] .glow,
-.page[data-paused="true"] .needle {
+.page[data-paused="true"] .needle,
+.page[data-paused="true"] .timeNeedle,
+.page[data-paused="true"] .dayNeedle {
   animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bars span,
   .glow,
-  .needle {
+  .needle,
+  .timeNeedle,
+  .dayNeedle {
     animation: none;
   }
 
@@ -838,4 +842,296 @@
 .on .stationArt {
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+/* Line-ups: the band's back button, and the day as a time strip with the needle at now. */
+
+.bandBack {
+  width: 32px;
+  height: 32px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.bandBack:hover {
+  background: var(--surface);
+}
+
+.timeStrip {
+  overflow-x: auto;
+  padding: 6px 4px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.timeTrack {
+  position: relative;
+  height: 196px;
+}
+
+.slotTile {
+  position: absolute;
+  top: 0;
+  height: 118px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.slotGap,
+.slotGap:hover {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: transparent;
+}
+
+.slotTag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--faint);
+}
+
+.slotTagOn {
+  color: var(--accent);
+}
+
+.slotHead {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slotArt {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slotText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slotTimes {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-soft);
+}
+
+.ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 136px;
+  height: 10px;
+  background-image: linear-gradient(90deg, var(--line-strong) 1px, transparent 1px);
+  background-repeat: repeat-x;
+}
+
+.hourTick {
+  position: absolute;
+  top: 132px;
+  width: 1px;
+  height: 18px;
+  background: var(--faint);
+}
+
+.hourLabel {
+  position: absolute;
+  top: 154px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.timeNeedle {
+  position: absolute;
+  top: 122px;
+  width: 3px;
+  height: 36px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(255, 138, 61, 0.8);
+  animation: needle 1.6s ease-in-out infinite;
+}
+
+.stripNow {
+  position: absolute;
+  top: 172px;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+.stripNote {
+  margin: 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* On a phone: the day running down the Line-ups tab. */
+
+.dayTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dayBack {
+  min-height: 36px;
+  margin-left: -4px;
+  padding: 0 10px 0 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.dayName {
+  margin-left: auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dayList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dayRow {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.dayTime {
+  flex: 0 0 44px;
+  padding-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.dayTimeOn {
+  color: var(--accent);
+}
+
+.dayCard {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dayProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dayTrack {
+  position: relative;
+  height: 14px;
+  background: linear-gradient(var(--line-strong), var(--line-strong)) 0 6px / 100% 2px no-repeat;
+}
+
+.dayFill {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.dayNeedle {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 14px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 138, 61, 0.8);
+  animation: needle 1.6s ease-in-out infinite;
+}
+
+.dayTimes {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.dayNow {
+  color: var(--accent);
+}
+
+.editLineups,
+.editLineups:hover {
+  min-height: var(--touch);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
 }

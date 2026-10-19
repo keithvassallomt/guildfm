@@ -145,7 +145,7 @@ export function SettingsPage() {
               </div>
               <ToggleRow
                 label="Allow explicit tracks"
-                hint="Turn off to hide them from search and refuse requests for them."
+                hint="Off by default: they're hidden from search, refused as requests, and left out of albums and AI stations."
                 checked={values.allow_explicit}
                 onChange={(allow_explicit) => save({ allow_explicit })}
               />

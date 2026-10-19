@@ -11,12 +11,24 @@ import time
 from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from guildfm.lineups import Change, Opening, follow, gap_station, minute_of, put_on
 from guildfm.live import LiveHub
-from guildfm.models import EntryState, Play, Playlist, QueueEntry, SourceState, Station, Vote
+from guildfm.models import (
+    EntryState,
+    Lineup,
+    Play,
+    Playlist,
+    QueueEntry,
+    SourceState,
+    Station,
+    Vote,
+)
 from guildfm.playback import PlaybackController, Status
 from guildfm.playlists import (
     best_voted,
@@ -37,11 +49,17 @@ from guildfm.speakers import spotify_track_id as track_id_in
 log = logging.getLogger(__name__)
 
 LEAD_SECONDS = 30  # how long before a song ends the next request goes to the speakers
+# Readings of stopped speakers with a song lined up before GuildFM gives up on that song: it
+# couldn't play.
+STALLED_READINGS = 3
+PREPARE_MINUTES = 10  # how soon before a line-up's show its station picks its first songs
 ACTIVITY_KEPT = 30
 
-# What fills the gaps between requests: a playlist, a station, or nothing ("requests only").
-Choice = Playlist | Station | None
-LinedUp = Callable[[int, str], Awaitable[None]]
+# What fills the gaps between requests: a playlist, a station, a line-up, or nothing
+# ("requests only").
+Choice = Playlist | Station | Lineup | None
+# Told the entry, its track key, and when a song opens a line-up's show, the minute the show ends.
+LinedUp = Callable[[int, str, int | None], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -110,6 +128,7 @@ class QueueEngine:
         sn: int,
         radio: Radio | None = None,
         clock: Callable[[], float] = time.time,
+        now: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._sessions = sessionmaker
         self._controller = controller
@@ -118,6 +137,12 @@ class QueueEngine:
         self._sid = sid
         self._sn = sn
         self._clock = clock
+        self._now = now  # the time of day, for line-ups
+        # A line-up's show that has started, waiting for its first song: its station and end.
+        self._opening: Opening | None = None
+        # That first song's entry, and the minute its show ends.
+        self._opener: tuple[int, int] | None = None
+        self._stalls = 0  # readings of stopped speakers with a song lined up
         # Serialises changes to the queue, so a vote and a hand-over to the speakers can't
         # interleave. The API takes it too.
         self.lock = asyncio.Lock()
@@ -140,6 +165,34 @@ class QueueEngine:
 
     def note(self, text: str) -> None:
         self.activity.appendleft({"text": text, "at": self._clock()})
+
+    async def office_time(self, db: AsyncSession, ahead: float = 0) -> datetime:
+        """The time in the office, `ahead` seconds from now."""
+        zone = ZoneInfo(await get_pref(db, "timezone"))
+        return (self._now() + timedelta(seconds=ahead)).astimezone(zone)
+
+    async def _follow(self, db: AsyncSession, ahead: float = 0) -> None:
+        """If a line-up is on, put on what it has due `ahead` seconds from now."""
+        self._changed_to(await follow(db, await self.office_time(db, ahead)))
+
+    def _changed_to(self, change: Change | None) -> None:
+        """Note what a line-up put on, and hold on to the show it opens, for its first song."""
+        if change is None:
+            return
+        self._opening = change.opening
+        self.note(f"{change.name} is on, from the {change.lineup} line-up")
+
+    async def keep_lineup_on(self, lineup_id: int) -> None:
+        """Put a line-up back on after the station or playlist it was playing was deleted,
+        which took the source with it. That slot is a gap now."""
+        async with self.lock, self._sessions() as db:
+            lineup = await db.get(Lineup, lineup_id)
+            if lineup is None or await db.get(SourceState, 1):
+                return
+            self._changed_to(await put_on(db, lineup, await self.office_time(db)))
+        if self._radio:
+            await self._radio.top_up()
+        await self.changed()
 
     async def recover(self) -> None:
         """After a restart. Songs still on the speakers GuildFM picked back up stay as they were.
@@ -209,17 +262,16 @@ class QueueEngine:
         )
         db.add(entry)
         await db.commit()
+        if self._opening and self._opening.station_id == station_id:
+            # The first song of a line-up's show: the show opens with it.
+            self._opener, self._opening = (entry.id, self._opening.until), None
         # Read back with its track, which a new entry doesn't have loaded.
         return await db.get(QueueEntry, entry.id, populate_existing=True)
 
     async def _run_out(self, db: AsyncSession) -> SourceState:
         """Nothing is left to fill the gaps: put the default station on, if that's the setting
         and there is one, otherwise AI picks. It needs a moment to pick its first songs."""
-        station = None
-        if await get_pref(db, "queue_runs_out") == "default_station":
-            default = await get_pref(db, "default_station")
-            station = default and await db.get(Station, default)
-        station = station or await ai_picks(db)
+        station = await gap_station(db)
         source = await play_station(db, station)
         self.note(f"The queue ran out, so {station.name} is on")
         if self._radio:
@@ -245,24 +297,43 @@ class QueueEngine:
         if not controller.in_control:
             return
         status, left = controller.status, controller.time_left
+        if status != Status.IDLE:
+            self._stalls = 0
         if status == Status.PLAYING and left is not None and left > LEAD_SECONDS:
             return
         if status not in (Status.PLAYING, Status.IDLE):
             return
+        # When the next song will start, which is what a line-up goes by.
+        ahead = (controller.seconds_left() or 0) if status == Status.PLAYING else 0
         async with self.lock, self._sessions() as db:
-            if await in_state(db, EntryState.NEXT):
+            lined_up = await in_state(db, EntryState.NEXT)
+            if lined_up and status == Status.IDLE:
+                # The speakers stopped with a song lined up, so it couldn't play. After a few
+                # readings, GuildFM lets it go and carries on.
+                self._stalls += 1
+                if self._stalls < STALLED_READINGS:
+                    return
+                self._stalls = 0
+                await self._let_go(db, lined_up)
+                lined_up = None
+            # Anything else after the current song had played, and the speakers went back to it.
+            await controller.clear_ahead({self.item(lined_up).key} if lined_up else set())
+            if lined_up:
                 return
+            await self._follow(db, ahead)
+            await self._prepare_shows(db, ahead)
             head = await self._lock_head(db)
             if head is None:
                 return
             entry_id, item = head.id, self.item(head)
+        opens = self._opener[1] if self._opener and self._opener[0] == entry_id else None
         try:
             if status == Status.IDLE:
                 await controller.play_now(item)
             else:
                 await controller.queue_next(item)
                 for callback in self.on_lined_up:
-                    await callback(entry_id, item.key)
+                    await callback(entry_id, item.key, opens)
         except SpeakersUnavailable, SpeakersRefused:
             log.warning("Couldn't hand the next request to the speakers", exc_info=True)
             await self._unlock(entry_id)
@@ -316,12 +387,16 @@ class QueueEngine:
         song. False when that was the source already."""
         async with self._sessions() as db:
             source = await current_source(db)
+            # Picking a line-up's playlist or station by hand ends the line-up.
+            alone = bool(source and source.lineup_id is None)
             if choice is None:
                 same = await requests_only(db)
+            elif isinstance(choice, Lineup):
+                same = bool(source and source.lineup_id == choice.id)
             elif isinstance(choice, Playlist):
-                same = bool(source and source.playlist_id == choice.id)
+                same = alone and source.playlist_id == choice.id
             else:
-                same = bool(source and source.station_id == choice.id)
+                same = alone and source.station_id == choice.id
             if same:
                 return False
             lined_up = await in_state(db, EntryState.NEXT)
@@ -343,6 +418,9 @@ class QueueEngine:
                     await db.delete(entry)
             if choice is None:
                 await choose_requests_only(db)
+            elif isinstance(choice, Lineup):
+                lineup = await db.get(Lineup, choice.id)
+                self._changed_to(await put_on(db, lineup, await self.office_time(db)))
             elif isinstance(choice, Playlist):
                 await play_playlist(db, await db.get(Playlist, choice.id))
             else:
@@ -355,9 +433,35 @@ class QueueEngine:
         await self.keep_fed()
         return True
 
+    async def _let_go(self, db: AsyncSession, entry: QueueEntry) -> None:
+        """Give up on a lined-up song that couldn't play: off the speakers and out of the queue."""
+        title = entry.track.title
+        try:
+            await self._controller.unqueue(self.item(entry))
+        except SpeakersUnavailable, SpeakersRefused:
+            log.warning("Couldn't take a song that wouldn't play off the speakers", exc_info=True)
+        await db.delete(entry)
+        await db.commit()
+        log.warning("%s wouldn't play on the speakers, so GuildFM skipped it", title)
+        self.note(f"{title} wouldn't play, so it was skipped")
+
+    async def _prepare_shows(self, db: AsyncSession, ahead: float) -> None:
+        """A line-up's show starting soon has its station pick its first songs now, so it starts
+        without waiting for the AI."""
+        source = await db.get(SourceState, 1)
+        if self._radio is None or source is None or source.lineup_id is None:
+            return
+        lineup = await db.get(Lineup, source.lineup_id)
+        minute = minute_of(await self.office_time(db, ahead))
+        for slot in lineup.slots:
+            soon = 0 < slot.start - minute <= PREPARE_MINUTES
+            if soon and slot.station_id and slot.station_id != source.station_id:
+                self._radio.prepare(slot.station_id)
+
     async def _first_up(self) -> list[QueueItem]:
         """What to play when GuildFM takes the speakers over and has nothing lined up."""
         async with self.lock, self._sessions() as db:
+            await self._follow(db)
             head = await in_state(db, EntryState.NEXT) or await self._lock_head(db)
             return [self.item(head)] if head else []
 

@@ -1,0 +1,10 @@
+.cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-raised);
+}
+
+.cover .mark {
+  width: 72%;
+}

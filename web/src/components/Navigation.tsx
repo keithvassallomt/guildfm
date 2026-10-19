@@ -24,6 +24,8 @@ const tabs: Tab[] = [
   { to: "/queue", label: "Queue", icon: "queue" },
   { to: "/playlists", label: "Playlists", icon: "library", needs: "switch_source" },
   { to: "/radio", label: "Radio", icon: "radio", needs: "switch_source" },
+  // On phones it's reached from Now Playing's Line-ups tab, keeping the tabs to five.
+  { to: "/lineups", label: "Line-ups", icon: "lineups", needs: "switch_source", wideOnly: true },
   {
     to: "/admin",
     label: "Admin",

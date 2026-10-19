@@ -5,7 +5,9 @@ or it isn't. While driving, anything else showing up on the speakers means someo
 from the Sonos or Spotify app; GuildFM then steps aside until an admin presses Play.
 
 GuildFM notes down what it put on the speakers, so after a restart it can tell whether they're
-still playing its queue and carry on driving them.
+still playing its queue and carry on driving them. It keeps the speakers' queue short: a few
+songs that have played, for Previous, the song on now and what's lined up after it. When the
+speakers stop, Sonos goes back to the start of its queue; GuildFM keeps its own place instead.
 
 The DJ's lines and jingles between songs go into the Sonos queue too, just before the song they
 come before, so every room plays them in step. Once played, they come back out.
@@ -41,6 +43,7 @@ FULL_EVERY = 5  # rooms and volumes are read on every fifth poll
 GRACE_SECONDS = 4.0  # after a GuildFM command, the speakers take a moment to catch up
 HEARTBEAT_SECONDS = 5.0  # state is re-sent at least this often, so positions stay fresh
 RESTART_SECONDS = 5  # further into a song than this, Previous starts it again
+KEEP_PLAYED = 3  # songs that have played kept on the speakers, so Previous can go back
 ACTIVE = ("PLAYING", "TRANSITIONING")
 
 
@@ -217,7 +220,7 @@ class PlaybackController:
         if snapshot.rooms:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
-        await self._drop_played_clips()
+        await self._trim()
 
         before = previous.track.uri if previous and previous.track else None
         after = snapshot.track.uri if snapshot.track else None
@@ -240,7 +243,8 @@ class PlaybackController:
             return
         if self._is_ours(snapshot):
             self._mismatches = 0
-            if snapshot.queue_position:
+            # Stopped, the speakers go back to the start of their queue: GuildFM keeps its place.
+            if snapshot.queue_position and snapshot.transport != "STOPPED":
                 self._position = snapshot.queue_position
             return
         if self._clock() < self._grace_until:
@@ -253,22 +257,48 @@ class PlaybackController:
             self._mismatches = 0
             self._remember()
 
-    async def _drop_played_clips(self) -> None:
-        """Take clips the speakers have played back out of their queue, so it holds just songs
-        again and Previous goes back a song rather than to the DJ."""
-        if not self._in_control:
+    async def _trim(self) -> None:
+        """Take what has played off the speakers: clips straight away, so Previous goes back a
+        song rather than to the DJ, and songs once a few more have. The speakers can't wander
+        back through the day, and the queue in the Sonos app stays short."""
+        if not self._in_control or (self._snapshot and self._snapshot.transport == "STOPPED"):
             return
         before = range(min(self._position - 1, len(self._items)))
-        played = [index for index in before if self._items[index].key in self._clips]
-        for index in reversed(played):
+        clips = [index for index in before if self._items[index].key in self._clips]
+        songs = [index for index in before if self._items[index].key not in self._clips]
+        played = clips + songs[: max(0, len(songs) - KEEP_PLAYED)]
+        for index in sorted(played, reverse=True):
             try:
                 await self._call(self._speakers.remove, index + 1)
             except SpeakersUnavailable, SpeakersRefused:
-                log.warning("Couldn't take a clip that has played out of the queue", exc_info=True)
+                log.warning("Couldn't take what has played off the speakers", exc_info=True)
                 break
             self._clips.pop(self._items.pop(index).key, None)
             self._position -= 1
         if played:
+            self._remember()
+
+    async def clear_ahead(self, keep: set[str]) -> None:
+        """Take songs off the speakers that come after the current one but that GuildFM hasn't
+        lined up, leaving `keep` and the clips. They're songs that had played, which the speakers
+        went back to."""
+        if not self._in_control:
+            return
+        ahead = range(self._position, len(self._items))
+        stray = [
+            index
+            for index in ahead
+            if self._items[index].key not in keep and self._items[index].key not in self._clips
+        ]
+        for index in reversed(stray):
+            try:
+                await self._call(self._speakers.remove, index + 1)
+            except SpeakersUnavailable, SpeakersRefused:
+                log.warning("Couldn't take a stray song off the speakers", exc_info=True)
+                break
+            del self._items[index]
+        if stray:
+            log.info("Took %s songs that had played back off the speakers", len(stray))
             self._remember()
 
     @property
@@ -382,12 +412,19 @@ class PlaybackController:
 
     async def play(self) -> None:
         """Resume, or take the speakers back and carry on from where GuildFM left off."""
+        snapshot = self._snapshot
         # After a Stop, the speakers may still hold GuildFM's queue, paused where it was.
-        untouched = bool(self._snapshot and self._items and self._is_ours(self._snapshot))
-        if self._in_control or (untouched and not self._switched):
+        untouched = bool(snapshot and self._items and self._is_ours(snapshot))
+        resume = self._in_control or (untouched and not self._switched)
+        # Stopped, the speakers went back to the start of their queue: GuildFM goes on from its
+        # own place instead, with what it has lined up, or else what's next from the source.
+        stopped = bool(snapshot and snapshot.transport == "STOPPED")
+        if resume and stopped and snapshot.track and self._position < len(self._items):
+            await self._call(self._speakers.play_position, self._position + 1)
+        elif resume and not stopped:
             await self._call(self._speakers.play)
         else:
-            remaining = self._items[self._position - 1 :]
+            remaining = [] if resume and stopped else self._items[self._position - 1 :]
             if not remaining and self.source:
                 remaining = await self.source()
             if not remaining:
@@ -471,7 +508,7 @@ class PlaybackController:
     async def queue_next(self, item: QueueItem) -> None:
         """Line `item` up to play after the current track."""
         self._require_control()
-        position = await self._call(self._speakers.add_next, item)
+        position = await self._call(self._speakers.add_at, item, self._position + 1)
         self._items.insert(position - 1, item)
         self._remember()
 
@@ -511,7 +548,8 @@ class PlaybackController:
     async def play_now(self, item: QueueItem) -> None:
         """Play `item` straight away, taking the speakers over if GuildFM isn't driving them."""
         if self._in_control:
-            position = await self._call(self._speakers.add_next, item)
+            # After GuildFM's place, not wherever stopped speakers went back to.
+            position = await self._call(self._speakers.add_at, item, self._position + 1)
             self._items.insert(position - 1, item)
             await self._call(self._speakers.play_position, position)
         else:

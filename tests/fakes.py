@@ -122,6 +122,13 @@ class FakeSpeakers:
         else:
             self.transport = "STOPPED"
 
+    def next_song_fails(self) -> None:
+        """The song ends and the next one won't play: the speakers stop, and go back to the start
+        of their queue, as Sonos does."""
+        self.transport = "STOPPED"
+        self.position = 1 if self.queue else None
+        self.track_position = 0
+
     def on_clip(self) -> bool:
         """Whether an MP3 from GuildFM is playing from the queue, such as the DJ."""
         ours = self.media_uri == QUEUE_URI.format(uid=COORDINATOR)

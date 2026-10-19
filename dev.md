@@ -19,6 +19,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 9: Announcements
 - [ ] Stage 10: AI radio
 - [ ] Stage 11: Hardening and handover
+- [ ] Stage 12: Line-ups
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -186,6 +187,9 @@ Goal: GuildFM runs unattended on the office machine.
 - [x] After a restart, the DJ remembers what it said lately, where it talked and how many songs since it last did, so it doesn't open with the weather after every restart. Kept with the playing source, so it starts afresh, and talks on the first song, each time a station comes on; before, that only happened the first time after startup. The DJ is always told to bring up the weather, time or news only now and then, naming just the time without global awareness (found while building)
 - [x] The DJ's album shout-out goes on an album's first song even across a restart, and again when the same album is queued another time: whether it has started is read from the play history rather than remembered (found while building)
 - [x] Monitor mode (Settings, admins): GuildFM plays in browsers instead of on the Sonos speakers, songs as beeps for their real length and the DJ, jingles and announcements for real, with "Listen here" at the top of every page. Turning it on or off stops the music and waits for Play; it stays on through a restart (added after building the stage)
+- [x] Explicit tracks blocked by default, from backlog.md: "Allow explicit tracks" in Settings is now off unless an admin turns it on (added after building the stage)
+- [x] GuildFM's logo in place of the cover on Now Playing and the Queue while an announcement, the DJ or a jingle is on, from backlog.md (added after building the stage)
+- [x] GuildFM keeps its own place on the speakers, after Keith found the morning's songs replaying with a station stuck on "After this song": the speakers' queue holds a few played songs, the one on now and what's lined up, and anything else comes off; when stopped speakers go back to the start of their queue, GuildFM and Play carry on from GuildFM's place; and a lined-up song that won't play is skipped after a few seconds (found while building)
 - [x] Graceful failure: speakers offline (a clip still plays in the rooms that answer), Spotify token expired, OpenAI and ElevenLabs errors including running out of credit, and the weather or a cover failing. The music keeps playing and the DJ goes quiet. An announcement whose ElevenLabs voice fails is read out in the OpenAI announcement voice instead. A station whose AI can't pick plays songs from before (its earlier picks, then its older plays, then Best Voted) rather than going silent (decided while building)
 - [x] Logging and a simple status view for admins (Admin, Status): the speakers, Spotify, OpenAI, ElevenLabs (with the credits used this month), the weather, whether ffmpeg was found, the backups and disk space, and recent problems from the log. Each service is judged by how GuildFM's own calls to it went, not by test calls
 - [x] Run as a service: a systemd unit (`deploy/guildfm.service`) rather than Docker, ffmpeg in the setup steps, old speech clips cleared out daily rather than only at startup, and `scripts/update.sh` for updates. An empty `AUDIO_LOUDNESS=` no longer stops GuildFM starting (found while building)
@@ -196,3 +200,18 @@ Goal: GuildFM runs unattended on the office machine.
 - [ ] Full end-to-end run on the office speakers: requests and votes, a whole album, a station with an ElevenLabs DJ and its jingles, an announcement in chosen rooms, and installing GuildFM on a phone
 
 Done when: GuildFM survives a restart of the machine and a day of normal office use without anyone touching it.
+
+## Stage 12: Line-ups
+Goal: curators plan the day as a line-up of AI shows and playlists, and GuildFM switches between them by the clock. From backlog.md, where it was called schedules.
+- [x] [Prototype](https://claude.ai/artifact/UHq9ijCE69mbRoYD1C6ccK) for Keith to review: the Line-ups page, the line-up editor (a bar across the screen on desktop, down it on phones) and Now Playing's Line-ups band, as a list of line-ups and as a time strip with the needle, on phone and desktop
+- [x] Line-up model: name, description, cover, and slots (a station or a playlist, with a start and an end time on 15-minute steps, never overlapping)
+- [x] Switching by the clock: a line-up as the source, its slot worked out from the time, each slot starting at the first song change after its start time. A playlist still playing when its slot ends is cut off there, a gap falls back to "When the queue runs out", and slots outside a day's playback hours don't play
+- [x] Hand-overs: when a show starts, its station ident, then its DJ saying what's on and until when
+- [x] Line-ups page and editor: list, new, edit and delete. Drag, move and resize on desktop; a day view with start and end times on phones. Playlists as long as the playlist or shorter, and the note that requests shift the timings a little
+- [x] Covers painted from the name and description, as for stations
+- [x] Now Playing: the Line-ups band (a fourth tab on phones) with the line-ups as tiles, and once one is on, its slots along a time strip with the needle moving with the clock, and back to the list. Picking a playlist, a station or Requests only ends the line-up
+- [x] Line-ups in the sidebar on desktop, and on phones through Now Playing's Line-ups tab, keeping the tabs to five
+- [x] A show's station picks its first songs up to ten minutes before the show, kept on the station until it comes on, so the show starts without waiting for the AI (added after building the stage)
+- [x] A "Put on" button on the Line-ups page as well as Now Playing, as in the prototype; a playlist that runs out before its slot ends starts over; and a line-up whose playing station or playlist is deleted carries on, with a gap there (decided while building)
+
+Done when: a line-up with a morning playlist, a lunchtime show and an afternoon show runs through a day by itself, each show opening with its ident and its DJ, while requests still play first.

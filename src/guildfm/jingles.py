@@ -97,6 +97,19 @@ class Rotation:
         self._changes = GAP  # song changes since the last jingle
         self._last: dict[str, int] = {}  # kind: the jingle of that kind that played last
 
+    def opening(self, jingles: list[Jingle]) -> Jingle | None:
+        """A line-up's show starting: one of its station idents, however lately the last
+        jingle played."""
+        options = [jingle for jingle in jingles if jingle.kind == JingleKind.STATION]
+        if not options:
+            self._changes += 1
+            return None
+        last = self._last.get(JingleKind.STATION.value)
+        chosen = random.choice([jingle for jingle in options if jingle.id != last] or options)
+        self._last[JingleKind.STATION.value] = chosen.id
+        self._changes = 0
+        return chosen
+
     def next(self, kind: str | None, jingles: list[Jingle]) -> Jingle | None:
         """The next song change, marked for an ident of `kind` or not: the jingle to play."""
         self._changes += 1
@@ -117,15 +130,16 @@ class JinglePlayer:
         self._media = media_dir
         self._rotation = Rotation()
 
-    async def lined_up(self, entry_id: int, key: str) -> None:
+    async def lined_up(self, entry_id: int, key: str, opens: int | None = None) -> None:
         try:
-            await self.play(entry_id, key)
+            await self.play(entry_id, key, opens)
         except Exception:
             log.exception("Couldn't line up a jingle")
 
-    async def play(self, entry_id: int, key: str) -> Spoken | None:
+    async def play(self, entry_id: int, key: str, opens: int | None = None) -> Spoken | None:
         """The song lined up as `entry_id` is coming next: if the AI marked it for an ident,
-        queue one for the pause before it. Returns the jingle queued, if any."""
+        queue one for the pause before it. A song that `opens` a line-up's show gets one of the
+        station's own idents. Returns the jingle queued, if any."""
         async with self._sessions() as db:
             source = await current_source(db)
             station = source.station if source and source.station_id else None
@@ -136,8 +150,13 @@ class JinglePlayer:
             if station.jingles and entry.requested_by is None:
                 picked = await db.get(PickNote, entry.track_id)
                 marked = picked.ident if picked else None
+                if opens is not None:
+                    marked = JingleKind.STATION.value
             jingles = await playable(db, station.id) if marked else []
-        jingle = self._rotation.next(marked, jingles)
+        if opens is not None:
+            jingle = self._rotation.opening(jingles)
+        else:
+            jingle = self._rotation.next(marked, jingles)
         if jingle is None:
             return None
         clip = Clip(folder(self._media) / jingle.file, jingle.seconds, JINGLES)

@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { Link } from "react-router";
 import type {
+  LineupTile,
   NowState,
   PlaylistTile,
   QueueEntry,
@@ -13,6 +14,7 @@ import { Icon } from "../components/Icon";
 import { StationCover } from "../components/StationCover";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { ago } from "../live/status";
+import { inLineupCaption, LineupBand, LineupTab } from "./NowLineups";
 import n from "./NowPlaying.module.css";
 
 /** What the sources need from the page: what's on, and how to switch. */
@@ -24,10 +26,16 @@ export type Sources = {
   canSwitch: boolean;
   pick: (playlist: PlaylistTile) => void;
   pickStation: (station: StationTile) => void;
+  pickLineup: (lineup: LineupTile) => void;
   requestsOnly: () => void;
 };
 
-const NAMES: Record<SourceKind, string> = { queue: "Queue", library: "Playlists", radio: "Radio" };
+const NAMES: Record<SourceKind, string> = {
+  queue: "Queue",
+  library: "Playlists",
+  radio: "Radio",
+  lineups: "Line-ups",
+};
 
 /** Three bouncing bars: this is what's on air. */
 export function OnAirBars({ dark = false }: { dark?: boolean }) {
@@ -196,7 +204,7 @@ function RequestTile({ entry, caption, onAir }: { entry: QueueEntry; caption: Re
 }
 
 export function Bands(sources: Sources) {
-  const { now, canSwitch, pick, pickStation, requestsOnly } = sources;
+  const { now, canSwitch, pick, pickStation, pickLineup, requestsOnly } = sources;
   const { playing, next, waiting, count } = queueParts(sources);
   const playlists = now?.playlists ?? [];
 
@@ -205,7 +213,7 @@ export function Bands(sources: Sources) {
       <p className={n.hint}>
         Requests always play first.{" "}
         {canSwitch
-          ? "Pick a playlist or station to fill the gaps between them: it takes over after this song."
+          ? "Pick a playlist, station or line-up to fill the gaps between them: it takes over after this song."
           : "Curators and admins choose what fills the gaps between them."}
       </p>
 
@@ -276,6 +284,8 @@ export function Bands(sources: Sources) {
         )}
       </Band>
 
+      <LineupBand now={now} canSwitch={canSwitch} pickLineup={pickLineup} />
+
       <Band
         id="band-library"
         label="Playlists"
@@ -299,7 +309,9 @@ export function Bands(sources: Sources) {
             <Covers urls={playlist.covers} />
             <span className={n.tileText}>
               <span className={n.tileName}>{playlist.name}</span>
-              <span className={n.tileCaption}>{lastPlayed(playlist)}</span>
+              <span className={n.tileCaption}>
+                {inLineupCaption(now, playlist.in_lineup) ?? lastPlayed(playlist)}
+              </span>
             </span>
             <span className={n.tileFoot}>
               <PlaylistBadge playlist={playlist} sources={sources} />
@@ -333,7 +345,9 @@ export function Bands(sources: Sources) {
             <StationArt url={station.art_url} />
             <span className={n.tileText}>
               <span className={n.tileName}>{station.name}</span>
-              <span className={n.tileCaption}>{stationCaption(station)}</span>
+              <span className={n.tileCaption}>
+                {inLineupCaption(now, station.in_lineup) ?? stationCaption(station)}
+              </span>
             </span>
             <span className={n.tileFoot}>
               <PlaylistBadge playlist={station} sources={sources} />
@@ -366,7 +380,7 @@ function RequestRow({ entry, caption, onAir }: { entry: QueueEntry; caption: Rea
 }
 
 export function SourceTabs(sources: Sources) {
-  const { now, canSwitch, pick, pickStation, requestsOnly } = sources;
+  const { now, canSwitch, pick, pickStation, pickLineup, requestsOnly } = sources;
   const { playing, next, waiting, count } = queueParts(sources);
   const onAir = now?.on_air ?? null;
   // Until someone picks a tab, show whichever source is on air.
@@ -383,7 +397,7 @@ export function SourceTabs(sources: Sources) {
         <p className={n.hint}>
           Requests always play first.{" "}
           {canSwitch
-            ? "Pick a playlist or station to fill the gaps after this song."
+            ? "Pick a playlist, station or line-up to fill the gaps after this song."
             : "Curators and admins choose what fills the gaps."}
         </p>
       </div>
@@ -391,7 +405,7 @@ export function SourceTabs(sources: Sources) {
         label="Sources"
         value={tab}
         onChange={setChosen}
-        options={(["queue", "library", "radio"] as const).map((kind) => ({
+        options={(["queue", "library", "radio", "lineups"] as const).map((kind) => ({
           value: kind,
           label: (
             <span className={n.tabLabel}>
@@ -453,7 +467,9 @@ export function SourceTabs(sources: Sources) {
                   <Covers urls={playlist.covers} />
                   <span className={n.rowText}>
                     <span className={n.rowName}>{playlist.name}</span>
-                    <span className={n.rowCaption}>{lastPlayed(playlist)}</span>
+                    <span className={n.rowCaption}>
+                      {inLineupCaption(now, playlist.in_lineup) ?? lastPlayed(playlist)}
+                    </span>
                   </span>
                   <PlaylistBadge playlist={playlist} sources={sources} />
                 </Pickable>
@@ -463,6 +479,8 @@ export function SourceTabs(sources: Sources) {
           {now && playlists.length === 0 && <p className={n.emptyRow}>No playlists yet.</p>}
         </>
       )}
+
+      {tab === "lineups" && <LineupTab now={now} canSwitch={canSwitch} pickLineup={pickLineup} />}
 
       {tab === "radio" && (
         <>
@@ -477,7 +495,9 @@ export function SourceTabs(sources: Sources) {
                   <StationArt url={station.art_url} />
                   <span className={n.rowText}>
                     <span className={n.rowName}>{station.name}</span>
-                    <span className={n.rowCaption}>{stationCaption(station)}</span>
+                    <span className={n.rowCaption}>
+                      {inLineupCaption(now, station.in_lineup) ?? stationCaption(station)}
+                    </span>
                   </span>
                   <PlaylistBadge playlist={station} sources={sources} />
                 </Pickable>

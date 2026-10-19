@@ -6,6 +6,7 @@ from guildfm.api import (
     djs,
     health,
     jingles,
+    lineups,
     now,
     playback,
     playlists,
@@ -32,6 +33,7 @@ router.include_router(playlists.router)
 router.include_router(now.router)
 router.include_router(announcements.router)
 router.include_router(stations.router)
+router.include_router(lineups.router)
 router.include_router(djs.router)
 router.include_router(jingles.router)
 router.include_router(voices.router)

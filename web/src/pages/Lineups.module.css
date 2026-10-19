@@ -1,0 +1,193 @@
+/* On a desktop the sidebar has Line-ups, so the way back to Now Playing is for phones. */
+@media (min-width: 768px) {
+  .back {
+    display: none;
+  }
+}
+
+.intro {
+  max-width: 640px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.dayNote {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.show {
+  background: var(--show);
+}
+
+.playlist {
+  background: var(--playlist-fill);
+}
+
+.gap {
+  border: 1px dashed var(--faint);
+}
+
+.grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+}
+
+.card {
+  height: 100%;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardOn {
+  border-color: var(--accent-line);
+  background: var(--accent-tint);
+}
+
+.cardTop {
+  display: flex;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cover {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.onAir {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+
+.summary {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dayBar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barTrack {
+  position: relative;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--bar);
+  overflow: hidden;
+}
+
+.segment {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 4px;
+}
+
+.barHours {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.buttons {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.newCard,
+.newCard:hover {
+  height: 100%;
+  min-height: 200px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.newCard:hover {
+  color: var(--text);
+  border-color: var(--faint);
+}

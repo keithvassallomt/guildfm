@@ -26,6 +26,12 @@
   --down-soft: rgba(141, 180, 255, 0.16);
   --warn: #f5c451;
   --warn-soft: rgba(245, 196, 81, 0.14);
+  /* Line-ups: shows and playlists on the day, told apart by lightness as well as hue. */
+  --show: #e0894d;
+  --show-soft: rgba(224, 137, 77, 0.3);
+  --playlist: #7c9ac6;
+  --playlist-fill: #4d6a94;
+  --playlist-soft: rgba(77, 106, 148, 0.45);
 
   --font-display: "Bricolage Grotesque Variable", sans-serif;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;

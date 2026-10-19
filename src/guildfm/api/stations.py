@@ -23,7 +23,17 @@ from guildfm.covers import painted_from
 from guildfm.db import get_session
 from guildfm.dj import voice_instructions
 from guildfm.jingles import forget
-from guildfm.models import DJProfile, DJStyle, Jingle, Play, Station, StationKind, TalkUnit, User
+from guildfm.models import (
+    DJProfile,
+    DJStyle,
+    Jingle,
+    Play,
+    SourceState,
+    Station,
+    StationKind,
+    TalkUnit,
+    User,
+)
 from guildfm.permissions import Permission
 from guildfm.playlists import current_source
 from guildfm.prefs import get_pref, set_pref
@@ -288,8 +298,13 @@ async def delete(station_id: int, _: Maker, request: Request, db: Db) -> Respons
     for jingle in await db.scalars(select(Jingle).where(Jingle.station_id == station.id)):
         forget(media(request), jingle)
     request.app.state.covers.forget(station)
+    # A line-up playing it carries on without it: its slot becomes a gap.
+    source = await db.get(SourceState, 1)
+    lineup_id = source.lineup_id if source and source.station_id == station.id else None
     await db.delete(station)
     await db.commit()
+    if lineup_id:
+        await request.app.state.queue.keep_lineup_on(lineup_id)
     await request.app.state.queue.changed()
     return Response(status_code=204)
 

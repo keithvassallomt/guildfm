@@ -17,7 +17,7 @@ VOICES = (
 QUEUE_RUNS_OUT = ("restart_playlist", "default_station", "ai_pick")
 
 DEFAULTS: dict[str, Any] = {
-    "allow_explicit": True,
+    "allow_explicit": False,  # off: hidden from search, refused as requests, kept off stations
     "request_cap": 5,  # requests one person can have in the queue at once
     "downvote_threshold": -3,  # a request is removed when its score falls to this
     "recently_played_hours": 24,

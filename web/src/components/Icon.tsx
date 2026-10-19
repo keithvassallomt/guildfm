@@ -14,6 +14,7 @@ const paths = {
       <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" />
     </>
   ),
+  lineups: <path d="M4 6h7M14 6h6M4 12h3M10 12h10M4 18h11M18 18h2" />,
   search: (
     <>
       <circle cx="11" cy="11" r="7" />

@@ -14,7 +14,7 @@ from guildfm.api.schemas import TrackOut
 from guildfm.api.search import AlbumOut
 from guildfm.auth import require
 from guildfm.db import get_session
-from guildfm.models import Playlist, PlaylistKind, PlaylistTrack, Track, User
+from guildfm.models import Playlist, PlaylistKind, PlaylistTrack, SourceState, Track, User
 from guildfm.permissions import Permission
 from guildfm.playlists import add_track, covers, current_source, thumb_down, tracks_of
 from guildfm.prefs import get_pref
@@ -225,8 +225,13 @@ async def delete(playlist_id: int, _: Editor, request: Request, db: Db) -> None:
     playlist = await _playlist(db, playlist_id)
     if playlist.kind == PlaylistKind.BEST_VOTED:
         raise HTTPException(409, "Best Voted can't be deleted.")
+    # A line-up playing it carries on without it: its slot becomes a gap.
+    source = await db.get(SourceState, 1)
+    lineup_id = source.lineup_id if source and source.playlist_id == playlist.id else None
     await db.delete(playlist)
     await db.commit()
+    if lineup_id:
+        await engine(request).keep_lineup_on(lineup_id)
     await engine(request).changed()
 
 

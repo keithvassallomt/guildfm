@@ -38,6 +38,11 @@ export function opensAgain(hours: { next_change: string | null }): string {
   return `Opens again ${today ? "today" : day} at ${time}.`;
 }
 
+/** Whether GuildFM's own sound is on: an announcement, the DJ or a jingle. */
+export function ownClip(state: PlaybackState): boolean {
+  return state.announcing || state.dj_talking || state.jingle;
+}
+
 /** The status chip's words: "Closed" rather than "Stopped" outside playback hours. */
 export function chipLabel(state: PlaybackState): string {
   if (state.announcing) return "Announcing";

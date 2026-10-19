@@ -210,6 +210,8 @@ class Station(Base):
     created_at: Mapped[float]
     # Track ids it picked lately, oldest first, so it doesn't repeat itself.
     picked: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Songs picked ahead of its show in a line-up, waiting for it to come on.
+    ready: Mapped[list[str]] = mapped_column(JSON, default=list)
     # Its cover's file name in the media folder's covers, once OpenAI has painted one.
     art: Mapped[str | None] = mapped_column(String(64), default=None)
     # The name and description the cover was painted from, as covers.painted_from has them.
@@ -264,6 +266,60 @@ class Jingle(Base):
         return f"/media/{JINGLES}/{self.file}"
 
 
+class LineupSlot(Base):
+    """A stretch of a line-up's day, in minutes after midnight on quarter hours: an AI station
+    (a show) or a playlist. Deleting the station or playlist deletes the slot, leaving a gap."""
+
+    __tablename__ = "lineup_slots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lineup_id: Mapped[int] = mapped_column(ForeignKey("lineups.id", ondelete="CASCADE"), index=True)
+    start: Mapped[int]
+    end: Mapped[int]
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), default=None
+    )
+    playlist_id: Mapped[int | None] = mapped_column(
+        ForeignKey("playlists.id", ondelete="CASCADE"), default=None
+    )
+
+    station: Mapped[Station | None] = relationship(lazy="joined")
+    playlist: Mapped[Playlist | None] = relationship(lazy="joined")
+
+
+class Lineup(Base):
+    """A plan for the day: which AI station or playlist fills the gaps between requests at each
+    time of day, like a radio station's schedule. See lineups.py."""
+
+    __tablename__ = "lineups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str] = mapped_column(String(600), default="")
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    created_at: Mapped[float]
+    # When it was last put on, so the most recent comes first.
+    last_on_at: Mapped[float | None] = mapped_column(default=None)
+    # Its cover's file name in the media folder's covers, once OpenAI has painted one.
+    art: Mapped[str | None] = mapped_column(String(64), default=None)
+    # The name and description the cover was painted from, as covers.painted_from has them.
+    art_for: Mapped[str | None] = mapped_column(String(32), default=None)
+
+    creator: Mapped[User | None] = relationship(lazy="joined")
+    slots: Mapped[list[LineupSlot]] = relationship(
+        lazy="selectin",
+        order_by=LineupSlot.start,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    @property
+    def art_url(self) -> str | None:
+        return f"/media/{COVERS}/{self.art}" if self.art else None
+
+
 class SourceState(Base):
     """What fills the gaps between requests: a playlist and how far through it GuildFM is, or a
     station and the songs it has picked so far. A row with neither means "requests only" was
@@ -285,12 +341,18 @@ class SourceState(Base):
     # Tracks thumbed down enough to skip this time round, and who thumbed them down.
     skipped: Mapped[list[str]] = mapped_column(JSON, default=list)
     downvotes: Mapped[dict[str, list[int]]] = mapped_column(JSON, default=dict)
+    # A line-up that's on: it puts its slots' stations and playlists on by the clock, as the
+    # station or playlist above.
+    lineup_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lineups.id", ondelete="CASCADE"), default=None
+    )
     # For a station with a DJ: songs since the DJ last talked, when that was, and where it
     # talked and what it said lately. None until it's first asked, each time the station comes on.
     dj_memory: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
 
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
     station: Mapped[Station | None] = relationship(lazy="joined")
+    lineup: Mapped[Lineup | None] = relationship(lazy="joined")
 
 
 class QueueEntry(Base):

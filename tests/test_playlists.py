@@ -193,11 +193,11 @@ def test_adding_a_whole_album(client: TestClient, people) -> None:
     assert again.json()["detail"] == "Every song on that album is already in the playlist."
 
 
-def test_explicit_album_songs_are_left_out_when_not_allowed(client: TestClient) -> None:
+def test_explicit_album_songs_are_left_out_unless_allowed(client: TestClient) -> None:
     sign_in(client, *ADMIN)
-    assert titles(client.get(f"/api/albums/{spotify_id('damn')}").json()) == ["HUMBLE."]
-    client.patch("/api/settings", json={"allow_explicit": False}).raise_for_status()
     assert titles(client.get(f"/api/albums/{spotify_id('damn')}").json()) == []
+    client.patch("/api/settings", json={"allow_explicit": True}).raise_for_status()
+    assert titles(client.get(f"/api/albums/{spotify_id('damn')}").json()) == ["HUMBLE."]
 
 
 def test_importing_an_album(client: TestClient) -> None:

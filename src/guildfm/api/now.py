@@ -9,11 +9,14 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm.api.lineups import DayOut, SlotOut, slots_out
 from guildfm.api.schemas import PersonOut, TrackOut
 from guildfm.auth import ActiveUser
 from guildfm.db import get_session
+from guildfm.lineups import day_span, gap_station, minute_of
 from guildfm.models import (
     EntryState,
+    Lineup,
     Play,
     Playlist,
     PlaylistKind,
@@ -22,6 +25,7 @@ from guildfm.models import (
     StationKind,
 )
 from guildfm.playlists import covers, current_source, requests_only
+from guildfm.prefs import get_pref
 from guildfm.queue import in_state
 
 router = APIRouter()
@@ -38,6 +42,7 @@ class PlaylistTileOut(BaseModel):
     last_played_at: datetime | None
     filling: bool  # the playlist filling the gaps between requests
     on_air: bool  # the current song came from it
+    in_lineup: bool  # the line-up that's on is playing it
 
 
 class StationTileOut(BaseModel):
@@ -51,14 +56,28 @@ class StationTileOut(BaseModel):
     last_played_at: datetime | None
     filling: bool  # the station filling the gaps between requests
     on_air: bool  # the current song came from it
+    in_lineup: bool  # the line-up that's on is playing it
+
+
+class LineupTileOut(BaseModel):
+    id: int
+    name: str
+    art_url: str | None
+    slots: list[SlotOut]
+    last_on_at: datetime | None
+    on: bool  # the source now
 
 
 class NowOut(BaseModel):
     # Where the current song came from, if GuildFM put it on.
-    on_air: Literal["queue", "library", "radio"] | None
+    on_air: Literal["queue", "library", "radio", "lineups"] | None
     requests_only: bool  # someone chose to have nothing fill the gaps between requests
     playlists: list[PlaylistTileOut]  # last played first
     stations: list[StationTileOut]  # last played first
+    lineups: list[LineupTileOut]  # the one on first, then the most recently on
+    day: DayOut  # the day line-ups plan
+    minute: int  # the time in the office, in minutes after midnight, for the needle
+    gap: str  # what fills a gap in a line-up
 
 
 class PlayOut(BaseModel):
@@ -82,13 +101,16 @@ def _when(epoch: float) -> datetime:
 
 
 @router.get("/now")
-async def now(_: ActiveUser, db: Db) -> NowOut:
+async def now(_: ActiveUser, request: Request, db: Db) -> NowOut:
     source = await current_source(db)
+    lineup_on = source.lineup_id if source else None
     playing = await in_state(db, EntryState.PLAYING)
     on_air = None
     if playing:
         if playing.requested_by:
             on_air = "queue"
+        elif lineup_on:
+            on_air = "lineups"
         elif playing.playlist_id:
             on_air = "library"
         elif playing.station_id:
@@ -135,6 +157,13 @@ async def now(_: ActiveUser, db: Db) -> NowOut:
         stations,
         key=lambda s: (-played.get(s.id, 0), s.kind == StationKind.AI_PICKS, s.name.lower()),
     )
+    lineups = sorted(
+        (await db.scalars(select(Lineup))).unique().all(),
+        key=lambda lineup: (lineup.id != lineup_on, -(lineup.last_on_at or 0), lineup.name.lower()),
+    )
+    start, end = day_span(await get_pref(db, "schedule"))
+    office = await request.app.state.queue.office_time(db)
+    alone = lineup_on is None
     return NowOut(
         on_air=on_air,
         requests_only=await requests_only(db),
@@ -147,8 +176,9 @@ async def now(_: ActiveUser, db: Db) -> NowOut:
                 shuffle=playlist.shuffle,
                 covers=await covers(db, playlist.id),
                 last_played_at=_when(last[playlist.id]) if playlist.id in last else None,
-                filling=bool(source and source.playlist_id == playlist.id),
-                on_air=bool(playing and playing.playlist_id == playlist.id),
+                filling=alone and bool(source and source.playlist_id == playlist.id),
+                on_air=alone and bool(playing and playing.playlist_id == playlist.id),
+                in_lineup=not alone and source.playlist_id == playlist.id,
             )
             for playlist in ordered
         ],
@@ -162,11 +192,26 @@ async def now(_: ActiveUser, db: Db) -> NowOut:
                 global_awareness=station.global_awareness,
                 art_url=station.art_url,
                 last_played_at=_when(played[station.id]) if station.id in played else None,
-                filling=bool(source and source.station_id == station.id),
-                on_air=bool(playing and playing.station_id == station.id),
+                filling=alone and bool(source and source.station_id == station.id),
+                on_air=alone and bool(playing and playing.station_id == station.id),
+                in_lineup=not alone and source.station_id == station.id,
             )
             for station in by_last
         ],
+        lineups=[
+            LineupTileOut(
+                id=lineup.id,
+                name=lineup.name,
+                art_url=lineup.art_url,
+                slots=await slots_out(db, lineup.slots),
+                last_on_at=_when(lineup.last_on_at) if lineup.last_on_at else None,
+                on=lineup.id == lineup_on,
+            )
+            for lineup in lineups
+        ],
+        day=DayOut(start=start, end=end),
+        minute=minute_of(office),
+        gap=(await gap_station(db)).name,
     )
 
 

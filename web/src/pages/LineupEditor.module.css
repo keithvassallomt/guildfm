@@ -1,0 +1,451 @@
+.saveState {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.about {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.fields {
+  flex: 999 1 420px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coverNote {
+  flex: 1 1 240px;
+}
+
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.textarea {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--faint);
+}
+
+.textarea:focus-visible,
+.select:focus-visible {
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+
+.select {
+  height: 48px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+
+.hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.cover {
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.coverArt {
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coverText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.day,
+.panel {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dayTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--down-soft);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+/* The desktop day: a bar from opening to closing. */
+
+.barWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hours {
+  position: relative;
+  height: 18px;
+}
+
+.hour {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.bar {
+  position: relative;
+  height: 104px;
+  border-radius: 14px;
+  background-color: var(--bar);
+  background-image:
+    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(65, 53, 48, 0.45) 1px, transparent 1px);
+  user-select: none;
+  touch-action: none;
+}
+
+.gap {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  border-radius: 10px;
+  border: 1px dashed var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--faint);
+  pointer-events: none;
+}
+
+.slot {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.slot:active {
+  cursor: grabbing;
+}
+
+.show {
+  background: var(--show-soft);
+  border-color: var(--show);
+}
+
+.playlist {
+  background: var(--playlist-soft);
+  border-color: var(--playlist);
+}
+
+.selected {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.slotName {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slotTimes {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-soft);
+}
+
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.handle::after {
+  content: "";
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--text);
+}
+
+.handleStart {
+  left: 0;
+}
+
+.handleEnd {
+  right: 0;
+}
+
+.ghost {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 2px dashed var(--accent);
+  background: var(--accent-tint);
+  display: flex;
+  align-items: flex-end;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.lower {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.lower > :first-child {
+  flex: 999 1 420px;
+  min-width: 0;
+}
+
+.lower > :last-child {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.group {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: var(--touch);
+  padding: 0 12px 0 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--bar);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: grab;
+}
+
+.chip:hover {
+  border-color: var(--faint);
+  background: var(--surface-raised);
+}
+
+.chipArt {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chipText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.chipName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chipMeta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* The phone day: running down the screen, a pixel a minute. */
+
+.column {
+  position: relative;
+}
+
+.columnHour {
+  position: absolute;
+  left: 0;
+  width: 42px;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.columnLine {
+  position: absolute;
+  left: 48px;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.columnGap,
+.columnSlot {
+  position: absolute;
+  left: 52px;
+  right: 0;
+  padding: 0 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 2px 8px;
+  text-align: left;
+}
+
+.columnGap {
+  justify-content: center;
+  border: 1px dashed var(--faint);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.columnSlot {
+  border: 1px solid;
+}
+
+.tall {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* A slot's times and notes, beside the desktop day or in a phone's sheet. */
+
+.slotFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.slotNote {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+.dialogActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.spacer {
+  flex: 1;
+}

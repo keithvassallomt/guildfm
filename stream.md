@@ -8,10 +8,11 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - **Queue**: the live list of upcoming tracks that everyone sees and votes on. There is one queue for the whole office.
 - **Playlist**: a saved list of tracks that can be played (for example, the Best Voted playlist, or one a curator created or imported).
 - **Station**: an AI radio station, which picks its own tracks and can have a DJ.
-- **Source**: the playlist or station that keeps the music going when nobody has requested anything.
+- **Source**: the playlist, station or line-up that keeps the music going when nobody has requested anything.
 - **Request**: a track a user adds to the queue. Requests always play before tracks from the source.
 - **Jingle**: a short ident an AI station plays between songs. A **system ident** is GuildFM's own, for any station; a **station ident** belongs to one station.
 - **DJ**: a voice with a name and a personality that talks between songs on an AI station. One DJ can host several stations.
+- **Line-up**: a plan for the day, like a radio station's schedule: which AI station or playlist fills the gaps between requests at each time of day. An AI station on a line-up is a **show**.
 
 ## Users and Roles
 - Users must register an account and log in to access the system. Users can create their own accounts.
@@ -28,7 +29,8 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 | Add a whole album to the queue | | Yes | Yes |
 | Create and import playlists | | Yes | Yes |
 | Create AI stations | | Yes | Yes |
-| Start or switch playlists and AI stations | | Yes | Yes |
+| Plan line-ups | | Yes | Yes |
+| Start or switch playlists, AI stations and line-ups | | Yes | Yes |
 | Play, pause, resume, skip and previous | | Yes | Yes |
 | Volume and stop | | | Yes |
 | Create announcements | | | Yes |
@@ -51,8 +53,9 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 ## Now Playing
 - The screen everyone lands on, and the first tab. The Queue screen stays its own tab, for requesting and voting.
 - Shows the current song, how far through it is, and where it came from: a request (and who asked), a playlist, or an AI station.
+- While an announcement, the DJ or a jingle is on, Now Playing and the Queue show GuildFM's logo in place of the song's cover.
 - Curators and admins get the playback controls here. Admins also get the office volume, each room's volume behind a "Rooms" toggle, Stop all, and an Announce button for a quick one-off announcement in every room (picking rooms and scheduling are on the Announcements page). These are the only full playback controls: the Admin page just links to Announcements, Users and Settings.
-- The sources: Queue, Playlists and Radio (AI stations). Playlists and Radio are sorted by when they last played, most recent first. The queue keeps its vote order.
+- The sources: Queue, Playlists, Radio (AI stations) and Line-ups. Playlists and Radio are sorted by when they last played, most recent first. The queue keeps its vote order.
 - The source the current song came from is highlighted and animated. Requests always play first: a picked playlist or station fills the gaps between them, and says so while a request is playing.
 - Curators and admins switch source by picking a playlist or station, which takes over after the current song. "Requests only" means nothing fills the gaps.
 - Below the sources: the songs played today, newest first, each with where it came from.
@@ -66,7 +69,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Each user can have a limited number of tracks in the queue at once. The cap is a setting (default: 5). Admins have no cap.
 - A track that is already in the queue cannot be added again.
 - Tracks played recently show a warning badge (for example, "played 2 hours ago") in search and in the queue, but can still be added.
-- Explicit tracks are allowed by default. Admins can block them in settings.
+- Explicit tracks are blocked by default: hidden from search, refused as requests, and left out of albums and AI stations. Admins can allow them in settings.
 - Curators and admins can add a whole album to the queue: albums show up in their search, and opening one lists its songs, with a button to queue them all (or the ones not already queued). They go in as that person's requests, in the album's order, and don't count towards the cap. Votes move them like any other request. Songs already in the queue stay where they are, and explicit ones are left out when they're turned off. The DJ names the requester on the album's first song only, and the queue marks the songs as part of a whole album.
 - Curators can manage the queue without voting: override votes, reorder tracks, and remove any track. Curators and admins reorder by dragging a request (press and hold on a phone), or with the up and down arrows. A request's actions (the arrows, and remove) are tucked behind a small arrow on its right, which slides them out when tapped.
 - Votes reorder everything after the next track. GuildFM hands the next track to Sonos shortly before it plays, so that one is locked.
@@ -92,6 +95,8 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - The dashboard shows that GuildFM has been overridden. Pressing Play takes control back and continues what was playing before.
 - If the Arc is switched to the TV, it just drops out of the group. GuildFM carries on in the other rooms.
 - If GuildFM restarts while the speakers are still playing its queue, it carries on where it was. Anything else on the speakers after a restart is left alone until someone presses Play.
+- GuildFM keeps its own place on the speakers. Their queue holds a few songs that have played (for Previous), the song on now and what's lined up after it; anything else comes off. When the speakers stop, Sonos goes back to the start of its queue, but GuildFM carries on from its own place.
+- A lined-up song that won't play is skipped after a few seconds, and the next one plays. The activity on the Queue screen says so.
 
 ### Monitor mode
 - An admin can switch on monitor mode in Settings, to try GuildFM out without the office hearing. GuildFM then plays in browsers instead of on the Sonos speakers.
@@ -190,6 +195,23 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - If announce requests is on, the DJ announces the request and the display name of the user who made it, unless that user has opted out. If announce requests is off, the DJ does not announce requests.
 - Users can vote on station tracks. Votes do not teach the station, so its taste isn't polluted.
 
+## Line-ups
+- Curators and admins plan the day as line-ups on the Line-ups page, and put one on from there or from Now Playing. A line-up is picked by hand; it isn't tied to days of the week.
+- A line-up has a name, a description, and a cover that OpenAI paints from them, like a station's.
+- The editor shows the day as a bar from the earliest opening time to the latest closing time in the playback hours. On a desktop the bar runs across the screen; on a phone it runs down it, like a calendar's day view.
+- Shows and playlists go onto the bar, snapping to 15 minutes, and never overlap. On a desktop they're dragged on and moved by dragging; on a phone they're added with a start and an end time.
+    - A show runs for as long as its slot, which can be moved and resized.
+    - A playlist's slot starts as long as the playlist, and can be shortened but not lengthened.
+    - Gaps are allowed. During one, "When the queue runs out" decides what plays.
+- A note on the editor says requests can shift the timings a little.
+- Slots run by the clock. Each starts at the first song change after its start time, so requests can make it start up to a song late, but the day never drifts. A playlist that hasn't finished when its slot ends is cut off there, and one that runs out before its slot ends starts over.
+- On a day with shorter playback hours, the slots outside them don't play.
+- Hand-overs: when a show starts, its station ident plays (if it has one and jingles are on), then its DJ, if it has one, says what's on and until when. The show's station picks its first songs up to ten minutes ahead, so it starts without waiting for the AI.
+- Picking a line-up on Now Playing makes it the source, starting with the slot that covers the time now. It stays the source from day to day until someone picks something else: a playlist, a station or "Requests only" ends it, as switching source always does. At opening time GuildFM starts with the slot that covers it.
+- On Now Playing, the Line-ups band sits with Queue, Playlists and Radio, and is a fourth tab on phones. It lists the line-ups as tiles. Once one is on, the band shows its slots along a time strip, with the needle moving with the clock over what's on and what's next, and a back button to the list.
+- Line-ups has its own place in the sidebar on a desktop. On a phone it's reached from Now Playing's Line-ups tab, keeping the bottom tabs to five.
+- Deleting a station or playlist leaves a gap where it was on any line-up, even while the line-up is playing it. Deleting the line-up that's on means nothing fills the gaps, as when a playing playlist is deleted.
+
 ## As an app
 - GuildFM can be installed as an app, opening from the home screen or dock in its own window, with its own icon. Profile has a section on it: an Install button where the browser offers one, and on an iPhone or iPad, Safari's two steps (Share, then Add to Home Screen). It's hidden when GuildFM is already running as the app.
 - Chrome, Edge and Android only offer to install over HTTPS (or on the machine itself), so in the office that needs GuildFM behind HTTPS. Over plain HTTP, their "add to home screen" is a shortcut that opens a browser tab.
@@ -209,7 +231,7 @@ GuildFM runs unattended on an always-on machine in the office. How to set it up 
 - Track cap per user (default: 5).
 - Downvote threshold for removing a track (default: a net score of -3).
 - How long a track counts as "recently played" (default: 24 hours).
-- Explicit tracks allowed (default: yes).
+- Explicit tracks allowed (default: no).
 - Upvotes needed for the Best Voted playlist (default: more than 5).
 - Best Voted playlist size (default: 50 tracks).
 - When the queue runs out (restart playlist, default AI station, or AI next track).

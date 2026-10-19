@@ -84,6 +84,7 @@ def create_app(
             sid=settings.sonos_spotify_sid,
             sn=settings.sonos_spotify_sn,
             radio=app.state.radio,
+            **({"now": now} if now else {}),
         )
         # New picks are on the Queue screen, and start the music if it had run out.
         app.state.radio.on_picked += [app.state.queue.changed, app.state.queue.keep_fed]

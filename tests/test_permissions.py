@@ -13,6 +13,7 @@ TABLE = [
     (Permission.MANAGE_QUEUE, False, True, True),
     (Permission.MANAGE_PLAYLISTS, False, True, True),
     (Permission.CREATE_STATIONS, False, True, True),
+    (Permission.PLAN_LINEUPS, False, True, True),
     (Permission.SWITCH_SOURCE, False, True, True),
     (Permission.TRANSPORT, False, True, True),
     (Permission.CONTROL_PLAYBACK, False, False, True),

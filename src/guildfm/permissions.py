@@ -12,7 +12,8 @@ class Permission(StrEnum):
     MANAGE_QUEUE = "manage_queue"  # remove any track, reorder, override votes
     MANAGE_PLAYLISTS = "manage_playlists"  # create and import
     CREATE_STATIONS = "create_stations"
-    SWITCH_SOURCE = "switch_source"  # start or switch playlists and AI stations
+    SWITCH_SOURCE = "switch_source"  # start or switch playlists, AI stations and line-ups
+    PLAN_LINEUPS = "plan_lineups"
     TRANSPORT = "transport"  # play, pause, resume, skip, previous
     CONTROL_PLAYBACK = "control_playback"  # office and room volume, stop
     ANNOUNCE = "announce"
@@ -25,6 +26,7 @@ _CURATORS = _EVERYONE | {
     Permission.MANAGE_QUEUE,
     Permission.MANAGE_PLAYLISTS,
     Permission.CREATE_STATIONS,
+    Permission.PLAN_LINEUPS,
     Permission.SWITCH_SOURCE,
     Permission.TRANSPORT,
 }

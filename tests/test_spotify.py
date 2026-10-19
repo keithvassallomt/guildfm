@@ -54,6 +54,8 @@ def test_search_leaves_out_tracks_spotify_repeats(client: TestClient, people, sp
 
 
 def test_search_by_artist(client: TestClient, people) -> None:
+    sign_in(client, *ADMIN)
+    client.patch("/api/settings", json={"allow_explicit": True}).raise_for_status()
     sign_in(client, *people["user"])
     result = client.get("/api/search", params={"artist": "Kendrick Lamar"}).json()
     assert [t["title"] for t in result["tracks"]] == ["HUMBLE."]
@@ -68,12 +70,12 @@ def test_found_tracks_are_kept_locally(client: TestClient, people, settings: Set
     assert row == ("HUMBLE.", "Kendrick Lamar", 1, f"https://i.scdn.co/{spotify_id('humble')}-300")
 
 
-def test_explicit_tracks_hidden_when_the_setting_is_off(client: TestClient, people, settings):
+def test_explicit_tracks_hidden_unless_allowed(client: TestClient, people, settings):
     sign_in(client, *people["user"])
-    assert client.get("/api/search", params={"q": "humble"}).json()["tracks"]
-    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
-        db.execute("INSERT INTO settings (key, value) VALUES ('allow_explicit', 'false')")
     assert client.get("/api/search", params={"q": "humble"}).json()["tracks"] == []
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        db.execute("INSERT INTO settings (key, value) VALUES ('allow_explicit', 'true')")
+    assert client.get("/api/search", params={"q": "humble"}).json()["tracks"]
 
 
 def test_search_needs_signing_in_and_something_to_find(client: TestClient, people) -> None:

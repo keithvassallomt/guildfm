@@ -5,6 +5,7 @@ import {
   errorText,
   type Play,
   type PlaybackState,
+  type LineupTile,
   type PlaylistTile,
   type QueueEntry,
   type SourceKind,
@@ -15,6 +16,7 @@ import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
+import { LogoCover } from "../components/LogoCover";
 import { PlaybackBanner } from "../components/PlaybackBanner";
 import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
@@ -22,7 +24,7 @@ import { useToast } from "../components/Toast";
 import { useWide } from "../components/useWide";
 import { RoomVolumes } from "../components/RoomVolumes";
 import { VolumeSlider } from "../components/VolumeSlider";
-import { chipLabel, statusTones } from "../live/status";
+import { chipLabel, ownClip, statusTones } from "../live/status";
 import { useHistory } from "../live/useHistory";
 import { useNow } from "../live/useNow";
 import { usePlayback } from "../live/usePlayback";
@@ -36,6 +38,7 @@ const FROM: Record<SourceKind, string> = {
   queue: "the queue",
   library: "the library",
   radio: "the radio",
+  lineups: "the line-up",
 };
 
 type Send = (method: "POST" | "PUT", path: string, body?: unknown) => Promise<void>;
@@ -98,6 +101,19 @@ export function NowPlayingPage() {
     }
   };
 
+  const pickLineup = async (lineup: LineupTile) => {
+    try {
+      await api("POST", `/lineups/${lineup.id}/play`);
+      show(
+        playing
+          ? `${lineup.name} takes over after this song. Requests still play first.`
+          : `${lineup.name} is on. Requests still play first.`,
+      );
+    } catch (caught) {
+      show(errorText(caught));
+    }
+  };
+
   const requestsOnly = async () => {
     if (now?.requests_only) return;
     try {
@@ -115,6 +131,7 @@ export function NowPlayingPage() {
     canSwitch: can("switch_source"),
     pick,
     pickStation,
+    pickLineup,
     requestsOnly,
   };
   const card = (
@@ -222,7 +239,9 @@ function NowCard({
       {track ? (
         <>
           <div className={n.nowTop}>
-            {art ? (
+            {playback && ownClip(playback) ? (
+              <LogoCover className={n.nowArt} />
+            ) : art ? (
               <img src={art} alt="" className={n.nowArt} />
             ) : (
               <span aria-hidden="true" className={n.nowArt} />
