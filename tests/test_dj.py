@@ -178,6 +178,21 @@ def test_a_line_for_a_song_that_doesnt_come_is_dropped(client, openai, speakers)
     assert speakers.clips == []
 
 
+def test_no_crossfade_into_or_out_of_the_dj(client: TestClient, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai, crossfade=True)
+    line_up_next(client, speakers)
+    assert speakers.crossfade is True  # Song 2 is lined up, to fade into
+    tick(client)  # the DJ's line goes in ahead of it
+    assert speakers.crossfade is False
+    speakers.song_ends()  # the DJ talks
+    read_speakers(client)
+    assert speakers.crossfade is False
+    speakers.song_ends()  # Song 2, which fades into the next song again
+    read_speakers(client)
+    assert speakers.crossfade is True
+
+
 def test_request_shout_outs(client: TestClient, people, openai: FakeOpenAI, speakers) -> None:
     sign_in(client, *ADMIN)
     on_air(client, openai, talk_every=10)

@@ -93,6 +93,7 @@ def create_app(
         )
         app.state.covers.on_painted.append(app.state.queue.changed)
         await app.state.queue.recover()
+        await app.state.queue.apply_crossfade()  # as the source asks, from the start
         app.state.schedule = Scheduler(app.state.sessionmaker, app.state.playback, **clock)
         await app.state.schedule.tick()
         app.state.housekeeping = Housekeeping(app.state.speech, settings.data_dir, settings.backups)

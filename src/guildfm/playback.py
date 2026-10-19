@@ -101,6 +101,10 @@ class PlaybackController:
         # Clips in `_items`, by key: what each is ("dj", "jingle" or "announcement"), and the song
         # it comes before ("" for an announcement, which goes straight after the current track).
         self._clips: dict[str, tuple[str, str]] = {}
+        # Whether the source asks for crossfade, and what the speakers were last set to (None
+        # for not known).
+        self._wants_crossfade = False
+        self._crossfading: bool | None = None
         self._grace_until = 0.0
         self._mismatches = 0
 
@@ -222,6 +226,7 @@ class PlaybackController:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
         await self._trim()
+        await self._fit_crossfade()
 
         before = previous.track.uri if previous and previous.track else None
         after = snapshot.track.uri if snapshot.track else None
@@ -494,6 +499,7 @@ class PlaybackController:
             self._speakers = speakers
         self.monitoring = monitoring
         self._in_control = self._overridden = False
+        self._crossfading = None
         self._switched = True
         self._snapshot, self._rooms, self._error, self._mismatches = None, [], None, 0
         self._remember()
@@ -532,6 +538,7 @@ class PlaybackController:
         self._items.insert(position - 1, item)
         self._clips[item.key] = ("announcement", "")
         self._remember()
+        await self._fit_crossfade()
 
     async def play_again(self, item: QueueItem) -> bool:
         """Have stopped speakers try the lined-up `item` once more. False if it isn't on them
@@ -558,6 +565,7 @@ class PlaybackController:
         self._items.insert(position - 1, item)
         self._clips[item.key] = (kind, key)
         self._remember()
+        await self._fit_crossfade()
         return True
 
     async def unqueue(self, item: QueueItem) -> None:
@@ -628,13 +636,29 @@ class PlaybackController:
         return await self._call(self._speakers.own_address)
 
     async def set_crossfade(self, on: bool) -> None:
-        """Have the speakers fade each song into the next, or not, while GuildFM drives them."""
+        """Have the speakers fade each song into the next, or not, while GuildFM drives them.
+        Never into or out of a clip, though: see `_fit_crossfade`."""
+        self._wants_crossfade = on
+        await self._fit_crossfade()
+
+    async def _fit_crossfade(self) -> None:
+        """Crossfade as the source asks, except while a clip is on or still to come. Sonos fades
+        for ten seconds or more, longer than most clips, so the DJ, a jingle or an announcement
+        would play under the songs either side. It comes back on once the song after the last
+        clip is playing. Someone else's music keeps its own setting."""
         if not self._in_control:
+            self._crossfading = None
+            return
+        ahead = self._items[max(self._position - 1, 0) :]
+        on = self._wants_crossfade and not any(item.key in self._clips for item in ahead)
+        if on == self._crossfading:
             return
         try:
             await self._call(self._speakers.set_crossfade, on)
         except SpeakersUnavailable, SpeakersRefused:
             log.warning("Couldn't change the speakers' crossfade", exc_info=True)
+            return
+        self._crossfading = on
 
     async def set_group_volume(self, volume: int) -> None:
         await self._call(self._speakers.set_group_volume, volume)
