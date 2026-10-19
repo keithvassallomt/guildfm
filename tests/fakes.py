@@ -58,6 +58,7 @@ class FakeSpeakers:
         self.clips: list[PlayedClip] = []
         self.refusing_clips: set[str] = set()  # rooms that turn overlay clips down
         self.queue_refuses_clips = False  # MP3s from GuildFM can't go in the queue
+        self.crossfade = False
         self.played: list[QueueItem] = []  # what played to the end from the queue, in order
 
     # Things that happen in the office
@@ -140,6 +141,10 @@ class FakeSpeakers:
             self.rooms[uid] = Room(
                 room.uid, room.name, room.model, volume, room.in_group, room.on_tv
             )
+
+    def set_crossfade(self, on: bool) -> None:
+        self._check()
+        self.crossfade = on
 
     def set_room_volume(self, uid: str, volume: int) -> None:
         self._check()

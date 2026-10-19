@@ -321,6 +321,7 @@ class QueueEngine:
             if lined_up:
                 return
             await self._follow(db, ahead)
+            await self._crossfade(db)
             await self._prepare_shows(db, ahead)
             head = await self._lock_head(db)
             if head is None:
@@ -432,6 +433,19 @@ class QueueEngine:
         # music had run out.
         await self.keep_fed()
         return True
+
+    async def _crossfade(self, db: AsyncSession) -> None:
+        """The speakers crossfade between songs while a station that asks for it fills the
+        gaps, on its own or as a line-up's show, and not otherwise. Set as each song is lined
+        up, so it holds for the change of song coming."""
+        source = await current_source(db)
+        station = source.station if source and source.station_id else None
+        await self._controller.set_crossfade(bool(station and station.crossfade))
+
+    async def apply_crossfade(self) -> None:
+        """A station's crossfade switch changed: set the speakers to match now."""
+        async with self._sessions() as db:
+            await self._crossfade(db)
 
     async def _let_go(self, db: AsyncSession, entry: QueueEntry) -> None:
         """Give up on a lined-up song that couldn't play: off the speakers and out of the queue."""

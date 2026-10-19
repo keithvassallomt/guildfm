@@ -34,6 +34,7 @@ const BLANK: StationFields = {
   style: "commentary",
   announce_requests: true,
   jingles: true,
+  crossfade: false,
 };
 
 const STYLES = [
@@ -180,6 +181,12 @@ export function StationEditor() {
                 hint="Uses the time of day, the weather where the office is, and music news, like an artist's passing or a song contest winner."
                 checked={form.global_awareness}
                 onChange={(global_awareness) => change({ global_awareness })}
+              />
+              <SwitchRow
+                label="Crossfade between songs"
+                hint="The speakers fade each song into the next, hiding the quiet at their starts and ends. The DJ and jingles fade in over the end of a song too."
+                checked={form.crossfade}
+                onChange={(crossfade) => change({ crossfade })}
               />
               {editing ? (
                 <Cover

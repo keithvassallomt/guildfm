@@ -422,3 +422,23 @@ def test_an_hour_when_the_ai_cant_help(client, openai: FakeOpenAI) -> None:
     assert "Try again" in response.json()["detail"]
     openai.down = True
     assert preview(client).status_code == 502
+
+
+def test_a_station_can_crossfade_between_songs(client: TestClient, openai, speakers) -> None:
+    openai.picks = FLEETWOOD
+    sign_in(client, *ADMIN)
+    station = make_station(client)
+    assert station["crossfade"] is False
+    put_on(client, station)
+    client.post("/api/playback/play").raise_for_status()
+    speakers.track_position = 190
+    read_speakers(client)
+    assert speakers.crossfade is False
+
+    body = {"name": station["name"], "description": station["description"], "crossfade": True}
+    client.put(f"/api/stations/{station['id']}", json=body).raise_for_status()
+    assert speakers.crossfade is True  # straight away, as it's on
+
+    # With nothing filling the gaps, nothing asks for it.
+    client.delete("/api/source").raise_for_status()
+    assert speakers.crossfade is False

@@ -68,6 +68,7 @@ class StationIn(BaseModel):
     style: DJStyle = DJStyle.COMMENTARY
     announce_requests: bool = True
     jingles: bool = True
+    crossfade: bool = False
 
     @model_validator(mode="after")
     def dj_has_a_name(self) -> StationIn:
@@ -92,6 +93,7 @@ class StationOut(BaseModel):
     style: DJStyle
     announce_requests: bool
     jingles: bool
+    crossfade: bool  # the speakers fade each song into the next while it's on
     art_url: str | None  # its cover, once OpenAI has painted one
     made_by: str | None
     playing: bool  # the station filling the gaps between requests
@@ -154,6 +156,7 @@ async def _out(db: AsyncSession, station: Station) -> StationOut:
         style=station.style,
         announce_requests=station.announce_requests,
         jingles=station.jingles,
+        crossfade=station.crossfade,
         art_url=station.art_url,
         made_by=station.creator.display_name if station.creator else None,
         playing=bool(source and source.station_id == station.id),
@@ -180,6 +183,7 @@ STATION_FIELDS = (
     "style",
     "announce_requests",
     "jingles",
+    "crossfade",
 )
 
 
@@ -285,6 +289,7 @@ async def change(station_id: int, body: StationIn, _: Maker, request: Request, d
     # A new name or description gets a new cover, unless it was already painted from them.
     if station.art is None or painted_from(station.name, station.description) != painted:
         request.app.state.covers.paint_later(station.id)
+    await request.app.state.queue.apply_crossfade()
     await request.app.state.queue.changed()
     return await _out(db, station)
 

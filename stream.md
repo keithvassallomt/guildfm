@@ -142,6 +142,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
     - A description of the station, such as the genre or mood of the music to be played.
     - The personality of the DJ, if any. The DJ is optional, and is a text-to-speech voice that announces the tracks being played, or provides commentary on the music.
     - Global awareness. If enabled, the AI takes into account the time of day, the current weather, and current events to influence the music selection.
+    - Crossfade between songs (off by default). While the station fills the gaps, on its own or as a line-up's show, the speakers fade each song into the next, hiding the quiet at their starts and ends; the DJ and jingles fade in over the end of a song too. Anything else plays without it.
 - If a DJ is used:
     - Which DJ: one made for another station, or a new one. A DJ is their name, personality and voice, and is kept as a DJ of their own, so they can host any number of stations. Changing a DJ's name, personality or voice from any of their stations' editors changes them on all of them, and the editor says which other stations that is. A DJ is kept when no station has them any more, ready for another. Each DJ's name is their own.
     - The DJ's voice, picked from the OpenAI voices or the ElevenLabs account's own.

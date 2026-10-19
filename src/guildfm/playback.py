@@ -593,6 +593,15 @@ class PlaybackController:
         """This machine's address on the speakers' network."""
         return await self._call(self._speakers.own_address)
 
+    async def set_crossfade(self, on: bool) -> None:
+        """Have the speakers fade each song into the next, or not, while GuildFM drives them."""
+        if not self._in_control:
+            return
+        try:
+            await self._call(self._speakers.set_crossfade, on)
+        except SpeakersUnavailable, SpeakersRefused:
+            log.warning("Couldn't change the speakers' crossfade", exc_info=True)
+
     async def set_group_volume(self, volume: int) -> None:
         await self._call(self._speakers.set_group_volume, volume)
         await self.poll(full=True)

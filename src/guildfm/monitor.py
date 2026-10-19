@@ -196,6 +196,9 @@ class MonitorSystem:
     def set_room_volume(self, uid: str, volume: int) -> None:
         self.set_group_volume(volume)
 
+    def set_crossfade(self, on: bool) -> None:
+        """Beeps have nothing to fade, so the monitor plays it straight."""
+
     def take_over(self, items: list[QueueItem]) -> None:
         with self._lock:
             self._queue, self._ours = list(items), True

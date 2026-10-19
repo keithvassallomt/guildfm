@@ -478,6 +478,8 @@ export type StationFields = {
   announce_requests: boolean;
   /** Plays idents between songs. */
   jingles: boolean;
+  /** The speakers fade each song into the next while it's on. */
+  crossfade: boolean;
 };
 
 export type Station = StationFields & {

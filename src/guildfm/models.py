@@ -204,6 +204,8 @@ class Station(Base):
     )
     announce_requests: Mapped[bool] = mapped_column(default=True)
     jingles: Mapped[bool] = mapped_column(default=True)  # plays idents between songs
+    # The speakers fade each song into the next while it's on, hiding quiet starts and ends.
+    crossfade: Mapped[bool] = mapped_column(default=False)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
