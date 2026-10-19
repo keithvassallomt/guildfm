@@ -19,7 +19,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 9: Announcements
 - [ ] Stage 10: AI radio
 - [ ] Stage 11: Hardening and handover
-- [ ] Stage 12: Line-ups
+- [x] Stage 12: Line-ups
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
