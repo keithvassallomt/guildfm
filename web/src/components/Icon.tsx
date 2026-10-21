@@ -56,6 +56,26 @@ const paths = {
     </>
   ),
   status: <path d="M3 12h4l3-7 4 14 3-7h4" />,
+  sparkle: (
+    <>
+      <path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z" />
+      <path d="M18.5 15l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" />
+    </>
+  ),
+  again: <path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" />,
+  check: <path d="M5 12l5 5L20 7" />,
+  alert: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v5M12 16.5h.01" />
+    </>
+  ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </>
+  ),
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,

@@ -221,6 +221,15 @@ class FakeOpenAI:
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
+        # What it hears in each jingle it's asked to listen to, in turn; then the last one again.
+        self.heard = ["Guild F M!"]
+        self.listened = 0
+        self.hearing_down = False
+        # Jingle descriptions it writes, in the generator, handed out in turn.
+        self.ideas = [
+            {"name": f"Idea {n}", "description": f"Bright sting number {n}.", "seconds": 6 + n}
+            for n in range(1, 7)
+        ]
 
     def asked_for(self, name: str) -> list[dict]:
         """Requests for answers in the named format, such as "picks" or "dj_line"."""
@@ -235,6 +244,9 @@ class FakeOpenAI:
             text = json.dumps({"songs": self.picks})
         elif name == "dj_line":
             text = json.dumps(self.line)
+        elif name == "jingle_ideas":
+            asked = body["input"].count("Write this one")
+            text = json.dumps({"jingles": self.ideas[:asked]})
         else:
             text = self.news
         output = [
@@ -259,6 +271,12 @@ class FakeOpenAI:
             return self._answer(json.loads(request.content))
         if request.url.path == "/v1/images/generations":
             return self._image(json.loads(request.content))
+        if request.url.path == "/v1/audio/transcriptions":
+            self.listened += 1
+            if self.hearing_down:
+                return httpx2.Response(500, json={"error": {"message": "nope"}})
+            text = self.heard.pop(0) if len(self.heard) > 1 else self.heard[0]
+            return httpx2.Response(200, json={"text": text})
         assert request.url.path == "/v1/audio/speech"
         self.requests.append(json.loads(request.content))
         if self.status != 200:
@@ -280,6 +298,13 @@ class FakeElevenLabs:
         self.status = 200
         self.detail: dict | None = None  # sent with an error status
         self.seconds = 4.0
+        self.plans: list[dict] = []  # music it's asked to plan, for jingles
+        self.music: list[dict] = []  # music it's asked to make from a plan
+        self.music_status = 200  # for planning and making music
+        self.music_detail: dict | None = None  # sent with a music error
+        self.busy_for = 0  # music calls it turns away as busy before it gets to them
+        # The parts it plans, as (text, seconds); None for its own plan, a second over.
+        self.parts: list[tuple[str, float]] | None = None
         # The account's credits this month, or None for a key that can't read them.
         self.subscription: dict | None = {
             "tier": "creator",
@@ -298,6 +323,8 @@ class FakeElevenLabs:
         if request.url.path == "/v2/voices":
             assert request.url.params["voice_type"] == "personal"
             return httpx2.Response(200, json={"voices": self.voices, "has_more": False})
+        if request.url.path.startswith("/v1/music"):
+            return self._music(request.url.path, json.loads(request.content))
         voice = request.url.path.removeprefix("/v1/text-to-speech/")
         self.requests.append({"voice": voice, **json.loads(request.content)})
         if self.status != 200:
@@ -305,6 +332,29 @@ class FakeElevenLabs:
         return httpx2.Response(
             200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
         )
+
+    def _music(self, path: str, body: dict) -> httpx2.Response:
+        (self.plans if path == "/v1/music/plan" else self.music).append(body)
+        if self.busy_for:
+            self.busy_for -= 1
+            detail = {"status": "too_many_concurrent_requests"}
+            return httpx2.Response(429, json={"detail": detail})
+        if self.music_status != 200:
+            return httpx2.Response(self.music_status, json={"detail": self.music_detail or {}})
+        if path == "/v1/music/plan":
+            # Like ElevenLabs' own, a part of a few seconds then the rest, and a second over.
+            seconds = body["music_length_ms"] / 1000
+            parts = self.parts or [("[Intro]\n{tap}", 3), ("[Tag]\nGuild F M!", seconds - 2)]
+            chunks = [
+                {"text": text, "duration_ms": round(length * 1000),
+                 "positive_styles": ["funk", "group vocals"], "negative_styles": [],
+                 "context_adherence": "high", "conditioning_ref": None, "condition_strength": None}
+                for text, length in parts
+            ]  # fmt: skip
+            return httpx2.Response(200, json={"chunks": chunks})
+        chunks = body["composition_plan"]["chunks"]
+        seconds = sum(chunk["duration_ms"] for chunk in chunks) / 1000
+        return httpx2.Response(200, content=mp3(seconds), headers={"content-type": "audio/mpeg"})
 
 
 class FakeWeather:

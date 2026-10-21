@@ -127,9 +127,10 @@ def _elevenlabs(request: Request) -> ServiceOut:
             key="elevenlabs",
             name="ElevenLabs",
             state="off",
-            detail="No key in .env, so only OpenAI's voices are offered.",
+            detail="No key in .env, so only OpenAI's voices are offered, and no jingles are made.",
         )
-    return _service("elevenlabs", "ElevenLabs", speech.eleven_health, "The account's own voices.")
+    purpose = "The account's own voices, and the jingle generator's music."
+    return _service("elevenlabs", "ElevenLabs", speech.eleven_health, purpose)
 
 
 def _ffmpeg(request: Request) -> ServiceOut:

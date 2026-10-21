@@ -11,10 +11,12 @@ type Props = {
   tall?: boolean;
   /** On wide screens, sit in the bottom-right corner, by the button that opened it. */
   corner?: boolean;
+  /** Under a tall dialog's scrolling content, always in view: its main buttons. */
+  footer?: ReactNode;
 };
 
 /** A modal: a sheet from the bottom on phones, a centred box on wider screens. */
-export function Dialog({ open, onClose, title, children, tall = false, corner = false }: Props) {
+export function Dialog({ open, onClose, title, children, tall = false, corner = false, footer }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -28,7 +30,7 @@ export function Dialog({ open, onClose, title, children, tall = false, corner = 
   return (
     <dialog
       ref={ref}
-      className={`${styles.dialog} ${tall ? styles.tall : ""} ${corner ? styles.corner : ""}`}
+      className={`${styles.dialog} ${tall ? styles.tall : ""} ${corner ? styles.corner : ""} ${footer ? styles.withFooter : ""}`}
       aria-labelledby={titleId}
       onClose={onClose}
       // A click on the dialog element itself is a click on the backdrop.
@@ -47,6 +49,7 @@ export function Dialog({ open, onClose, title, children, tall = false, corner = 
             )}
           </div>
           <div className={styles.content}>{children}</div>
+          {footer && <div className={styles.footer}>{footer}</div>}
         </div>
       )}
     </dialog>

@@ -22,10 +22,14 @@ class Settings(BaseSettings):
     # OpenAI's image model, for stations' covers, and how carefully it paints.
     openai_image_model: str = "gpt-image-2.5-flare"
     openai_image_quality: str = "medium"
+    # OpenAI's speech to text model, for listening for the words in a generated jingle.
+    openai_hearing_model: str = "gpt-4o-transcribe"
     # ElevenLabs, for the account's own voices alongside OpenAI's. Optional: without a key, only
     # OpenAI's voices are offered. The model has to understand audio tags such as [laughs].
     elevenlabs_api_key: SecretStr = SecretStr("")
     elevenlabs_model: str = "eleven_v4"
+    # ElevenLabs' music model, for the jingle generator.
+    elevenlabs_music_model: str = "music_v2_5"
     # How loud voices and uploaded jingles are made, in LUFS, so they sit at about the music's
     # level. Needs ffmpeg; empty leaves them as they come.
     audio_loudness: float | None = -14.0

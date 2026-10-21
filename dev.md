@@ -20,6 +20,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [x] Stage 10: AI radio
 - [ ] Stage 11: Hardening and handover
 - [x] Stage 12: Line-ups
+- [ ] Stage 13: Jingle generator
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -220,3 +221,20 @@ Goal: curators plan the day as a line-up of AI shows and playlists, and GuildFM 
 - [x] A "Put on" button on the Line-ups page as well as Now Playing, as in the prototype; a playlist that runs out before its slot ends starts over; and a line-up whose playing station or playlist is deleted carries on, with a gap there (decided while building)
 
 Done when: a line-up with a morning playlist, a lunchtime show and an afternoon show runs through a day by itself, each show opening with its ident and its DJ, while requests still play first.
+
+## Stage 13: Jingle generator
+Goal: whoever looks after jingles describes the ones they want, or has the AI write them, and ElevenLabs makes them to listen to and keep or turn down. Asked for by Keith on 2026-10-21.
+- [x] [Prototype](https://claude.ai/artifact/Vnj5Qwy49yCFa9LEU9h5FS) for Keith to review: the generator opened from Admin, Jingles and from the station editor, describing and reviewing, on desktop and phone
+- [x] About GuildFM: a setting with a sensible default, edited on Admin, Jingles, for the AI to read when it writes system idents
+- [x] Prompts kept: a jingle made here keeps its description, length and whether it's instrumental. One turned down keeps its description, marked as turned down, and its file goes. Uploaded MP3s have none
+- [x] The AI writing descriptions: one call for any number of them, answered as JSON (a name, a description, a length of 5 to 15 seconds, instrumental or not). It reads About GuildFM for system idents, or the station's name, description and DJ for a station's own, as they are in the editor, saved or not, as "Paint another" does. It also reads the descriptions made here before, kept and turned down, and what the other cards already say, so they come out different. A card with words in it is built on, not replaced. The AI never names real artists, bands or songs, which ElevenLabs refuses, and spells out any words to be sung or said
+- [x] Making them with ElevenLabs Music (`/v1/music`, its model in `.env` as `ELEVENLABS_MUSIC_MODEL`): each description at its length, instrumental forced when asked, then evened out to the voices' loudness as uploads are. Its errors fit to show (out of credits, a description refused and why) and counted in ElevenLabs' health on Status
+- [x] Drafts: what ElevenLabs makes waits in the media folder until it's kept or turned down, so closing the generator part way loses nothing, and opening it again picks up where it left off. Drafts no one decided on are cleared after a day, and left out of backups
+- [x] The generator, one modal for both places, opened by "Generate jingles" beside "Add MP3s" in the jingle list: how many (1 to 6), and a card for each with its description, a length slider (5 to 15 seconds) and an Instrumental switch. An AI button on each card, and "Write the empty ones" for every empty card in one go
+- [x] Making and reviewing: "Generate" makes them all side by side, each card showing its own progress. Each plays on this device, can be renamed, and is kept (it joins the list straight away), turned down, or tried again with the same description. One ElevenLabs refused gets its description back to change, by hand or with the AI. "Generate more" starts another round that knows about this one. Done with some still to decide on asks first; closing it any other way keeps the round for next time (decided while building)
+- [x] The jingle list's permissions: admins for system idents, whoever makes stations for a station's own, and none for AI picks
+- [x] Tests: what the AI is given (kept and turned down, the other cards), keeping and turning down drafts, permissions, ElevenLabs' errors, and old drafts being cleared
+- [x] After Keith's first round: ElevenLabs makes two at a time, and when it says it's busy it's asked again after 5, 15 and 30 seconds. Each jingle is planned by ElevenLabs first (free), then made from the plan with its parts fitted to the length asked for, since from a description alone 12 seconds came out as 20 and 6 as 9. The Instrumental switch takes the words out of the plan. The AI always writes words, sung, chanted or rapped rather than spoken, which the music model left out; it writes an instrumental only for a card switched to one (found while trying it)
+- [x] Words that go unsung: a test of the same description four times lost its words once, made on its own, so it wasn't the two at a time. OpenAI's speech to text now listens to each jingle with words, and one where they can't be heard is made again, once; if they're missing again, its card says so. The voices in ElevenLabs' plan also go in the first part's styles, which set the tone for the whole piece, and the plan's words are kept to the ones the description quotes, since ElevenLabs adds lines of its own (found while trying it)
+
+Done when: an admin asks for three system idents, has the AI write two and writes the third, keeps two and turns one down, and the next round's AI descriptions steer clear of the one turned down.

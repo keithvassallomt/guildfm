@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, apiUpload, errorText, type Jingle } from "../api";
+import { api, apiUpload, errorText, type Jingle, type StationAsEdited } from "../api";
 import { clock } from "../live/usePlayback";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
+import { JingleGenerator } from "./JingleGenerator";
 import { FormError } from "./TextField";
 import styles from "./JingleList.module.css";
 
@@ -17,13 +18,17 @@ type Props = {
   stationId: number | null;
   /** Shown when there are none yet. */
   empty: string;
+  /** The station as its editor has it, for the jingle generator's AI. */
+  station?: StationAsEdited;
 };
 
-/** Jingles to listen to here, add and remove. Adding takes MP3s, several at once. */
-export function JingleList({ stationId, empty }: Props) {
+/** Jingles to listen to here, add and remove. Adding takes MP3s, several at once, or opens the
+ * jingle generator. */
+export function JingleList({ stationId, empty, station }: Props) {
   const [jingles, setJingles] = useState<Jingle[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [playing, setPlaying] = useState<number | null>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
   const files = useRef<HTMLInputElement>(null);
@@ -124,6 +129,15 @@ export function JingleList({ stationId, empty }: Props) {
         onChange={(event) => add(event.target.files)}
       />
       <div className={styles.foot}>
+        <Button
+          onClick={() => {
+            stop();
+            setGenerating(true);
+          }}
+        >
+          <Icon name="sparkle" size={18} />
+          Generate jingles
+        </Button>
         <Button variant="secondary" disabled={adding} onClick={() => files.current?.click()}>
           <Icon name="plus" size={16} />
           {adding ? "Adding..." : "Add MP3s"}
@@ -133,6 +147,13 @@ export function JingleList({ stationId, empty }: Props) {
         </span>
       </div>
       <FormError message={error} />
+      <JingleGenerator
+        open={generating}
+        onClose={() => setGenerating(false)}
+        stationId={stationId}
+        station={station}
+        onChanged={load}
+      />
     </div>
   );
 }

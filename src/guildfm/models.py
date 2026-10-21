@@ -8,6 +8,8 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 AVATARS = "avatars"  # the folder for people's photos, inside the media folder
 JINGLES = "jingles"  # the folder for jingles, inside the media folder
 COVERS = "covers"  # the folder for stations' covers, inside the media folder
+# The folder for the jingle generator's drafts, inside the media folder. Left out of backups.
+JINGLE_DRAFTS = "jingle-drafts"
 
 
 class Base(DeclarativeBase):
@@ -262,10 +264,69 @@ class Jingle(Base):
     file: Mapped[str] = mapped_column(String(64))  # its file name in the media folder's jingles
     seconds: Mapped[float]
     created_at: Mapped[float]
+    # What it was made from, for one the jingle generator made; None for an uploaded MP3.
+    prompt: Mapped[str | None] = mapped_column(String(1000), default=None)
+    instrumental: Mapped[bool] = mapped_column(default=False)  # made with no voice at all
 
     @property
     def url(self) -> str:
         return f"/media/{JINGLES}/{self.file}"
+
+
+class DraftStatus(StrEnum):
+    MAKING = "making"  # ElevenLabs is on it
+    READY = "ready"  # to listen to, then keep or turn down
+    FAILED = "failed"  # ElevenLabs couldn't make it, and the problem says why
+    KEPT = "kept"  # now a jingle
+    TURNED_DOWN = "turned_down"
+
+
+class JingleDraft(Base):
+    """A jingle the generator is making, or has made, for a system ident or a station's own,
+    until whoever asked for it keeps it or turns it down. Drafts last until the generator is done
+    with them, or a day."""
+
+    __tablename__ = "jingle_drafts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # The station it's for; None for a system ident.
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), default=None
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    prompt: Mapped[str] = mapped_column(String(1000))  # what ElevenLabs makes it from
+    length: Mapped[int]  # the seconds asked for
+    instrumental: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[DraftStatus] = mapped_column(
+        Enum(DraftStatus, native_enum=False, length=16, values_callable=enum_values),
+        default=DraftStatus.MAKING,
+    )
+    # Its file name in the media folder's jingle drafts, once made, until it's kept.
+    file: Mapped[str | None] = mapped_column(String(64), default=None)
+    seconds: Mapped[float | None] = mapped_column(default=None)  # how long it plays, once made
+    # Why it failed, or what's wrong with one that was made: its words can't be heard, say.
+    problem: Mapped[str | None] = mapped_column(String(300), default=None)
+    # ElevenLabs' own wording, when it refused the prompt and offered one.
+    suggestion: Mapped[str | None] = mapped_column(String(1000), default=None)
+    # The jingle it became, once kept.
+    jingle_id: Mapped[int | None] = mapped_column(
+        ForeignKey("jingles.id", ondelete="SET NULL"), default=None
+    )
+    created_at: Mapped[float]
+
+
+class TurnedDownJingle(Base):
+    """What a jingle the generator made and someone turned down was made from, so the AI steers
+    clear of it next time."""
+
+    __tablename__ = "turned_down_jingles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), default=None
+    )
+    prompt: Mapped[str] = mapped_column(String(1000))
+    turned_down_at: Mapped[float]
 
 
 class LineupSlot(Base):

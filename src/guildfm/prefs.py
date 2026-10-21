@@ -32,6 +32,12 @@ DEFAULTS: dict[str, Any] = {
     "weather_location": "Carlisle, Cumbria, UK",
     "announcement_voice": "cedar",
     "monitor": False,  # monitor mode: playing in browsers instead of on the speakers
+    # What GuildFM is, for the AI writing system idents in the jingle generator.
+    "about": (
+        "GuildFM is the office radio. Everyone requests songs and votes on them, and AI stations "
+        "with their own DJs fill the gaps, from the first coffee to home time. Friendly and a "
+        "bit cheeky, never too slick."
+    ),
 }
 
 

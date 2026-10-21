@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import AfterValidator, BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, Field, StringConstraints, model_validator
 from pydantic_core import PydanticCustomError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ Db = Annotated[AsyncSession, Depends(get_session)]
 Admin = Annotated[User, require(Permission.CHANGE_SETTINGS)]
 
 HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
+About = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 
 
 class Hours(BaseModel):
@@ -68,6 +69,8 @@ class SettingsIn(BaseModel):
     timezone: Annotated[str, AfterValidator(_zone)] | None = None
     weather_location: str | None = Field(None, min_length=1, max_length=120)
     announcement_voice: Voice | None = None
+    # What GuildFM is, for the AI writing system idents.
+    about: About | None = None
 
 
 class StationChoice(BaseModel):

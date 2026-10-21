@@ -10,7 +10,7 @@ What it does is described in [stream.md](stream.md), and how it was built in [de
 - **The Sonos speakers**, with Spotify linked in the Sonos app. GuildFM plays to the biggest group of speakers, which is normally every room.
 - **A Spotify account with Premium**, which owns a free Spotify developer app (below).
 - **An OpenAI API key**, for the AI radio, the DJ, the voices and station covers.
-- **An ElevenLabs API key** (optional), for the ElevenLabs account's own voices.
+- **An ElevenLabs API key** (optional), for the ElevenLabs account's own voices, and for making jingles in the jingle generator. That needs a plan that includes music, and a key allowed to use it.
 - **Software:** git, [uv](https://docs.astral.sh/uv/) (it installs the right Python by itself), Node.js 22 or later, and ffmpeg. Without ffmpeg, everything works, but voices play quieter than the music.
 
 ## Setting up the Spotify app
@@ -123,7 +123,7 @@ To start fresh instead, sign in as `admin` and upload the jingles from `assets/j
 
 ## Backups
 
-GuildFM makes a backup every day: a zip of the database and the uploaded media (jingles, covers and profile photos). It keeps the last 14, in `data/backups`. Backups on the same disk don't help if the disk dies, so point `BACKUP_DIR` in `.env` at another disk or a network share, or copy them off now and then. `make backup` makes one straight away.
+GuildFM makes a backup every day: a zip of the database and the uploaded media (jingles, covers and profile photos). Jingles still waiting in the jingle generator are left out. It keeps the last 14, in `data/backups`. Backups on the same disk don't help if the disk dies, so point `BACKUP_DIR` in `.env` at another disk or a network share, or copy them off now and then. `make backup` makes one straight away.
 
 To restore one:
 
@@ -136,7 +136,7 @@ sudo systemctl start guildfm
 ## What it costs to run
 
 - **OpenAI:** a request for each batch of songs a station picks, each line the DJ says and its voice, the music news every few hours, and one image for each station's cover. Usage shows at [platform.openai.com/usage](https://platform.openai.com/usage).
-- **ElevenLabs** (only for its voices): about 0.45 credits a character on `eleven_v4`, so about 67 credits for a typical DJ line. A DJ station talking every 3 songs through all of the office's hours uses about 69,000 credits a month. A clip is only made once for the same words in the same voice, so a repeating announcement costs nothing after the first time.
+- **ElevenLabs** (only for its voices and the jingle generator): about 0.45 credits a character on `eleven_v4`, so about 67 credits for a typical DJ line. A DJ station talking every 3 songs through all of the office's hours uses about 69,000 credits a month. A clip is only made once for the same words in the same voice, so a repeating announcement costs nothing after the first time. Music for the jingle generator is charged by the length made, every time "Generate" or "Try again" is pressed. Writing descriptions with the AI button is an OpenAI call, like a DJ line.
 
 ## Installing it as an app
 

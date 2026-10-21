@@ -294,9 +294,12 @@ async def delete(station_id: int, _: Maker, request: Request, db: Db) -> Respons
     station = await _station(db, station_id, editing=True)
     if await get_pref(db, "default_station") == station.id:
         await set_pref(db, "default_station", None)
-    # Its station idents go with it: the database deletes the rows, and this the files.
+    # Its station idents go with it: the database deletes the rows, and this the files. The
+    # same for any in the jingle generator.
     for jingle in await db.scalars(select(Jingle).where(Jingle.station_id == station.id)):
         forget(media(request), jingle)
+    composer = request.app.state.composer
+    composer.forget_station(await composer.drafts(db, station.id))
     request.app.state.covers.forget(station)
     # A line-up playing it carries on without it: its slot becomes a gap.
     source = await db.get(SourceState, 1)

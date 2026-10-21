@@ -15,6 +15,7 @@ from guildfm.accounts import seed_admin
 from guildfm.ai import AIClient
 from guildfm.announcements import Announcer
 from guildfm.awareness import Awareness
+from guildfm.composer import Composer
 from guildfm.config import Settings, get_settings
 from guildfm.covers import Painter
 from guildfm.db import make_engine, upgrade_to_head
@@ -96,7 +97,17 @@ def create_app(
         await app.state.queue.apply_crossfade()  # as the source asks, from the start
         app.state.schedule = Scheduler(app.state.sessionmaker, app.state.playback, **clock)
         await app.state.schedule.tick()
-        app.state.housekeeping = Housekeeping(app.state.speech, settings.data_dir, settings.backups)
+        app.state.composer = Composer(
+            app.state.sessionmaker,
+            app.state.ai,
+            app.state.speech,
+            settings.data_dir / "media",
+            loudness=settings.audio_loudness,
+        )
+        await app.state.composer.recover()
+        app.state.housekeeping = Housekeeping(
+            app.state.speech, settings.data_dir, settings.backups, app.state.composer
+        )
         app.state.announcer = Announcer(
             app.state.sessionmaker,
             app.state.playback,
@@ -142,6 +153,7 @@ def create_app(
         await app.state.radio.close()
         await app.state.dj.close()
         await app.state.covers.close()
+        await app.state.composer.close()
         await app.state.spotify.close()
         await app.state.speech.close()
         await app.state.awareness.close()
@@ -172,6 +184,8 @@ def create_app(
         media_dir=settings.data_dir / "media",
         eleven_key=settings.elevenlabs_api_key.get_secret_value(),
         eleven_model=settings.elevenlabs_model,
+        eleven_music_model=settings.elevenlabs_music_model,
+        hearing_model=settings.openai_hearing_model,
         loudness=settings.audio_loudness,
     )
     app.state.ai = ai or AIClient(

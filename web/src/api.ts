@@ -256,6 +256,8 @@ export type SettingsValues = {
   timezone: string;
   weather_location: string;
   announcement_voice: string;
+  /** What GuildFM is, for the AI writing system idents. */
+  about: string;
 };
 
 export type SettingsState = {
@@ -515,6 +517,50 @@ export type Jingle = {
   seconds: number;
   /** For the browser to play. */
   url: string;
+};
+
+/** A jingle description the AI wrote for the jingle generator. */
+export type JingleIdea = {
+  name: string;
+  prompt: string;
+  seconds: number;
+};
+
+/** A station as its editor has it, saved or not, for the AI writing its station idents. */
+export type StationAsEdited = {
+  name: string;
+  description: string;
+  dj_name: string;
+  personality: string;
+};
+
+export type DraftStatus = "making" | "ready" | "failed" | "kept" | "turned_down";
+
+/** A jingle ElevenLabs is making or has made in the generator, to keep or turn down. */
+export type JingleDraft = {
+  id: number;
+  station_id: number | null;
+  name: string;
+  prompt: string;
+  /** The seconds asked for. */
+  length: number;
+  instrumental: boolean;
+  status: DraftStatus;
+  /** How long it plays, once made. */
+  seconds: number | null;
+  /** For the browser to play, once made. */
+  url: string | null;
+  /** Why ElevenLabs couldn't make it. */
+  problem: string | null;
+  /** ElevenLabs' own wording, when it refused the description. */
+  suggestion: string | null;
+};
+
+/** The generator's round, and how many made before were kept and turned down. */
+export type JingleRound = {
+  drafts: JingleDraft[];
+  kept: number;
+  turned_down: number;
 };
 
 /** The voices GuildFM can speak in. An ElevenLabs voice's id starts "elevenlabs:". */

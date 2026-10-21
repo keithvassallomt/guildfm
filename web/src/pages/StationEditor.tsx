@@ -222,6 +222,12 @@ export function StationEditor() {
                     <JingleList
                       stationId={Number(id)}
                       empty="None yet. Without its own, the station plays GuildFM's system idents."
+                      station={{
+                        name: form.name,
+                        description: form.description,
+                        dj_name: form.dj ? form.dj_name : "",
+                        personality: form.dj ? form.personality : "",
+                      }}
                     />
                   </div>
                 ) : (
