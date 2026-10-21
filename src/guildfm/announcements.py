@@ -393,8 +393,10 @@ class Announcer:
             await self._record(results)
 
     def _url(self, address: str, spoken: Spoken) -> str:
-        """Where the speakers fetch `spoken` from."""
-        return f"http://{address}:{self._port}/media/{spoken.clip.media_path}"
+        """Where the speakers fetch `spoken` from. Port 80 is left out, in case the speakers report
+        the address back without it: queued clips are known as GuildFM's by their address."""
+        host = address if self._port == 80 else f"{address}:{self._port}"
+        return f"http://{host}/media/{spoken.clip.media_path}"
 
     async def _queue(self, items: list[Spoken]) -> list[Spoken]:
         """Put clips in the Sonos queue so the rooms play them in step: the DJ's lines and

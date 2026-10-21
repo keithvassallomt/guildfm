@@ -16,7 +16,7 @@ What it does is described in [stream.md](stream.md), and how it was built in [de
 ## Setting up the Spotify app
 
 1. Sign in to the [Spotify developer dashboard](https://developer.spotify.com/dashboard) with the Premium account, and create an app.
-2. Add this redirect URI, exactly as written: `http://127.0.0.1:8000/auth/spotify/callback`. Spotify only accepts `127.0.0.1` or an HTTPS address here, which is why connecting the account happens on the GuildFM machine itself (see [Connecting Spotify](#connecting-spotify)).
+2. Add this redirect URI, exactly as written: `http://127.0.0.1:8000/auth/spotify/callback`. Spotify only accepts `127.0.0.1` or an HTTPS address here, which is why the office machine's account is connected through an SSH tunnel (see [Connecting Spotify](#connecting-spotify)).
 3. Tick **Web API**, save, and copy the client ID and client secret.
 
 The app is used for searching the catalogue. A Spotify account connected from Admin, Settings is only needed for importing playlists, and only playlists that account owns or collaborates on can be imported.
@@ -45,7 +45,7 @@ make dev       # the API and the front end, reloading as you change the code
 
 Run these on the office machine, as a user with sudo.
 
-1. **Name the machine `guildfm`**, so people can open `http://guildfm.local:8000` without knowing its address. That name is announced on the network over mDNS by Avahi:
+1. **Name the machine `guildfm`**, so people can open `http://guildfm.local` without knowing its address. That name is announced on the network over mDNS by Avahi:
 
    ```sh
    sudo hostnamectl set-hostname guildfm
@@ -70,7 +70,7 @@ Run these on the office machine, as a user with sudo.
    (cd web && npm ci && npm run build)
    ```
 
-4. **Fill in `~/guildfm/.env`** (see [above](#the-env-file)). If you're moving GuildFM from another machine, bring its data now (see [Moving in](#moving-in)).
+4. **Fill in `~/guildfm/.env`** (see [above](#the-env-file)), and set `PORT=80` in it, so people can open GuildFM without a port. If you're moving GuildFM from another machine, bring its data now (see [Moving in](#moving-in)).
 
 5. **Start it as a service**, so it starts at boot and starts again if it ever stops:
 
@@ -79,20 +79,18 @@ Run these on the office machine, as a user with sudo.
    sudo systemctl enable --now guildfm
    ```
 
-6. **Open `http://guildfm.local:8000`** from a phone, and sign in as `admin`. Check Admin, Status: the speakers should be answering.
+6. **Open `http://guildfm.local`** from a phone, and sign in as `admin`. Check Admin, Status: the speakers should be answering.
 
-If the machine has a firewall, allow TCP port 8000 and UDP port 5353 (mDNS) from the office network. If the speakers can't be found, put their addresses in `SONOS_HOSTS` in `.env`.
+If the machine has a firewall, allow TCP port 80 and UDP port 5353 (mDNS) from the office network. If the speakers can't be found, put their addresses in `SONOS_HOSTS` in `.env`.
 
 Some older Android phones can't open `.local` names. If one can't, use the machine's address instead (reserve one for it on the router, so it doesn't change).
 
 ## Connecting Spotify
 
-Only needed for importing playlists. Spotify only sends people back to `127.0.0.1` after they sign in, so connect from a browser on the GuildFM machine itself: open `http://127.0.0.1:8000/admin`, sign in, and connect from Settings.
-
-For a machine without a screen, do it from a laptop through an SSH tunnel. The address Spotify sends you back to then reaches the GuildFM machine:
+Only needed for importing playlists. Spotify only sends people back to `http://127.0.0.1:8000` after they sign in, which on the office machine is nothing, since GuildFM listens on port 80 there. Connect from a laptop through an SSH tunnel instead, so that address on the laptop reaches GuildFM on the office machine:
 
 ```sh
-ssh -L 8000:127.0.0.1:8000 guildfm@guildfm.local
+ssh -L 8000:127.0.0.1:80 guildfm@guildfm.local
 ```
 
 Leave that running, then on the laptop open `http://127.0.0.1:8000/admin`, sign in, and connect from Settings. If the laptop runs GuildFM itself, stop it first, since the tunnel needs port 8000. Spotify asks for the account to be connected again about every six months, and Settings reminds you.
@@ -140,4 +138,4 @@ sudo systemctl start guildfm
 
 ## Installing it as an app
 
-People can add GuildFM to their home screen: on an iPhone, Safari's Share button then Add to Home Screen, and Profile explains how on each device. Android and desktop browsers only install it as a proper app, in its own window, over HTTPS. On `http://guildfm.local:8000` they add a shortcut that opens a browser tab, which works just as well. A `.local` name can't get a certificate browsers trust, so HTTPS would mean giving GuildFM a hostname on a company domain, with a certificate from Let's Encrypt.
+People can add GuildFM to their home screen: on an iPhone, Safari's Share button then Add to Home Screen, and Profile explains how on each device. Android and desktop browsers only install it as a proper app, in its own window, over HTTPS. On `http://guildfm.local` they add a shortcut that opens a browser tab, which works just as well. A `.local` name can't get a certificate browsers trust, so HTTPS would mean giving GuildFM a hostname on a company domain, with a certificate from Let's Encrypt.

@@ -228,7 +228,7 @@ GuildFM runs unattended on an always-on machine in the office. How to set it up 
 - **Logs** go to the console, which is the system journal when GuildFM runs as a service, and the latest warnings and errors show on the Status page.
 - **Backups**: once a day, a zip of the database and the uploaded media (jingles, covers and profile photos), the last 14 kept, in `data/backups` or wherever `BACKUP_DIR` in `.env` says. `guildfm backup` (or `make backup`) makes one straight away. Restoring is unzipping one into the data folder while GuildFM is stopped.
 - **Clearing out**: speech clips nobody has used for 30 days are deleted once a day.
-- **Reaching it**: the machine is named `guildfm`, so people open `http://guildfm.local:8000` (mDNS). Browsers only offer to install GuildFM as an app over HTTPS; on plain HTTP, iPhones can still add it to the home screen, and Android and desktop get a shortcut that opens a browser tab. HTTPS would need a hostname on a company domain, since a `.local` name can't get a certificate browsers trust.
+- **Reaching it**: the machine is named `guildfm`, so people open `http://guildfm.local` (mDNS, on port 80). Browsers only offer to install GuildFM as an app over HTTPS; on plain HTTP, iPhones can still add it to the home screen, and Android and desktop get a shortcut that opens a browser tab. HTTPS would need a hostname on a company domain, since a `.local` name can't get a certificate browsers trust.
 
 ## Settings (admin)
 - Track cap per user (default: 5).

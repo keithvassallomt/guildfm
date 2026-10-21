@@ -262,6 +262,17 @@ def test_between_songs_in_every_room(client: TestClient, speakers: FakeSpeakers,
     assert client.get("/api/queue").json()["playing"]["track"]["title"] == "Song 2"
 
 
+def test_on_port_80_clip_addresses_leave_the_port_out(start, settings, speakers) -> None:
+    settings.port = 80  # the office machine's, so people open http://guildfm.local
+    with start() as client:
+        playing(client, speakers)
+        client.post("/api/announcements/now", json={"text": "Lunch is ready."})
+        tick(client)
+        uri = speakers.queue[1].uri
+        assert uri.startswith("http://127.0.0.1/media/speech/")
+        assert client.get(uri.removeprefix("http://127.0.0.1")).content
+
+
 def test_a_song_lined_up_later_goes_after_it(client: TestClient, speakers, naps) -> None:
     playing(client, speakers, songs=1)
     client.post("/api/announcements/now", json={"text": "Lunch is ready."})
