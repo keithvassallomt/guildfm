@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { Link } from "react-router";
 import { api, errorText, type SettingsState } from "../api";
 import { Button } from "../components/Button";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { JingleList } from "../components/JingleList";
 import { FormError } from "../components/TextField";
@@ -19,6 +20,7 @@ export function JinglesPage() {
           </Link>
           <h1 className={styles.title}>Jingles</h1>
         </div>
+        <HelpLink />
       </header>
 
       <p className={styles.muted}>

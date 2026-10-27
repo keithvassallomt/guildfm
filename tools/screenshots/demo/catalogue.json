@@ -1,0 +1,1340 @@
+{
+ "songs": [
+  {
+   "wanted": [
+    "Mr. Blue Sky",
+    "Electric Light Orchestra"
+   ],
+   "id": "2RlgNHKcydI9sayD2Df2xp",
+   "name": "Mr. Blue Sky",
+   "artists": [
+    "Electric Light Orchestra"
+   ],
+   "album": {
+    "id": "3usnShwygMXVZB4IV5dwnU",
+    "name": "Out of the Blue"
+   },
+   "duration_ms": 303820,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "September",
+    "Earth, Wind & Fire"
+   ],
+   "id": "2grjqo0Frpf2okIBiifQKs",
+   "name": "September",
+   "artists": [
+    "Earth, Wind & Fire"
+   ],
+   "album": {
+    "id": "2FW0uQ4WL25umm5p2VrZO7",
+    "name": "The Best Of Earth, Wind & Fire Vol. 1"
+   },
+   "duration_ms": 215005,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Dreams",
+    "Fleetwood Mac"
+   ],
+   "id": "0ofHAoxe9vBkTCp2UQIavz",
+   "name": "Dreams - 2004 Remaster",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "0BwWUstDMUbgq2NYONRqlu",
+    "name": "Rumours (Super Deluxe)"
+   },
+   "duration_ms": 257800,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Golden Hour",
+    "JVKE"
+   ],
+   "id": "4yNk9iz9WVJikRFle3XEvn",
+   "name": "golden hour",
+   "artists": [
+    "JVKE"
+   ],
+   "album": {
+    "id": "2uiQo0DIcriQKVm5ivXuDO",
+    "name": "this is what falling in love feels like (554Hz)"
+   },
+   "duration_ms": 209259,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Heat Waves",
+    "Glass Animals"
+   ],
+   "id": "3USxtqRwSYz57Ewm6wWRMp",
+   "name": "Heat Waves",
+   "artists": [
+    "Glass Animals"
+   ],
+   "album": {
+    "id": "5bfpRtBW7RNRdsm3tRyl3R",
+    "name": "Dreamland"
+   },
+   "duration_ms": 238805,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Don't Stop Me Now",
+    "Queen"
+   ],
+   "id": "1NHWG8zxSEypSRF3UufrnO",
+   "name": "Don't Stop Me Now",
+   "artists": [
+    "Queen"
+   ],
+   "album": {
+    "id": "1yzF0wUwJFgtkkXmKNe5BE",
+    "name": "Jazz"
+   },
+   "duration_ms": 209391,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Levitating",
+    "Dua Lipa"
+   ],
+   "id": "39LLxExYz6ewLAcYrzQQyP",
+   "name": "Levitating",
+   "artists": [
+    "Dua Lipa"
+   ],
+   "album": {
+    "id": "7fJJK56U9fHixgO0HQkhtI",
+    "name": "Future Nostalgia"
+   },
+   "duration_ms": 203807,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Africa",
+    "TOTO"
+   ],
+   "id": "2374M0fQpWi3dLnB54qaLX",
+   "name": "Africa",
+   "artists": [
+    "TOTO"
+   ],
+   "album": {
+    "id": "62U7xIHcID94o20Of5ea4D",
+    "name": "Toto IV"
+   },
+   "duration_ms": 295282,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Walking On Sunshine",
+    "Katrina & The Waves"
+   ],
+   "id": "05wIrZSwuaVWhcv5FfqeH0",
+   "name": "Walking On Sunshine",
+   "artists": [
+    "Katrina & The Waves"
+   ],
+   "album": {
+    "id": "1UQG78YJjaBySRMh0A8Uw7",
+    "name": "Katrina & The Waves"
+   },
+   "duration_ms": 238733,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Here Comes The Sun",
+    "The Beatles"
+   ],
+   "id": "6dGnYIeXmHdcikdzNNDMm2",
+   "name": "Here Comes The Sun - Remastered 2009",
+   "artists": [
+    "The Beatles"
+   ],
+   "album": {
+    "id": "0ETFjACtuP2ADo6LFhL6HN",
+    "name": "Abbey Road (Remastered 2009)"
+   },
+   "duration_ms": 185733,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "I Wanna Dance with Somebody",
+    "Whitney Houston"
+   ],
+   "id": "2tUBqZG2AbRi7Q0BIrVrEj",
+   "name": "I Wanna Dance with Somebody (Who Loves Me)",
+   "artists": [
+    "Whitney Houston"
+   ],
+   "album": {
+    "id": "5Vdzprr5cOqXQo44eHeV7t",
+    "name": "Whitney"
+   },
+   "duration_ms": 292875,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Superstition",
+    "Stevie Wonder"
+   ],
+   "id": "4N0TP4Rmj6QQezWV88ARNJ",
+   "name": "Superstition",
+   "artists": [
+    "Stevie Wonder"
+   ],
+   "album": {
+    "id": "3PResMqFgQYBfzTnqTKwQw",
+    "name": "Talking Book"
+   },
+   "duration_ms": 266133,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Take On Me",
+    "a-ha"
+   ],
+   "id": "2WfaOiMkCvy7F5fcp2zZ8L",
+   "name": "Take on Me",
+   "artists": [
+    "a-ha"
+   ],
+   "album": {
+    "id": "1ER3B6zev5JEAaqhnyyfbf",
+    "name": "Hunting High and Low"
+   },
+   "duration_ms": 225280,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Dancing Queen",
+    "ABBA"
+   ],
+   "id": "0GjEhVFGZW8afUYGChu3Rr",
+   "name": "Dancing Queen",
+   "artists": [
+    "ABBA"
+   ],
+   "album": {
+    "id": "1V6a99EbTTIegOhWoPxYI9",
+    "name": "Arrival"
+   },
+   "duration_ms": 230400,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Sweet Caroline",
+    "Neil Diamond"
+   ],
+   "id": "62AuGbAkt8Ox2IrFFb8GKV",
+   "name": "Sweet Caroline",
+   "artists": [
+    "Neil Diamond"
+   ],
+   "album": {
+    "id": "6RfgcwsOUlWkGNAd6zjjYd",
+    "name": "Sweet Caroline"
+   },
+   "duration_ms": 203573,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Livin' On A Prayer",
+    "Bon Jovi"
+   ],
+   "id": "37ZJ0p5Jm13JPevGcx4SkF",
+   "name": "Livin' On A Prayer",
+   "artists": [
+    "Bon Jovi"
+   ],
+   "album": {
+    "id": "0kBfgEilUFCMIQY5IOjG4t",
+    "name": "Slippery When Wet"
+   },
+   "duration_ms": 249293,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Ain't No Mountain High Enough",
+    "Marvin Gaye"
+   ],
+   "id": "7tqhbajSfrz2F7E1Z75ASX",
+   "name": "Ain't No Mountain High Enough",
+   "artists": [
+    "Marvin Gaye",
+    "Tammi Terrell"
+   ],
+   "album": {
+    "id": "5LqviduT0g0J0ypFrFSwCE",
+    "name": "United"
+   },
+   "duration_ms": 151666,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Mr. Brightside",
+    "The Killers"
+   ],
+   "id": "003vvx7Niy0yvhvHt4a68B",
+   "name": "Mr. Brightside",
+   "artists": [
+    "The Killers"
+   ],
+   "album": {
+    "id": "4piJq7R3gjUOxnYs6lDCTg",
+    "name": "Hot Fuss"
+   },
+   "duration_ms": 222973,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Shut Up and Dance",
+    "WALK THE MOON"
+   ],
+   "id": "4kbj5MwxO1bq9wjT5g9HaA",
+   "name": "Shut Up and Dance",
+   "artists": [
+    "WALK THE MOON"
+   ],
+   "album": {
+    "id": "3mNoFlD1wsoXfkljfFzExT",
+    "name": "TALKING IS HARD"
+   },
+   "duration_ms": 199080,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Wake Me Up Before You Go-Go",
+    "Wham!"
+   ],
+   "id": "0ikz6tENMONtK6qGkOrU3c",
+   "name": "Wake Me Up Before You Go-Go",
+   "artists": [
+    "Wham!"
+   ],
+   "album": {
+    "id": "02f3y3NTsddjdUMoNiBppI",
+    "name": "Make It Big"
+   },
+   "duration_ms": 231333,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Billie Jean",
+    "Michael Jackson"
+   ],
+   "id": "7J1uxwnxfQLu4APicE5Rnj",
+   "name": "Billie Jean",
+   "artists": [
+    "Michael Jackson"
+   ],
+   "album": {
+    "id": "2ANVost0y2y52ema1E9xAZ",
+    "name": "Thriller"
+   },
+   "duration_ms": 293802,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Lovely Day",
+    "Bill Withers"
+   ],
+   "id": "0bRXwKfigvpKZUurwqAlEh",
+   "name": "Lovely Day",
+   "artists": [
+    "Bill Withers"
+   ],
+   "album": {
+    "id": "3QjPTUI6UcPr5m9RujkO3c",
+    "name": "Menagerie"
+   },
+   "duration_ms": 257157,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Can't Stop the Feeling!",
+    "Justin Timberlake"
+   ],
+   "id": "6JV2JOEocMgcZxYSZelKcc",
+   "name": "CAN'T STOP THE FEELING! (from DreamWorks Animation's \"TROLLS\")",
+   "artists": [
+    "Justin Timberlake"
+   ],
+   "album": {
+    "id": "40LbnfieVTWtHrK24WQeEB",
+    "name": "CAN'T STOP THE FEELING! (from DreamWorks Animation's \"TROLLS\")"
+   },
+   "duration_ms": 236001,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Electric Feel",
+    "MGMT"
+   ],
+   "id": "3FtYbEfBqAlGO46NUDQSAt",
+   "name": "Electric Feel",
+   "artists": [
+    "MGMT"
+   ],
+   "album": {
+    "id": "6mm1Skz3JE6AXneya9Nyiv",
+    "name": "Oracular Spectacular"
+   },
+   "duration_ms": 229640,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Dog Days Are Over",
+    "Florence + The Machine"
+   ],
+   "id": "456WNXWhDwYOSf5SpTuqxd",
+   "name": "Dog Days Are Over",
+   "artists": [
+    "Florence + The Machine"
+   ],
+   "album": {
+    "id": "1rLLyY5p6HXNl2lKzINWp5",
+    "name": "Lungs (Deluxe Version)"
+   },
+   "duration_ms": 252818,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Golden",
+    "Harry Styles"
+   ],
+   "id": "45S5WTQEGOB1VHr1Q4FuPl",
+   "name": "Golden",
+   "artists": [
+    "Harry Styles"
+   ],
+   "album": {
+    "id": "7xV2TzoaVc0ycW7fwBwAml",
+    "name": "Fine Line"
+   },
+   "duration_ms": 208917,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Pompeii",
+    "Bastille"
+   ],
+   "id": "4Ub8UsjWuewQrPhuepfVpd",
+   "name": "Pompeii",
+   "artists": [
+    "Bastille"
+   ],
+   "album": {
+    "id": "5G6oMu9zNW2acdV0lqzI3L",
+    "name": "All This Bad Blood"
+   },
+   "duration_ms": 214147,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Uptown Funk",
+    "Mark Ronson"
+   ],
+   "id": "32OlwWuMpZ6b0aN2RZOeMS",
+   "name": "Uptown Funk (feat. Bruno Mars)",
+   "artists": [
+    "Mark Ronson",
+    "Bruno Mars"
+   ],
+   "album": {
+    "id": "3vLaOYCNCzngDf8QdBg2V1",
+    "name": "Uptown Special"
+   },
+   "duration_ms": 269658,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Go Your Own Way",
+    "Fleetwood Mac"
+   ],
+   "id": "07GvNcU1WdyZJq3XxP0kZa",
+   "name": "Go Your Own Way - 2004 Remaster",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "1bt6q2SruMsBtcerNVtpZB",
+    "name": "Rumours"
+   },
+   "duration_ms": 223613,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Everywhere",
+    "Fleetwood Mac"
+   ],
+   "id": "1prZ0pr6XoRCxcrC3MCL0M",
+   "name": "Everywhere",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "0LfM3PGkXE6KvJEE1HkOnz",
+    "name": "Greatest Hits"
+   },
+   "duration_ms": 222733,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "The Chain",
+    "Fleetwood Mac"
+   ],
+   "id": "5e9TFTbltYBg2xThimr0rU",
+   "name": "The Chain - 2004 Remaster",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "0BwWUstDMUbgq2NYONRqlu",
+    "name": "Rumours (Super Deluxe)"
+   },
+   "duration_ms": 270213,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Landslide",
+    "Fleetwood Mac"
+   ],
+   "id": "5ihS6UUlyQAfmp48eSkxuQ",
+   "name": "Landslide",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "5VIQ3VaAoRKOEpJ0fewdvo",
+    "name": "Fleetwood Mac"
+   },
+   "duration_ms": 199493,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Little Lies",
+    "Fleetwood Mac"
+   ],
+   "id": "08o75xMKmGrKny6GsXrNJW",
+   "name": "Little Lies",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "0LfM3PGkXE6KvJEE1HkOnz",
+    "name": "Greatest Hits"
+   },
+   "duration_ms": 218040,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Rhiannon",
+    "Fleetwood Mac"
+   ],
+   "id": "05oETzWbd4SI33qK2gbJfR",
+   "name": "Rhiannon",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "5VIQ3VaAoRKOEpJ0fewdvo",
+    "name": "Fleetwood Mac"
+   },
+   "duration_ms": 252773,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Don't Stop",
+    "Fleetwood Mac"
+   ],
+   "id": "4bEb3KE4mSKlTFjtWJQBqO",
+   "name": "Don't Stop - 2004 Remaster",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "1bt6q2SruMsBtcerNVtpZB",
+    "name": "Rumours"
+   },
+   "duration_ms": 193346,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Songbird",
+    "Fleetwood Mac"
+   ],
+   "id": "2JoUtztTqCN4ZhmbRDGPIL",
+   "name": "Songbird - 2004 Remaster",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "1bt6q2SruMsBtcerNVtpZB",
+    "name": "Rumours"
+   },
+   "duration_ms": 200813,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Seven Wonders",
+    "Fleetwood Mac"
+   ],
+   "id": "0BEajdb792o6xGRUFL1NEr",
+   "name": "Seven Wonders",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "album": {
+    "id": "5YzOUVdLMrItgSP3lMxReH",
+    "name": "Greatest Hits (Deluxe Edition)"
+   },
+   "duration_ms": 212853,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Don't You (Forget About Me)",
+    "Simple Minds"
+   ],
+   "id": "3fH4KjXFYMmljxrcGrbPj9",
+   "name": "Don't You (Forget About Me)",
+   "artists": [
+    "Simple Minds"
+   ],
+   "album": {
+    "id": "4YimfceN1R0nOS9CefIFhm",
+    "name": "Once Upon A Time (Super Deluxe)"
+   },
+   "duration_ms": 263040,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Wonderwall",
+    "Oasis"
+   ],
+   "id": "1qPbGZqppFwLwcBC1JQ6Vr",
+   "name": "Wonderwall",
+   "artists": [
+    "Oasis"
+   ],
+   "album": {
+    "id": "2u30gztZTylY4RG7IvfXs8",
+    "name": "(What's The Story) Morning Glory?"
+   },
+   "duration_ms": 258906,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Common People",
+    "Pulp"
+   ],
+   "id": "3SzP7yEGRSbfnkkNVMxxYa",
+   "name": "Common People",
+   "artists": [
+    "Pulp"
+   ],
+   "album": {
+    "id": "2eidOWrCeH2sUMML9Ive4b",
+    "name": "The Gambler (Music From The Motion Picture)"
+   },
+   "duration_ms": 246026,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Girls Just Want to Have Fun",
+    "Cyndi Lauper"
+   ],
+   "id": "4y1LsJpmMti1PfRQV9AWWe",
+   "name": "Girls Just Want to Have Fun",
+   "artists": [
+    "Cyndi Lauper"
+   ],
+   "album": {
+    "id": "1FvdZ1oizXwF9bxogujoF0",
+    "name": "She's So Unusual"
+   },
+   "duration_ms": 238120,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Bitter Sweet Symphony",
+    "The Verve"
+   ],
+   "id": "57iDDD9N9tTWe75x6qhStw",
+   "name": "Bitter Sweet Symphony - Remastered 2016",
+   "artists": [
+    "The Verve"
+   ],
+   "album": {
+    "id": "52AeC4gwbxDfFlLHgK1ByD",
+    "name": "Urban Hymns (Remastered 2016)"
+   },
+   "duration_ms": 357266,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Song 2",
+    "Blur"
+   ],
+   "id": "3GfOAdcoc3X5GPiiXmpBjK",
+   "name": "Song 2",
+   "artists": [
+    "Blur"
+   ],
+   "album": {
+    "id": "1bgkxe4t0HNeLn9rhrx79x",
+    "name": "Blur: The Best Of"
+   },
+   "duration_ms": 121880,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Torn",
+    "Natalie Imbruglia"
+   ],
+   "id": "1Jaah2tmN9Hv81A87KZ1MU",
+   "name": "Torn",
+   "artists": [
+    "Natalie Imbruglia"
+   ],
+   "album": {
+    "id": "38alWeQVP9UUAGJvLptys9",
+    "name": "Left Of The Middle"
+   },
+   "duration_ms": 244666,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Everybody Wants To Rule The World",
+    "Tears For Fears"
+   ],
+   "id": "4RvWPyQ5RL0ao9LPZeSouE",
+   "name": "Everybody Wants To Rule The World",
+   "artists": [
+    "Tears For Fears"
+   ],
+   "album": {
+    "id": "3myPwaMYjdwhtq0nFgeG6W",
+    "name": "Songs From The Big Chair (Super Deluxe Edition)"
+   },
+   "duration_ms": 251488,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Crazy In Love",
+    "Beyoncé"
+   ],
+   "id": "5IVuqXILoxVWvWEPm82Jxr",
+   "name": "Crazy In Love (feat. JAŸ-Z)",
+   "artists": [
+    "Beyoncé",
+    "JAŸ-Z"
+   ],
+   "album": {
+    "id": "6oxVabMIqCMJRYN1GqR3Vf",
+    "name": "Dangerously In Love"
+   },
+   "duration_ms": 236133,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Toxic",
+    "Britney Spears"
+   ],
+   "id": "6I9VzXrHxO9rA9A5euc8Ak",
+   "name": "Toxic",
+   "artists": [
+    "Britney Spears"
+   ],
+   "album": {
+    "id": "0z7pVBGOD7HCIB7S8eLkLI",
+    "name": "In The Zone"
+   },
+   "duration_ms": 198800,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Don't Look Back In Anger",
+    "Oasis"
+   ],
+   "id": "7ppPZa3TRUSGKaks9wH7VT",
+   "name": "Don't Look Back In Anger",
+   "artists": [
+    "Oasis"
+   ],
+   "album": {
+    "id": "2u30gztZTylY4RG7IvfXs8",
+    "name": "(What's The Story) Morning Glory?"
+   },
+   "duration_ms": 287826,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Sweet Dreams (Are Made of This)",
+    "Eurythmics"
+   ],
+   "id": "1TfqLAPs4K3s2rJMoCokcS",
+   "name": "Sweet Dreams (Are Made of This) - 2005 Remaster",
+   "artists": [
+    "Eurythmics",
+    "Annie Lennox",
+    "Dave Stewart"
+   ],
+   "album": {
+    "id": "5jNDWA19BJbE24x1UUJGRY",
+    "name": "Sweet Dreams (Are Made Of This)"
+   },
+   "duration_ms": 216933,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Fast Car",
+    "Tracy Chapman"
+   ],
+   "id": "2M9ro2krNb7nr7HSprkEgo",
+   "name": "Fast Car",
+   "artists": [
+    "Tracy Chapman"
+   ],
+   "album": {
+    "id": "6hmmX5UP4rIvOpGSaPerV8",
+    "name": "Tracy Chapman"
+   },
+   "duration_ms": 296800,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Banana Pancakes",
+    "Jack Johnson"
+   ],
+   "id": "0BgbobvykXxEvxo2HhCuvM",
+   "name": "Banana Pancakes",
+   "artists": [
+    "Jack Johnson"
+   ],
+   "album": {
+    "id": "2B9q4KPjOEYu885Keo9dfX",
+    "name": "In Between Dreams"
+   },
+   "duration_ms": 191906,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Bloom",
+    "The Paper Kites"
+   ],
+   "id": "1HMQmOWrkieKYWlFsjUP3D",
+   "name": "Bloom - Bonus Track",
+   "artists": [
+    "The Paper Kites"
+   ],
+   "album": {
+    "id": "1lq6KMHFACcE6GQZysxnSZ",
+    "name": "Woodland"
+   },
+   "duration_ms": 210080,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Better Together",
+    "Jack Johnson"
+   ],
+   "id": "2iXdwVdzA0KrI2Q0iZNJbX",
+   "name": "Better Together",
+   "artists": [
+    "Jack Johnson"
+   ],
+   "album": {
+    "id": "2B9q4KPjOEYu885Keo9dfX",
+    "name": "In Between Dreams"
+   },
+   "duration_ms": 207680,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Riptide",
+    "Vance Joy"
+   ],
+   "id": "7yq4Qj7cqayVTp3FF9CWbm",
+   "name": "Riptide",
+   "artists": [
+    "Vance Joy"
+   ],
+   "album": {
+    "id": "6rIbiUMmZJfqJRnXhVxFvg",
+    "name": "Dream Your Life Away"
+   },
+   "duration_ms": 204280,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Le Freak",
+    "CHIC"
+   ],
+   "id": "7Kszjzps0xbQXyo1pO4KfE",
+   "name": "Le Freak - 2018 Remaster",
+   "artists": [
+    "CHIC"
+   ],
+   "album": {
+    "id": "4a1EmaXGBiQ61Y4m6SNcYi",
+    "name": "C'est Chic (2018 Remaster)"
+   },
+   "duration_ms": 331360,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Good Times",
+    "CHIC"
+   ],
+   "id": "0G3fbPbE1vGeABDEZF0jeG",
+   "name": "Good Times",
+   "artists": [
+    "CHIC"
+   ],
+   "album": {
+    "id": "1UFBJkKiBe3Lzjr307UhuU",
+    "name": "Risqué"
+   },
+   "duration_ms": 495400,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "I Feel Love",
+    "Donna Summer"
+   ],
+   "id": "1vCBk33l9HaWp5FOnhSGxk",
+   "name": "I Feel Love",
+   "artists": [
+    "Donna Summer"
+   ],
+   "album": {
+    "id": "04nlrp346ZfIBhxsNOxpqe",
+    "name": "I Remember Yesterday"
+   },
+   "duration_ms": 355173,
+   "explicit": false
+  },
+  {
+   "wanted": [
+    "Get Lucky",
+    "Daft Punk"
+   ],
+   "id": "69kOkLUCkxIZYexIgSG8rq",
+   "name": "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+   "artists": [
+    "Daft Punk",
+    "Pharrell Williams",
+    "Nile Rodgers"
+   ],
+   "album": {
+    "id": "4m2880jivSbbyEGAKfITCa",
+    "name": "Random Access Memories"
+   },
+   "duration_ms": 369626,
+   "explicit": false
+  }
+ ],
+ "artists": [
+  {
+   "wanted": "Fleetwood Mac",
+   "id": "08GQAI4eElDnROBrJRGE0X",
+   "name": "Fleetwood Mac"
+  },
+  {
+   "wanted": "Queen",
+   "id": "1dfeR4HaWDbWqFHLkxsg1d",
+   "name": "Queen"
+  }
+ ],
+ "albums": [
+  {
+   "wanted": [
+    "Rumours",
+    "Fleetwood Mac"
+   ],
+   "id": "1bt6q2SruMsBtcerNVtpZB",
+   "name": "Rumours",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "release_date": "1977-02-04",
+   "album_type": "album",
+   "songs": [
+    {
+     "id": "0hlniElQOr5tvSKBaSpAQi",
+     "name": "Second Hand News - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 176306,
+     "explicit": false
+    },
+    {
+     "id": "5TDZyWDfbQFQJabbPwImVY",
+     "name": "Dreams - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 257800,
+     "explicit": false
+    },
+    {
+     "id": "2TJqhMuTx2eMun7MMQVIFy",
+     "name": "Never Going Back Again - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 134400,
+     "explicit": false
+    },
+    {
+     "id": "4bEb3KE4mSKlTFjtWJQBqO",
+     "name": "Don't Stop - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 193346,
+     "explicit": false
+    },
+    {
+     "id": "07GvNcU1WdyZJq3XxP0kZa",
+     "name": "Go Your Own Way - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 223613,
+     "explicit": false
+    },
+    {
+     "id": "2JoUtztTqCN4ZhmbRDGPIL",
+     "name": "Songbird - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 200813,
+     "explicit": false
+    },
+    {
+     "id": "7Dm3dV3WPNdTgxoNY7YFnc",
+     "name": "The Chain - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 269813,
+     "explicit": false
+    },
+    {
+     "id": "28H3wOEKsaEa8NBEYCLl4j",
+     "name": "You Make Loving Fun - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 213693,
+     "explicit": false
+    },
+    {
+     "id": "6mGTiazKYI1BHT2uc9wTUL",
+     "name": "I Don't Want to Know - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 196853,
+     "explicit": false
+    },
+    {
+     "id": "3D8bcwMmgPR5ZnpL52rY1q",
+     "name": "Oh Daddy - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 236240,
+     "explicit": false
+    },
+    {
+     "id": "2w3ScXudq4aD3K5HFO5xvx",
+     "name": "Gold Dust Woman - 2004 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "1bt6q2SruMsBtcerNVtpZB",
+      "name": "Rumours"
+     },
+     "duration_ms": 295626,
+     "explicit": false
+    }
+   ]
+  },
+  {
+   "wanted": [
+    "Tango in the Night",
+    "Fleetwood Mac"
+   ],
+   "id": "7CWZNdANL2ZYQs3JfdxoM5",
+   "name": "Tango in the Night (2017 Remaster)",
+   "artists": [
+    "Fleetwood Mac"
+   ],
+   "release_date": "1987-04-14",
+   "album_type": "album",
+   "songs": [
+    {
+     "id": "3pBj4EcASvEBCNNUXaf7Sv",
+     "name": "Big Love - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 223733,
+     "explicit": false
+    },
+    {
+     "id": "4DsFdZmkVhYjMAfEFctvqg",
+     "name": "Seven Wonders - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 222400,
+     "explicit": false
+    },
+    {
+     "id": "4k5FeWIdUaBx5OZdvrSYP1",
+     "name": "Everywhere - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 226653,
+     "explicit": false
+    },
+    {
+     "id": "0tZC4oMQl6tIwvjPIjqfRd",
+     "name": "Caroline - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 233613,
+     "explicit": false
+    },
+    {
+     "id": "5Y5du84wNM20ZZ0DP5GjGu",
+     "name": "Tango in the Night - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 242880,
+     "explicit": false
+    },
+    {
+     "id": "43TbxuSMutvAnWTCi0xieo",
+     "name": "Mystified - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 189760,
+     "explicit": false
+    },
+    {
+     "id": "4EcM86vNf0QIOGkpf4O0UP",
+     "name": "Little Lies - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 221053,
+     "explicit": false
+    },
+    {
+     "id": "02jrZxFA2nMEweoUc5UvX3",
+     "name": "Family Man - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 247133,
+     "explicit": false
+    },
+    {
+     "id": "0moGExIxhhbxLtlVn2D9Qg",
+     "name": "Welcome to the Room... Sara - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 221973,
+     "explicit": false
+    },
+    {
+     "id": "62gVYQO3xzwYHg3tvyYWdG",
+     "name": "Isn't It Midnight - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 253586,
+     "explicit": false
+    },
+    {
+     "id": "5m3EAk28nE4TbibeoCvtdb",
+     "name": "When I See You Again - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 229093,
+     "explicit": false
+    },
+    {
+     "id": "5njIsIfKDybWULkucnZwSf",
+     "name": "You and I, Pt. II - 2017 Remaster",
+     "artists": [
+      "Fleetwood Mac"
+     ],
+     "album": {
+      "id": "7CWZNdANL2ZYQs3JfdxoM5",
+      "name": "Tango in the Night (2017 Remaster)"
+     },
+     "duration_ms": 159613,
+     "explicit": false
+    }
+   ]
+  }
+ ]
+}

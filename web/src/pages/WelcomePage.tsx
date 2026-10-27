@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router";
 import { errorText } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
@@ -92,6 +93,9 @@ export function WelcomePage() {
             <p className={styles.note}>Forgot your password? Ask an admin to reset it.</p>
           )}
         </form>
+        <p className={styles.note}>
+          New here? <Link to="/help">See how GuildFM works</Link>.
+        </p>
       </div>
     </main>
   );

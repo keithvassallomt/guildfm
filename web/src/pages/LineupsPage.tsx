@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { api, errorText, type Lineup, type LineupDay } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { Button, ButtonLink } from "../components/Button";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { LineupCover } from "../components/LineupCover";
 import { FormError } from "../components/TextField";
@@ -113,12 +114,15 @@ export function LineupsPage() {
           </Link>
           <h1 className={styles.title}>Line-ups</h1>
         </div>
-        {canPlan && (
-          <ButtonLink to="/lineups/new">
-            <Icon name="plus" size={16} strokeWidth={2.6} />
-            New line-up
-          </ButtonLink>
-        )}
+        <div className={styles.headerEnd}>
+          {canPlan && (
+            <ButtonLink to="/lineups/new">
+              <Icon name="plus" size={16} strokeWidth={2.6} />
+              New line-up
+            </ButtonLink>
+          )}
+          <HelpLink />
+        </div>
       </header>
       <p className={`${styles.muted} ${l.intro}`}>
         Plan the day: which shows and playlists fill the gaps between requests, by the clock. Put

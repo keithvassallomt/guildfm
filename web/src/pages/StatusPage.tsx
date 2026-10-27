@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { api, errorText, type Service, type ServiceState, type SystemStatus } from "../api";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { StatusChip } from "../components/StatusChip";
 import { FormError } from "../components/TextField";
@@ -101,11 +102,14 @@ export function StatusPage() {
           </Link>
           <h1 className={styles.title}>Status</h1>
         </div>
-        {status && (
-          <StatusChip tone={failing ? "warn" : "live"}>
-            {failing ? `${failing} need${failing === 1 ? "s" : ""} a look` : "All working"}
-          </StatusChip>
-        )}
+        <div className={styles.headerEnd}>
+          {status && (
+            <StatusChip tone={failing ? "warn" : "live"}>
+              {failing ? `${failing} need${failing === 1 ? "s" : ""} a look` : "All working"}
+            </StatusChip>
+          )}
+          <HelpLink />
+        </div>
       </header>
 
       <FormError message={error} />

@@ -15,6 +15,7 @@ import { Button, ButtonLink } from "../components/Button";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { Dialog } from "../components/Dialog";
 import { EmotionPicker } from "../components/EmotionPicker";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { PreviewButton } from "../components/PreviewButton";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -187,6 +188,7 @@ export function AnnouncementEditor() {
           </Link>
           <h1 className={styles.title}>{title}</h1>
         </div>
+        <HelpLink />
       </header>
 
       {!form && <FormError message={error} />}

@@ -15,6 +15,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { Credit } from "../components/Credit";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { LogoCover } from "../components/LogoCover";
 import { PlaybackBanner } from "../components/PlaybackBanner";
@@ -157,6 +158,7 @@ export function NowPlayingPage() {
           {playback && (
             <StatusChip tone={statusTones[playback.status]}>{chipLabel(playback)}</StatusChip>
           )}
+          <HelpLink />
           {!wide && me && (
             <Link to="/profile" aria-label="Profile" className={n.avatar}>
               <Avatar name={me.display_name} url={me.avatar_url} size={32} />

@@ -16,3 +16,8 @@
     padding-bottom: 0;
   }
 }
+
+/* The help, before signing in: no navigation, so it sits in the middle. */
+.signedOut > * {
+  margin: 0 auto;
+}

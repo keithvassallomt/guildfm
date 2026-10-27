@@ -1,0 +1,17 @@
+.help,
+.help:hover {
+  width: var(--touch);
+  height: var(--touch);
+  margin-right: -10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help:hover {
+  color: var(--text);
+  background: var(--surface);
+}

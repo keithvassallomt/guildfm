@@ -39,7 +39,7 @@ make install   # Python and front end dependencies
 make dev       # the API and the front end, reloading as you change the code
 ```
 
-`make dev` serves the front end at `http://<this machine>:5173`, which phones on the same network can open too. `make serve` builds the front end and runs GuildFM as it runs in the office, at `http://<this machine>:8000`. `make test` runs the tests and `make lint` checks the code.
+`make dev` serves the front end at `http://<this machine>:5173`, which phones on the same network can open too. `make serve` builds the front end and runs GuildFM as it runs in the office, at `http://<this machine>:8000`. `make test` runs the tests and `make lint` checks the code. `make screenshots` takes the help's screenshots again, in a staged office that needs no speakers or keys (`make screenshots only="queue-*"` for some of them). Its songs, photos and covers were gathered once, with the keys in `.env`, by `uv run python -m tools.screenshots.fetch`; run that again after adding to `tools/screenshots/cast.py`.
 
 ## Installing it on the office machine
 

@@ -6,6 +6,8 @@ Work goes stage by stage, in order. A task is ticked when it is built and tested
 
 Every screen is mobile first and responsive: it has to work on a phone and look like a normal web app on a desktop browser.
 
+From Stage 14 on, any change people can see also updates its help topics and takes their screenshots again (`make screenshots`).
+
 ## Overview
 - [x] Stage 0: Feasibility and design
 - [x] Stage 1: Foundations
@@ -21,6 +23,7 @@ Every screen is mobile first and responsive: it has to work on a phone and look 
 - [ ] Stage 11: Hardening and handover
 - [x] Stage 12: Line-ups
 - [ ] Stage 13: Jingle generator
+- [x] Stage 14: Help
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -238,3 +241,20 @@ Goal: whoever looks after jingles describes the ones they want, or has the AI wr
 - [x] Words that go unsung: a test of the same description four times lost its words once, made on its own, so it wasn't the two at a time. OpenAI's speech to text now listens to each jingle with words, and one where they can't be heard is made again, once; if they're missing again, its card says so. The voices in ElevenLabs' plan also go in the first part's styles, which set the tone for the whole piece, and the plan's words are kept to the ones the description quotes, since ElevenLabs adds lines of its own (found while trying it)
 
 Done when: an admin asks for three system idents, has the AI write two and writes the third, keeps two and turns one down, and the next round's AI descriptions steer clear of the one turned down.
+
+## Stage 14: Help
+Goal: help inside GuildFM, in plain words with screenshots, covering every feature, where each person reads only about what they can do. The README stays the technical guide (setting up, `.env`, the service); the help never mentions any of that. Asked for by Keith on 2026-10-23.
+- [x] Demo office: a staged GuildFM on the fakes the tests use, so screenshots need no speakers, Spotify or AI. The six office rooms, invented colleagues with photos painted once by OpenAI and kept in the repo, real songs with their real artwork, playlists (Best Voted among them), stations with covers and DJs, a line-up, announcements, jingles and today's plays, at a fixed date and time, the same every run
+- [x] Screenshot tool, `make screenshots`: Playwright drives Chromium through each shot as a user, a curator or an admin, on a phone (390 px wide) and a desktop, with motion held still and the control a step is about ringed in orange. Shots are saved small (WebP) in the repo, and one shot or all of them can be taken again with one command
+- [x] Help viewer: a Help section at the bottom of the sidebar on desktop and on Profile on phones, topics grouped by area, each topic short numbered steps with screenshots, the phone shots on phones and the desktop shots on desktop. A search box over the topics. A ? in every page's header opens that page's topic, and the sign-in page links to the getting-started topics
+- [x] Who sees what: each topic, and any part within one, is marked with the permission it needs (the same ones the app checks), so a user never reads about controls they don't have, and screenshots are taken as the role reading them wherever a page looks different. Admins can switch the help to how a user or a curator sees it, for explaining things to people. The help ships with the app, so this hides it rather than locking it
+- [x] Sample for Keith to review before the rest: the viewer, the screenshot tool and two finished topics, Requesting and voting (everyone) and Making an announcement (admins), on phone and desktop
+- [x] Topics for everyone: what GuildFM is and why requests play first; creating an account, signing in and a forgotten password (ask an admin, then choose a new one); installing GuildFM on a phone or computer; Profile (display name, photo and cropping, announce my requests, your requests, signing out); Now Playing (what's on, where it came from, today's plays, the logo while the DJ, a jingle or an announcement is on); requesting a song (search, the cap, already queued, "recently played", songs that don't show up); voting and how the queue orders itself, removal at the threshold and the locked next song; removing your own request; thumbs down on a playlist's or station's next songs; what the status chip and banners mean (paused, stopped, outside playback hours, taken over from the Sonos app); the DJ and jingles, and not being named
+- [x] Topics for curators: play, pause, previous and skip (and why Previous is sometimes greyed out); reordering, removing and overriding votes in the queue; whole albums in the queue; choosing what fills the gaps on Now Playing, "after this song" and Requests only; playlists (making one, adding songs and albums, renaming, removing songs, shuffle, playing, deleting); importing from Spotify, playlist and album links, and copying a playlist Spotify won't share; Best Voted; Radio and AI picks; making a station (description, global awareness, crossfade, play jingles); its DJ (choosing or making one, shared DJs, personality, voice and preview, how often and what they say, announcing requests); covers and Paint another; a station's own jingles, uploaded or generated; previewing an hour; line-ups (what they are, making one on desktop and phone, putting one on, the Line-ups band, hand-overs and gaps)
+- [x] Topics for admins: office and room volume and Stop all; quick controls; the quick announcement; announcements (rooms, now or scheduled, over the music or after the song, repeats, emotions, preview, the on/off switch, Play now, editing, deleting, missed ones); jingles (system idents, uploading, About GuildFM, the jingle generator); users (adding, roles, resetting a password, deleting); every setting explained, with playback hours, when the queue runs out and connections; monitor mode and Listen here; the Status page and what each state means
+- [x] Checks: every page in the app has a topic, every screenshot a topic uses exists for each size and role it's shown at, and every permission a topic names is a real one. Build and typecheck pass
+- [x] Keeping it current: from this stage on, a stage that changes what people see also updates its topics and takes its screenshots again (noted at the top of this plan)
+
+- [x] The office in phases, so screens that only show in other states can be shot too: a line-up on, the jingle generator's drafts, someone taking over from the Sonos app, and monitor mode. The clock goes back to 11:24 for each, and a role's shot that's the same as the role's below is dropped, since the help falls back to it. Signed out, the sign-in page's link opens the three getting-started topics. A page with several topics opens a list of them from its ?, and curators can read the help as a user too. Covers, photos and songs are gathered once by `tools/screenshots/fetch.py` (decided while building)
+
+Done when: a user, a curator and an admin each open Help on a phone and on a desktop, see only what they can do, with screenshots that match the screen in front of them, and the ? on every page opens the right topic.

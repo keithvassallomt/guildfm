@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { api, errorText, type Station } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { Button, ButtonLink } from "../components/Button";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { StationCover } from "../components/StationCover";
 import { FormError } from "../components/TextField";
@@ -72,6 +73,7 @@ export function RadioPage() {
     <div className={`${styles.page} ${styles.narrow}`}>
       <header className={styles.header}>
         <h1 className={styles.title}>Radio</h1>
+        <HelpLink />
       </header>
 
       {playing && (

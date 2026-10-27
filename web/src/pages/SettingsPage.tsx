@@ -10,6 +10,7 @@ import {
   VOICES,
 } from "../api";
 import { ChoiceCards } from "../components/ChoiceCards";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { SpotifyConnection } from "../components/SpotifyConnection";
@@ -102,9 +103,12 @@ export function SettingsPage() {
           </Link>
           <h1 className={styles.title}>Settings</h1>
         </div>
-        <span role="status" className={s.saved}>
-          {saved === "saving" ? "Saving..." : saved === "saved" ? "Saved" : "Saves as you go"}
-        </span>
+        <div className={styles.headerEnd}>
+          <span role="status" className={s.saved}>
+            {saved === "saving" ? "Saving..." : saved === "saved" ? "Saved" : "Saves as you go"}
+          </span>
+          <HelpLink />
+        </div>
       </header>
 
       <FormError message={error} />

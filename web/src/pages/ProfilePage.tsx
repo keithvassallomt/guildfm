@@ -5,6 +5,7 @@ import { useAuth, useMe } from "../auth/AuthProvider";
 import { useQueue } from "../live/useQueue";
 import { Avatar } from "../components/Avatar";
 import { Button, ButtonLink } from "../components/Button";
+import { HelpLink } from "../components/HelpLink";
 import { InstallApp } from "../components/InstallApp";
 import { RoleBadge } from "../components/RoleBadge";
 import { PhotoCropper } from "../components/PhotoCropper";
@@ -109,6 +110,9 @@ export function ProfilePage() {
             <RoleBadge role={me.role} />
           </div>
         </div>
+        <span className={profile.help}>
+          <HelpLink />
+        </span>
       </header>
 
       <div className={profile.photo}>
@@ -188,6 +192,21 @@ export function ProfilePage() {
               Your requests
             </h2>
             <YourRequests />
+          </section>
+
+          <section className={styles.section} aria-labelledby="help">
+            <h2 id="help" className={styles.sectionTitle}>
+              Help
+            </h2>
+            <div className={styles.card}>
+              <p className={styles.muted}>
+                How to request songs, vote and everything else you can do in GuildFM, step by
+                step with pictures.
+              </p>
+              <ButtonLink to="/help" variant="secondary">
+                Open the help
+              </ButtonLink>
+            </div>
           </section>
 
           <section className={styles.section} aria-labelledby="account">

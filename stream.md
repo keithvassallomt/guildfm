@@ -220,6 +220,13 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Chrome, Edge and Android only offer to install over HTTPS (or on the machine itself), so in the office that needs GuildFM behind HTTPS. Over plain HTTP, their "add to home screen" is a shortcut that opens a browser tab.
 - There's no offline mode: GuildFM needs the office network and the server, as before.
 
+## Help
+- GuildFM has its own help, in plain words with screenshots, covering every feature. It's for the people using GuildFM; setting it up is in the README.
+- Each person reads only about what they can do: a user never sees help on curators' or admins' controls, and screenshots show the screen as that person sees it. Admins can switch the help to how a user or a curator sees it, and curators to how a user does.
+- On a desktop, Help is at the bottom of the sidebar; on a phone it's on Profile. Every page has a ? in its header that opens the help for that page, and the sign-in page links to the help on getting started.
+- Topics are short numbered steps, grouped by area, with a search box. Phones show screenshots taken on a phone, desktops ones taken on a desktop.
+- The screenshots come from a staged office (invented people, real songs) that GuildFM sets up on its own, so they can all be taken again with one command when a screen changes.
+
 ## Looking after GuildFM
 GuildFM runs unattended on an always-on machine in the office. How to set it up is in the [README](README.md).
 

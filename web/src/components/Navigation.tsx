@@ -90,6 +90,16 @@ export function Navigation() {
           );
         })}
       </div>
+      {/* At the foot of the sidebar. On phones it's on Profile, keeping the tabs to five. */}
+      <NavLink
+        to="/help"
+        className={({ isActive }) =>
+          `${styles.link} ${styles.wideOnly} ${styles.help} ${isActive ? styles.active : ""}`
+        }
+      >
+        <Icon name="help" />
+        Help
+      </NavLink>
     </nav>
   );
 }

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { api, errorText, type PlaylistDetail } from "../api";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { FormError, TextField } from "../components/TextField";
 import { Toggle } from "../components/Toggle";
@@ -58,11 +59,14 @@ export function PlaylistPage() {
           </Link>
           <h1 className={styles.title}>{playlist?.name ?? "Playlist"}</h1>
         </div>
-        {playlist && !best && (
-          <Button variant="ghost" onClick={() => setDialog("rename")}>
-            Rename
-          </Button>
-        )}
+        <div className={styles.headerEnd}>
+          {playlist && !best && (
+            <Button variant="ghost" onClick={() => setDialog("rename")}>
+              Rename
+            </Button>
+          )}
+          <HelpLink />
+        </div>
       </header>
 
       <FormError message={error} />

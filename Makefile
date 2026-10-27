@@ -1,4 +1,4 @@
-.PHONY: install dev build serve backup update test lint format migration
+.PHONY: install dev build serve backup update test lint format migration screenshots
 
 install:  ## Install Python and front end dependencies
 	uv sync
@@ -30,6 +30,10 @@ lint:  ## Check Python style and front end types
 format:  ## Fix Python formatting and lint issues
 	uv run ruff format .
 	uv run ruff check --fix .
+
+screenshots: build  ## Take the help's screenshots in a staged office: make screenshots [only="queue-*"]
+	uv run python -m tools.screenshots $(only)
+	cd web && npm run build
 
 migration:  ## Create a migration from model changes: make migration m="add users"
 	uv run alembic revision --autogenerate -m "$(m)"

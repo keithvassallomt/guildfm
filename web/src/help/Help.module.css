@@ -1,0 +1,429 @@
+/* The help: a list of topics by area, and each topic as steps with screenshots. */
+
+.home {
+  max-width: 1040px;
+}
+
+.intro {
+  margin: -6px 0 0;
+  max-width: 640px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.readAs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+}
+
+.readAsLabel {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.readAs > :last-child {
+  flex: 1;
+}
+
+/* Searching, like the song search. */
+.search {
+  max-width: 640px;
+  height: 52px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search:focus-within {
+  border-color: var(--accent);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.search input:focus-visible {
+  outline: none;
+}
+
+.search input::placeholder {
+  color: var(--faint);
+}
+
+.areas {
+  display: grid;
+  gap: 26px;
+  align-items: start;
+}
+
+.areaTitle {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Topics, as rows like Admin's links. */
+.topics {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.topics li + li {
+  border-top: 1px solid var(--line);
+}
+
+.topicLink,
+.topicLink:hover {
+  min-height: 64px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.topicLink:hover {
+  background: var(--surface-raised);
+}
+
+.topicText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topicTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.topicSummary {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* A topic */
+
+.layout {
+  display: grid;
+  gap: 28px;
+  align-items: start;
+}
+
+.contents {
+  display: none;
+}
+
+.article {
+  min-width: 0;
+  max-width: 720px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.summary {
+  margin: -8px 0 20px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.article h2 {
+  margin: 34px 0 10px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  scroll-margin-top: 16px;
+}
+
+.article h3 {
+  margin: 22px 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.article p {
+  margin: 0 0 12px;
+}
+
+.article strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.article ul,
+.article ol {
+  margin: 0 0 14px;
+  padding-left: 1.4em;
+}
+
+.article li {
+  margin: 6px 0;
+  padding-left: 4px;
+}
+
+.article li::marker {
+  color: var(--faint);
+}
+
+/* Numbered steps stand out in orange. */
+.steps > li::marker {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.article code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.article hr {
+  margin: 28px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.tip {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-tint);
+  color: var(--text-soft);
+}
+
+.tip p:last-child {
+  margin-bottom: 0;
+}
+
+.onThisPage {
+  margin: 0 0 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.onThisPageTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.onThisPage ul {
+  margin: 6px 0 0;
+}
+
+.onThisPage li {
+  margin: 2px 0;
+}
+
+.more {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.more h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+/* Screenshots */
+
+.shot {
+  margin: 16px 0 22px;
+}
+
+.shot img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.shot figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+
+/* A whole phone screen is shown smaller than the phone it's on, so it reads as a picture of
+   one. Tapping it opens it larger. */
+.screen img {
+  width: 250px;
+}
+
+.enlarge {
+  padding: 0;
+  border: 0;
+  background: none;
+  display: block;
+  cursor: zoom-in;
+  border-radius: 14px;
+}
+
+.larger {
+  max-width: none;
+  max-height: none;
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+
+.larger[open] {
+  display: flex;
+}
+
+.larger::backdrop {
+  background: rgba(10, 7, 6, 0.86);
+}
+
+.larger img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+}
+
+.close {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.missing {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--warn);
+  color: var(--warn);
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .screen img {
+    width: 100%;
+  }
+}
+
+/* Two columns of areas, and the topics alongside a topic, once the page has room. */
+@container page (min-width: 880px) {
+  .areas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 30px 28px;
+  }
+
+  .layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .contents {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    font-size: 14px;
+  }
+}
+
+.contentsHome,
+.contentsHome:hover {
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.contentsArea {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contentsTitle {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.contentsLink,
+.contentsLink:hover {
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1.35;
+}
+
+.contentsLink:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.current,
+.current:hover {
+  background: var(--accent-tint);
+  color: var(--accent);
+}

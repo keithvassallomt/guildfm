@@ -1,0 +1,1322 @@
+{
+ "admin": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "4bb9062e",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "bf4cbee6",
+    "screen": true
+   }
+  }
+ },
+ "announcement-card": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 244,
+    "v": "a5ddad09",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 193,
+    "v": "a7555937",
+    "screen": false
+   }
+  }
+ },
+ "announcement-message": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 501,
+    "v": "9330ad69",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 449,
+    "v": "6a0296bd",
+    "screen": false
+   }
+  }
+ },
+ "announcement-when": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 875,
+    "v": "7c22da9c",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 857,
+    "v": "2d4e167a",
+    "screen": false
+   }
+  }
+ },
+ "announcements": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "430462d2",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "0f1c0935",
+    "screen": true
+   }
+  }
+ },
+ "best-voted": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "1d7ff1f6",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "4d256833",
+    "screen": true
+   }
+  }
+ },
+ "choose-password": {
+  "phone": {
+   "guest": {
+    "w": 390,
+    "h": 844,
+    "v": "87ff4287",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "guest": {
+    "w": 1280,
+    "h": 800,
+    "v": "d4a26aad",
+    "screen": true
+   }
+  }
+ },
+ "generator-describe": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "7be47e98",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 760,
+    "h": 688,
+    "v": "e6707db3",
+    "screen": false
+   }
+  }
+ },
+ "generator-review": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "555597ac",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 760,
+    "h": 688,
+    "v": "eadca78e",
+    "screen": false
+   }
+  }
+ },
+ "hour-preview": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "698bcba4",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 760,
+    "h": 688,
+    "v": "8f44de9a",
+    "screen": false
+   }
+  }
+ },
+ "jingles": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "d5bc3750",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "b4abc3e5",
+    "screen": true
+   }
+  }
+ },
+ "lineup-editor": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "17e576be",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "50b1b48c",
+    "screen": true
+   }
+  }
+ },
+ "lineup-slot": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "b305ba20",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 502,
+    "h": 565,
+    "v": "77efd807",
+    "screen": false
+   }
+  }
+ },
+ "lineups": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "a17b3b3b",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "51a55788",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "377c8fed",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "8f9b5637",
+    "screen": true
+   }
+  }
+ },
+ "monitor-bar": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "ddb1af38",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "6ffef130",
+    "screen": true
+   }
+  }
+ },
+ "now-controls": {
+  "phone": {
+   "curator": {
+    "w": 386,
+    "h": 267,
+    "v": "2c60a1cd",
+    "screen": false
+   },
+   "admin": {
+    "w": 386,
+    "h": 453,
+    "v": "a5f590d0",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 328,
+    "h": 570,
+    "v": "4e26d0de",
+    "screen": false
+   },
+   "admin": {
+    "w": 328,
+    "h": 758,
+    "v": "f5cfd6c9",
+    "screen": false
+   }
+  }
+ },
+ "now-history": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 401,
+    "v": "1276c94d",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 499,
+    "h": 265,
+    "v": "c960ecd9",
+    "screen": false
+   }
+  }
+ },
+ "now-lineups": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 541,
+    "v": "5f996edc",
+    "screen": false
+   },
+   "curator": {
+    "w": 386,
+    "h": 597,
+    "v": "05feb603",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 651,
+    "h": 293,
+    "v": "8fb9810b",
+    "screen": false
+   },
+   "curator": {
+    "w": 651,
+    "h": 293,
+    "v": "75fc1ecc",
+    "screen": false
+   }
+  }
+ },
+ "now-playing": {
+  "phone": {
+   "user": {
+    "w": 390,
+    "h": 844,
+    "v": "d23fb26a",
+    "screen": true
+   },
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "9c8241ed",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "df7e8ee4",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 1280,
+    "h": 800,
+    "v": "39aef1d3",
+    "screen": true
+   },
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "1fe2e1e0",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "cccda9ff",
+    "screen": true
+   }
+  }
+ },
+ "now-requests-only": {
+  "phone": {
+   "curator": {
+    "w": 386,
+    "h": 833,
+    "v": "02ffb198",
+    "screen": false
+   },
+   "admin": {
+    "w": 386,
+    "h": 833,
+    "v": "59e1c9ee",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 651,
+    "h": 347,
+    "v": "1d6ed7c5",
+    "screen": false
+   }
+  }
+ },
+ "now-rooms": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 807,
+    "v": "7dbae263",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 328,
+    "h": 1112,
+    "v": "1ee9e37a",
+    "screen": false
+   }
+  }
+ },
+ "now-sources": {
+  "phone": {
+   "curator": {
+    "w": 386,
+    "h": 481,
+    "v": "da5710fe",
+    "screen": false
+   },
+   "admin": {
+    "w": 386,
+    "h": 481,
+    "v": "c2e8fc9c",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 651,
+    "h": 1418,
+    "v": "652368bd",
+    "screen": false
+   }
+  }
+ },
+ "now-takeover": {
+  "phone": {
+   "user": {
+    "w": 390,
+    "h": 844,
+    "v": "7460919a",
+    "screen": true
+   },
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "26a33943",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "a6ab64e1",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 1280,
+    "h": 800,
+    "v": "879f0771",
+    "screen": true
+   },
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "52d2505f",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "0ba01d91",
+    "screen": true
+   }
+  }
+ },
+ "playlist": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "b367de9a",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "b2dc618b",
+    "screen": true
+   }
+  }
+ },
+ "playlist-add": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "227e39f2",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 760,
+    "h": 688,
+    "v": "4ae93e05",
+    "screen": false
+   }
+  }
+ },
+ "playlists": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "a1effa9d",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "7845e7a8",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "13aa6189",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "bcd73e5c",
+    "screen": true
+   }
+  }
+ },
+ "playlists-import": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "fba19df7",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 440,
+    "h": 346,
+    "v": "d4c3074a",
+    "screen": false
+   }
+  }
+ },
+ "profile": {
+  "phone": {
+   "user": {
+    "w": 390,
+    "h": 844,
+    "v": "05d791a0",
+    "screen": true
+   },
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "303ada65",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "38f975c0",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 1280,
+    "h": 800,
+    "v": "c84fe54f",
+    "screen": true
+   },
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "a1935548",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "6d196588",
+    "screen": true
+   }
+  }
+ },
+ "profile-help": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 195,
+    "v": "f76a1ae8",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 490,
+    "h": 203,
+    "v": "1fc88b07",
+    "screen": false
+   }
+  }
+ },
+ "profile-install": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 135,
+    "v": "2553c13f",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 490,
+    "h": 143,
+    "v": "c478a16e",
+    "screen": false
+   }
+  }
+ },
+ "profile-on-air": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 354,
+    "v": "8a6d11ec",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 490,
+    "h": 362,
+    "v": "ede79a07",
+    "screen": false
+   }
+  }
+ },
+ "profile-photo": {
+  "phone": {
+   "user": {
+    "w": 390,
+    "h": 844,
+    "v": "fc597f63",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 440,
+    "h": 592,
+    "v": "f004cd36",
+    "screen": false
+   }
+  }
+ },
+ "queue": {
+  "phone": {
+   "user": {
+    "w": 390,
+    "h": 844,
+    "v": "f5bb8ea2",
+    "screen": true
+   },
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "24bc10aa",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "e4824fa0",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 1280,
+    "h": 800,
+    "v": "df7f379a",
+    "screen": true
+   },
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "5d6c9999",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "7d865968",
+    "screen": true
+   }
+  }
+ },
+ "queue-remove": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 134,
+    "v": "a616c0be",
+    "screen": false
+   },
+   "curator": {
+    "w": 386,
+    "h": 134,
+    "v": "4cbd6c57",
+    "screen": false
+   },
+   "admin": {
+    "w": 386,
+    "h": 134,
+    "v": "ab949f02",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 567,
+    "h": 134,
+    "v": "69a279b0",
+    "screen": false
+   },
+   "curator": {
+    "w": 567,
+    "h": 134,
+    "v": "95ddcedb",
+    "screen": false
+   },
+   "admin": {
+    "w": 567,
+    "h": 134,
+    "v": "29cfebcb",
+    "screen": false
+   }
+  }
+ },
+ "queue-search": {
+  "phone": {
+   "user": {
+    "w": 390,
+    "h": 844,
+    "v": "1137c754",
+    "screen": true
+   },
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "ca40c646",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "84c7fd13",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 760,
+    "h": 688,
+    "v": "cb36a007",
+    "screen": false
+   },
+   "curator": {
+    "w": 760,
+    "h": 688,
+    "v": "10f4c9af",
+    "screen": false
+   },
+   "admin": {
+    "w": 760,
+    "h": 688,
+    "v": "99607ae1",
+    "screen": false
+   }
+  }
+ },
+ "queue-up-next": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 127,
+    "v": "b1e15489",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 413,
+    "h": 127,
+    "v": "e3b3f83e",
+    "screen": false
+   }
+  }
+ },
+ "queue-upcoming": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 255,
+    "v": "62672fd7",
+    "screen": false
+   },
+   "curator": {
+    "w": 386,
+    "h": 255,
+    "v": "3ee9eb73",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 567,
+    "h": 255,
+    "v": "d719807d",
+    "screen": false
+   },
+   "curator": {
+    "w": 567,
+    "h": 255,
+    "v": "a7cd3b09",
+    "screen": false
+   }
+  }
+ },
+ "queue-vote": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 118,
+    "v": "001b5c90",
+    "screen": false
+   },
+   "curator": {
+    "w": 386,
+    "h": 134,
+    "v": "8ea10004",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 567,
+    "h": 118,
+    "v": "23dc884e",
+    "screen": false
+   },
+   "curator": {
+    "w": 567,
+    "h": 134,
+    "v": "ba1a0091",
+    "screen": false
+   }
+  }
+ },
+ "quick-announcement": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "45767b15",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 440,
+    "h": 451,
+    "v": "11ccddfa",
+    "screen": false
+   }
+  }
+ },
+ "quick-controls": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "db38c8ed",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "0e55443e",
+    "screen": true
+   }
+  }
+ },
+ "radio": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "dbe496f9",
+    "screen": true
+   },
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "d76e7fa6",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "4428351e",
+    "screen": true
+   },
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "e07df5a6",
+    "screen": true
+   }
+  }
+ },
+ "settings-connections": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 361,
+    "v": "6101665f",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 377,
+    "v": "7a5dddef",
+    "screen": false
+   }
+  }
+ },
+ "settings-hours": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 890,
+    "v": "20e65e93",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 675,
+    "v": "0665b582",
+    "screen": false
+   }
+  }
+ },
+ "settings-monitor": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 331,
+    "v": "7b4ad785",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 279,
+    "v": "3f472637",
+    "screen": false
+   }
+  }
+ },
+ "settings-runs-out": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 422,
+    "v": "4d667cb9",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 391,
+    "v": "f69992aa",
+    "screen": false
+   }
+  }
+ },
+ "settings-voice": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 511,
+    "v": "bf526f10",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 519,
+    "v": "2ed4eb17",
+    "screen": false
+   }
+  }
+ },
+ "settings-voting": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 711,
+    "v": "5d4752b8",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 677,
+    "v": "54f90fe2",
+    "screen": false
+   }
+  }
+ },
+ "station-cover": {
+  "phone": {
+   "curator": {
+    "w": 352,
+    "h": 170,
+    "v": "c4e5cdd6",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 448,
+    "h": 152,
+    "v": "25f99c8d",
+    "screen": false
+   }
+  }
+ },
+ "station-dj": {
+  "phone": {
+   "curator": {
+    "w": 369,
+    "h": 429,
+    "v": "af1c670e",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 469,
+    "h": 433,
+    "v": "81de74cd",
+    "screen": false
+   }
+  }
+ },
+ "station-editor": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "c4a15b92",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "b6925a2c",
+    "screen": true
+   }
+  }
+ },
+ "station-jingles": {
+  "phone": {
+   "curator": {
+    "w": 386,
+    "h": 651,
+    "v": "7123dfa6",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 490,
+    "h": 624,
+    "v": "cd9b7bf8",
+    "screen": false
+   }
+  }
+ },
+ "station-switches": {
+  "phone": {
+   "curator": {
+    "w": 352,
+    "h": 342,
+    "v": "7f5415fe",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 448,
+    "h": 323,
+    "v": "795ea5d6",
+    "screen": false
+   }
+  }
+ },
+ "station-talk": {
+  "phone": {
+   "curator": {
+    "w": 352,
+    "h": 454,
+    "v": "1e2e0848",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 448,
+    "h": 404,
+    "v": "52992fa5",
+    "screen": false
+   }
+  }
+ },
+ "station-voice": {
+  "phone": {
+   "curator": {
+    "w": 352,
+    "h": 694,
+    "v": "d6ce3254",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 448,
+    "h": 637,
+    "v": "2630dbef",
+    "screen": false
+   }
+  }
+ },
+ "status": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "56ae9f09",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "3d743697",
+    "screen": true
+   }
+  }
+ },
+ "users": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "8f301a91",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 1280,
+    "h": 800,
+    "v": "a6bf2246",
+    "screen": true
+   }
+  }
+ },
+ "users-add": {
+  "phone": {
+   "admin": {
+    "w": 390,
+    "h": 844,
+    "v": "f2f4c83c",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 440,
+    "h": 372,
+    "v": "6f3d494d",
+    "screen": false
+   }
+  }
+ },
+ "users-manage": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 214,
+    "v": "f00acf08",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 980,
+    "h": 100,
+    "v": "2d2d94eb",
+    "screen": false
+   }
+  }
+ },
+ "welcome-create": {
+  "phone": {
+   "guest": {
+    "w": 390,
+    "h": 844,
+    "v": "1fa8d8eb",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "guest": {
+    "w": 1280,
+    "h": 800,
+    "v": "00756670",
+    "screen": true
+   }
+  }
+ },
+ "welcome-sign-in": {
+  "phone": {
+   "guest": {
+    "w": 390,
+    "h": 844,
+    "v": "d9b4211e",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "guest": {
+    "w": 1280,
+    "h": 800,
+    "v": "0bc64f49",
+    "screen": true
+   }
+  }
+ }
+}

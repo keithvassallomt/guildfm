@@ -27,6 +27,13 @@
   gap: 4px;
 }
 
+/* What sits at the end of a header, such as the status and the help button. */
+.headerEnd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .title {
   font-weight: 800;
   font-size: 26px;

@@ -19,7 +19,8 @@ from guildfm.auth import (
     sign_out,
 )
 from guildfm.db import get_session
-from guildfm.models import AVATARS, User
+from guildfm.models import AVATARS, Role, User
+from guildfm.permissions import ROLE_PERMISSIONS, Permission
 
 router = APIRouter()
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -82,6 +83,15 @@ async def logout(request: Request) -> None:
 @router.get("/me")
 async def me(user: CurrentUser) -> MeOut:
     return MeOut.of(user)
+
+
+@router.get("/roles")
+async def roles(_: ActiveUser) -> dict[Role, list[Permission]]:
+    """What each role may do, so the help can be read as another role would see it."""
+    return {
+        role: [permission for permission in Permission if permission in allowed]
+        for role, allowed in ROLE_PERMISSIONS.items()
+    }
 
 
 @router.patch("/me")

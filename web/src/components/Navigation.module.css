@@ -108,6 +108,10 @@
     color: var(--accent);
   }
 
+  .help {
+    margin-top: auto;
+  }
+
   /* Pages under a tab, such as Admin's, indented beneath it. */
   .under,
   .under:hover {

@@ -3,6 +3,7 @@ import { api, errorText, type PlaybackState, type QueueEntry, type QueueState } 
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { HelpLink } from "../components/HelpLink";
 import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
 import { LogoCover } from "../components/LogoCover";
@@ -40,9 +41,12 @@ export function QueuePage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Queue</h1>
-        {playback && (
-          <StatusChip tone={statusTones[playback.status]}>{chipLabel(playback)}</StatusChip>
-        )}
+        <div className={styles.headerEnd}>
+          {playback && (
+            <StatusChip tone={statusTones[playback.status]}>{chipLabel(playback)}</StatusChip>
+          )}
+          <HelpLink />
+        </div>
       </header>
 
       <PlaybackBanner playback={playback} />

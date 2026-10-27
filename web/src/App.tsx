@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, lazy, type ReactNode, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useParams, useSearchParams } from "react-router";
 import type { Permission } from "./api";
 import styles from "./App.module.css";
@@ -47,6 +47,9 @@ function Shell() {
   );
 }
 
+// The help is only loaded when it's opened.
+const Help = lazy(() => import("./help/Help"));
+
 /** Where the Library's pages went when it split into Playlists and Radio. */
 function OldLibrary() {
   const [params] = useSearchParams();
@@ -68,7 +71,24 @@ export function App() {
   const { me, refresh } = useAuth();
 
   if (me === undefined) return null;
-  if (me === null) return <WelcomePage />;
+  if (me === null) {
+    // Signed out, only the help's getting-started topics are open, besides signing in.
+    return (
+      <Routes>
+        <Route
+          path="help/*"
+          element={
+            <main className={styles.signedOut}>
+              <Suspense fallback={null}>
+                <Help />
+              </Suspense>
+            </main>
+          }
+        />
+        <Route path="*" element={<WelcomePage />} />
+      </Routes>
+    );
+  }
   if (me.must_change_password) return <ChoosePasswordPage />;
 
   return (
@@ -213,6 +233,14 @@ export function App() {
             }
           />
           <Route path="profile" element={<ProfilePage />} />
+          <Route
+            path="help/*"
+            element={
+              <Suspense fallback={null}>
+                <Help />
+              </Suspense>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

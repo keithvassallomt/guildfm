@@ -5,6 +5,7 @@ import { useMe } from "../auth/AuthProvider";
 import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { RoleBadge, roleOptions } from "../components/RoleBadge";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -40,10 +41,13 @@ export function UsersPage() {
           </Link>
           <h1 className={styles.title}>Users</h1>
         </div>
-        <Button onClick={() => setAdding(true)}>
-          <Icon name="plus" size={16} strokeWidth={2.6} />
-          Add
-        </Button>
+        <div className={styles.headerEnd}>
+          <Button onClick={() => setAdding(true)}>
+            <Icon name="plus" size={16} strokeWidth={2.6} />
+            Add
+          </Button>
+          <HelpLink />
+        </div>
       </header>
 
       <FormError message={error} />

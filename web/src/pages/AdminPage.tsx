@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
+import { HelpLink } from "../components/HelpLink";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusChip } from "../components/StatusChip";
 import { chipLabel, statusTones } from "../live/status";
@@ -57,7 +58,10 @@ export function AdminPage() {
     <div className={`${styles.page} ${styles.narrow}`}>
       <header className={styles.header}>
         <h1 className={styles.title}>Admin</h1>
-        {state && <StatusChip tone={statusTones[state.status]}>{chipLabel(state)}</StatusChip>}
+        <div className={styles.headerEnd}>
+          {state && <StatusChip tone={statusTones[state.status]}>{chipLabel(state)}</StatusChip>}
+          <HelpLink />
+        </div>
       </header>
 
       <nav aria-label="Admin" className={admin.links}>

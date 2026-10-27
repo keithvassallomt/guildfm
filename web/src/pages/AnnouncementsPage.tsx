@@ -8,6 +8,7 @@ import {
   errorText,
 } from "../api";
 import { ButtonLink, Button } from "../components/Button";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { FormError } from "../components/TextField";
 import { useToast } from "../components/Toast";
@@ -82,10 +83,13 @@ export function AnnouncementsPage() {
           </Link>
           <h1 className={styles.title}>Announcements</h1>
         </div>
-        <ButtonLink to="/admin/announcements/new">
-          <Icon name="plus" size={16} strokeWidth={2.6} />
-          New
-        </ButtonLink>
+        <div className={styles.headerEnd}>
+          <ButtonLink to="/admin/announcements/new">
+            <Icon name="plus" size={16} strokeWidth={2.6} />
+            New
+          </ButtonLink>
+          <HelpLink />
+        </div>
       </header>
 
       <p className={styles.muted}>

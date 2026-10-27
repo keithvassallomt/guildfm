@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { api, errorText, type Playlist, type PlaylistDetail } from "../api";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { FormError, TextField } from "../components/TextField";
 import { useToast } from "../components/Toast";
@@ -69,6 +70,7 @@ export function PlaylistsPage() {
     <div className={`${styles.page} ${styles.narrow}`}>
       <header className={styles.header}>
         <h1 className={styles.title}>Playlists</h1>
+        <HelpLink />
       </header>
 
       {playing && (

@@ -39,6 +39,16 @@ def test_me_lists_your_permissions(client: TestClient, people) -> None:
     assert set(me["permissions"]) == set(ROLE_PERMISSIONS[Role.CURATOR])
 
 
+def test_roles_list_what_each_role_may_do(client: TestClient, people) -> None:
+    """For reading the help as another role would see it."""
+    assert client.get("/api/roles").status_code == 401
+    sign_in(client, *people["user"])
+    roles = client.get("/api/roles").json()
+    assert {role: set(allowed) for role, allowed in roles.items()} == {
+        role.value: set(allowed) for role, allowed in ROLE_PERMISSIONS.items()
+    }
+
+
 USER_ROUTES = [
     ("get", "/api/users", None),
     ("post", "/api/users", {"username": "lena", "display_name": "Lena"}),

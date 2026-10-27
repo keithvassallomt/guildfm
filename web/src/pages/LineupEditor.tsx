@@ -11,6 +11,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { api, errorText, type Lineup, type LineupChoices, type LineupDay } from "../api";
 import { Button, ButtonLink } from "../components/Button";
 import { Dialog } from "../components/Dialog";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { useLeaveGuard } from "../components/LeaveGuard";
 import { LineupCover } from "../components/LineupCover";
@@ -263,7 +264,10 @@ export function LineupEditor() {
           </Link>
           <h1 className={styles.title}>{editing ? form?.name || "Line-up" : "New line-up"}</h1>
         </div>
-        <span className={e.saveState}>{dirty ? "Unsaved changes" : editing ? "Saved" : ""}</span>
+        <div className={styles.headerEnd}>
+          <span className={e.saveState}>{dirty ? "Unsaved changes" : editing ? "Saved" : ""}</span>
+          <HelpLink />
+        </div>
       </header>
 
       {!form && <FormError message={error} />}

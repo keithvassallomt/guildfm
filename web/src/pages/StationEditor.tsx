@@ -4,6 +4,7 @@ import { api, type DJProfile, errorText, type Station, type StationFields, VOICE
 import { Button, ButtonLink } from "../components/Button";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { Dialog } from "../components/Dialog";
+import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
 import { JingleList } from "../components/JingleList";
 import { useLeaveGuard } from "../components/LeaveGuard";
@@ -155,6 +156,7 @@ export function StationEditor() {
           </Link>
           <h1 className={styles.title}>{editing ? "Edit station" : "New AI station"}</h1>
         </div>
+        <HelpLink />
       </header>
 
       {!form && <FormError message={error} />}
