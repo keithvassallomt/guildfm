@@ -42,6 +42,26 @@ def test_after_a_restart_guildfm_carries_on_driving_the_speakers(start, speakers
         assert queue(client)["playing"]["track"]["title"] == "Song 2"
 
 
+def test_a_song_the_speakers_moved_on_to_during_a_restart_is_playing(start, speakers) -> None:
+    with start() as client:
+        sign_in(client, *ADMIN)
+        for name in ("fm1", "fm2", "fm3"):
+            request(client, name)
+        client.post("/api/playback/play").raise_for_status()
+        speakers.track_position = 190
+        read_speakers(client)  # Song 2 is lined up
+    speakers.song_ends()  # and starts while GuildFM is down
+
+    with start() as client:
+        sign_in(client, *ADMIN)
+        body = queue(client)
+        assert body["playing"]["track"]["title"] == "Song 2"
+        assert [entry["track"]["title"] for entry in body["waiting"]] == ["Song 3"]
+        speakers.track_position = 190
+        read_speakers(client)
+        assert queue(client)["next"]["track"]["title"] == "Song 3"  # not Song 2 again
+
+
 def test_a_queue_built_in_the_sonos_app_isnt_mistaken_for_guildfms(start, speakers) -> None:
     with start() as client:
         playing_two_songs(client, speakers)

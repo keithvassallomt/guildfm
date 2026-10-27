@@ -199,10 +199,13 @@ class QueueEngine:
         await self.changed()
 
     async def recover(self) -> None:
-        """After a restart. Songs still on the speakers GuildFM picked back up stay as they were.
-        Anything else is no longer playing or locked in: a locked request goes back to the top of
-        the vote, and a locked playlist song is let go."""
+        """After a restart. Songs still on the speakers GuildFM picked back up stay as they were,
+        and the song lined up is playing if the speakers moved on to it meanwhile. Anything else
+        is no longer playing or locked in: a locked request goes back to the top of the vote, and
+        a locked playlist song is let go."""
         playing, lined_up = self._controller.current_key, self._controller.upcoming_keys
+        if playing:
+            await self._track_changed(None, playing)  # as if GuildFM had seen the song change
         async with self._sessions() as db:
             await best_voted(db)
             await ai_picks(db)

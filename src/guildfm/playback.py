@@ -2,7 +2,8 @@
 
 GuildFM is either driving the speakers (it put the music in the Sonos queue and is in control)
 or it isn't. While driving, anything else showing up on the speakers means someone took over
-from the Sonos or Spotify app; GuildFM then steps aside until an admin presses Play.
+from the Sonos or Spotify app; GuildFM then steps aside until an admin presses Play, or until the
+speakers are playing GuildFM's queue again.
 
 GuildFM notes down what it put on the speakers, so after a restart it can tell whether they're
 still playing its queue and carry on driving them. It keeps the speakers' queue short: a few
@@ -45,6 +46,7 @@ HEARTBEAT_SECONDS = 5.0  # state is re-sent at least this often, so positions st
 RESTART_SECONDS = 5  # further into a song than this, Previous starts it again
 KEEP_PLAYED = 3  # songs that have played kept on the speakers, so Previous can go back
 CLIP_STOP_SECONDS = 10  # speakers stopping this soon after a clip was on stopped at its end
+TAKE_BACK_READINGS = 3  # readings of the speakers back on GuildFM's queue before it drives them
 ACTIVE = ("PLAYING", "TRANSITIONING")
 
 
@@ -67,6 +69,19 @@ class NothingToPlay(Exception):
 
 class CantGoBack(Exception):
     """Previous was pressed, but going back would jump over a song already lined up."""
+
+
+def _in_place(snapshot: Snapshot, items: list[QueueItem]) -> bool:
+    """Whether the speakers are on GuildFM's queue where it lines up with `items`: the song on
+    them is the one GuildFM has at that place in the queue."""
+    track, position = snapshot.track, snapshot.queue_position
+    return bool(
+        snapshot.playing_our_queue
+        and track
+        and position
+        and position <= len(items)
+        and items[position - 1].key == track_key(track.uri)
+    )
 
 
 TrackChange = Callable[[str | None, str | None], Awaitable[None]]
@@ -108,6 +123,7 @@ class PlaybackController:
         self._crossfading: bool | None = None
         self._grace_until = 0.0
         self._mismatches = 0
+        self._back_readings = 0  # in a row, of the speakers back on GuildFM's queue
         self._clip_heard_at = float("-inf")  # when the speakers were last read playing a clip
 
         self._last_compared: dict[str, Any] | None = None
@@ -165,13 +181,7 @@ class PlaybackController:
         items = [QueueItem(**item) for item in notes["items"]]
         position = snapshot.queue_position
         track = snapshot.track
-        if not (
-            snapshot.playing_our_queue
-            and track
-            and position
-            and position <= len(items)
-            and items[position - 1].key == track_key(track.uri)
-        ):
+        if not _in_place(snapshot, items):
             # Something else is on the speakers, put there while GuildFM was down.
             ours = snapshot.playing_our_queue and (
                 track is None or track_key(track.uri) in {item.key for item in items}
@@ -182,6 +192,7 @@ class PlaybackController:
             return False
         self._items, self._position, self._in_control = items, position, True
         self._clips = {key: tuple(clip) for key, clip in notes.get("clips", {}).items()}
+        self._settle()  # the first readings can catch the speakers changing songs
         log.info("Picked the speakers back up where GuildFM left them")
         return True
 
@@ -219,9 +230,13 @@ class PlaybackController:
         try:
             snapshot = await self._call(self._speakers.snapshot, full or not self._rooms)
         except SpeakersUnavailable as error:
+            if self._error is None:
+                log.info("Lost the speakers: %s", error)
             self._error = str(error)
             await self._publish()
             return
+        if self._error:
+            log.info("The speakers are answering again")
         self._error = None
         self._snapshot, self._read_at = snapshot, self._clock()
         if snapshot.rooms:
@@ -250,6 +265,7 @@ class PlaybackController:
         """Keep track of where GuildFM's queue has got to, and notice outside takeovers."""
         if not self._in_control:
             self._mismatches = 0
+            self._take_back(snapshot)
             return
         if self._is_ours(snapshot):
             self._mismatches = 0
@@ -261,11 +277,34 @@ class PlaybackController:
             return
         # Two readings in a row, so a speaker mid-change doesn't count as a takeover.
         self._mismatches += 1
+        log.info(
+            "Not GuildFM's queue on the speakers: %s, %s, %s",
+            snapshot.transport,
+            snapshot.media_uri or "no media",
+            snapshot.track.uri if snapshot.track else "no track",
+        )
         if self._mismatches >= 2:
+            log.info("Someone took over the speakers, so GuildFM stepped aside")
             self._in_control = False
             self._overridden = True
             self._mismatches = 0
             self._remember()
+
+    def _take_back(self, snapshot: Snapshot) -> None:
+        """After a takeover, drive the speakers again once they're playing GuildFM's queue where
+        it lines up: the takeover wasn't one, or someone put GuildFM's queue back on from the
+        Sonos app. Not while they're paused or stopped, which someone may want."""
+        back = (
+            self._overridden and snapshot.transport in ACTIVE and _in_place(snapshot, self._items)
+        )
+        self._back_readings = self._back_readings + 1 if back else 0
+        if self._back_readings < TAKE_BACK_READINGS:
+            return
+        self._back_readings = 0
+        self._in_control, self._overridden = True, False
+        self._position = snapshot.queue_position
+        self._remember()
+        log.info("The speakers are back on GuildFM's queue, so it's driving them again")
 
     async def _trim(self) -> None:
         """Take what has played off the speakers: clips straight away, so Previous goes back a

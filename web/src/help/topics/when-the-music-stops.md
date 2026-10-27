@@ -26,7 +26,7 @@ Pressing **Play** outside playback hours starts the music anyway. It then plays 
 
 ## Someone's using the Sonos app
 
-If someone plays something from the Sonos app or the Spotify app, GuildFM steps aside straight away, announcements included, and leaves the speakers alone. Now Playing shows what's on the speakers instead.
+If someone plays something from the Sonos app or the Spotify app, GuildFM steps aside straight away, announcements included, and leaves the speakers alone. Now Playing shows what's on the speakers instead. If the speakers go back to playing GuildFM's queue, from the Sonos app say, GuildFM takes over again by itself after a few seconds.
 
 ![Someone playing the radio from the Sonos app](shot:now-takeover)
 

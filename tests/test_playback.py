@@ -3,8 +3,8 @@ from fastapi.testclient import TestClient
 
 from guildfm.live import LiveHub
 from guildfm.playback import NothingToPlay, NotInControl, PlaybackController, Status
-from guildfm.speakers import SpeakersRefused, spotify_item
-from tests.fakes import FakeSpeakers, spotify_id
+from guildfm.speakers import QUEUE_URI, SpeakersRefused, spotify_item
+from tests.fakes import COORDINATOR, FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
 TRACK = spotify_item("6SP5GXlyb0yiCCMODUjeFb", sid=9, sn=1)
@@ -95,6 +95,33 @@ async def test_play_takes_back_control_where_it_left_off(controller, speakers, s
     await controller.play()
     assert speakers.took_over[-1] == [OTHER]
     assert controller.status == Status.PLAYING
+
+
+async def test_back_on_its_queue_guildfm_drives_the_speakers_again(controller, speakers, steady):
+    await controller.play_now(TRACK)
+    await controller.play_now(OTHER)
+    await outside_takeover(controller, speakers, steady)
+    assert controller.status == Status.OVERRIDDEN
+
+    # Someone puts GuildFM's queue back on from the Sonos app, where it was.
+    speakers.media_uri = QUEUE_URI.format(uid=COORDINATOR)
+    await controller.poll()
+    await controller.poll()
+    assert controller.status == Status.OVERRIDDEN  # a few readings first
+    await controller.poll()
+    assert controller.status == Status.PLAYING
+    assert controller.position == 2
+    assert speakers.took_over == [[TRACK]]  # it carries on, without taking over again
+
+
+async def test_paused_on_its_queue_guildfm_leaves_the_speakers_alone(controller, speakers, steady):
+    await controller.play_now(TRACK)
+    await outside_takeover(controller, speakers, steady)
+    speakers.media_uri = QUEUE_URI.format(uid=COORDINATOR)
+    speakers.someone_pauses()
+    for _ in range(5):
+        await controller.poll()
+    assert controller.status == Status.OVERRIDDEN
 
 
 async def test_a_takeover_still_shows_after_a_restart(speakers, steady, tmp_path) -> None:
