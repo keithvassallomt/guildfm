@@ -270,8 +270,11 @@ def test_the_queue_plays_through(client: TestClient, people, speakers: FakeSpeak
     assert body["playing"]["track"]["title"] == "Song 1"
     assert titles(body) == ["Song 2"]
 
-    # Half a minute from the end, the next request goes to the speakers and is locked in.
-    speakers.track_position = 175
+    # A minute and a half from the end, the next request goes to the speakers and is locked in.
+    speakers.track_position = 100
+    read_speakers(client)
+    assert queue(client)["next"] is None
+    speakers.track_position = 115
     read_speakers(client)
     body = queue(client)
     assert body["next"]["track"]["title"] == "Song 2"

@@ -1,13 +1,13 @@
 """The DJ: a voice on an AI station that introduces songs, comments on them and gives shout-outs
 for requests, in the station's personality and voice.
 
-GuildFM asks the DJ about each song as it's lined up on the speakers, about half a minute before
-the current one ends. The DJ talks every so many songs or minutes, as the station says, and for
-every request while announcing requests is on, unless the person who asked opted out. The AI
-writes the line, which plays between the songs from the Sonos queue, so every room hears it in
-step. It never goes over music: Sonos plays a clip over the music one room at a time, with no way
-to start the rooms together, so they echo. Lines go through the announcer, so announcements
-always go first.
+GuildFM asks the DJ about each song as it's lined up on the speakers, about a minute and a half
+before the current one ends. The DJ talks every so many songs or minutes, as the station says,
+and for every request while announcing requests is on, unless the person who asked opted out.
+The AI writes the line, which plays between the songs from the Sonos queue, so every room hears
+it in step. It never goes over music: Sonos plays a clip over the music one room at a time, with
+no way to start the rooms together, so they echo. Lines go through the announcer, so
+announcements always go first.
 """
 
 import asyncio

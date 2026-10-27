@@ -44,6 +44,7 @@ GRACE_SECONDS = 4.0  # after a GuildFM command, the speakers take a moment to ca
 HEARTBEAT_SECONDS = 5.0  # state is re-sent at least this often, so positions stay fresh
 RESTART_SECONDS = 5  # further into a song than this, Previous starts it again
 KEEP_PLAYED = 3  # songs that have played kept on the speakers, so Previous can go back
+CLIP_STOP_SECONDS = 10  # speakers stopping this soon after a clip was on stopped at its end
 ACTIVE = ("PLAYING", "TRANSITIONING")
 
 
@@ -107,6 +108,7 @@ class PlaybackController:
         self._crossfading: bool | None = None
         self._grace_until = 0.0
         self._mismatches = 0
+        self._clip_heard_at = float("-inf")  # when the speakers were last read playing a clip
 
         self._last_compared: dict[str, Any] | None = None
         self._last_sent_at = float("-inf")
@@ -225,6 +227,8 @@ class PlaybackController:
         if snapshot.rooms:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
+        if snapshot.transport in ACTIVE and self.current_key in self._clips:
+            self._clip_heard_at = self._clock()
         await self._trim()
         await self._fit_crossfade()
 
@@ -332,6 +336,13 @@ class PlaybackController:
         if track is None or not track.duration:
             return None
         return max(0, track.duration - track.position)
+
+    @property
+    def stopped_after_clip(self) -> bool:
+        """Whether the speakers stopped as one of GuildFM's clips ended. Sonos often does that
+        at the end of the DJ, instead of going on to the song after it."""
+        recent = self._clock() - self._clip_heard_at <= CLIP_STOP_SECONDS
+        return self.status == Status.IDLE and recent
 
     @property
     def position(self) -> int:

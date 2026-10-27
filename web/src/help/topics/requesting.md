@@ -54,7 +54,7 @@ The number between the thumbs is the song's score: its thumbs up minus its thumb
 
 ## Up next is locked in
 
-About 30 seconds before a song ends, GuildFM sends the next request to the speakers, so it starts on time. It moves up to **Up next**, with a padlock, and votes can't move it any more.
+About a minute and a half before a song ends, GuildFM sends the next request to the speakers, so it starts on time. It moves up to **Up next**, with a padlock, and votes can't move it any more.
 
 ![The song up next, locked in](shot:queue-up-next)
 

@@ -48,7 +48,10 @@ from guildfm.speakers import spotify_track_id as track_id_in
 
 log = logging.getLogger(__name__)
 
-LEAD_SECONDS = 30  # how long before a song ends the next request goes to the speakers
+# How long before a song ends the next request goes to the speakers. The DJ's line for it takes
+# up to half a minute to make, and lines that went into the Sonos queue in a song's last few
+# seconds often left the speakers stopped after them.
+LEAD_SECONDS = 90
 # Readings of stopped speakers with a song lined up before GuildFM tries it again, and after a
 # second try, gives up on it: it couldn't play.
 STALLED_READINGS = 3
@@ -311,12 +314,15 @@ class QueueEngine:
             if lined_up and status == Status.IDLE:
                 # The speakers stopped with a song lined up, so it couldn't play, often just a
                 # hiccup. After a few readings GuildFM has them try it again, and if they stop
-                # again, it lets the song go and carries on.
+                # again, it lets the song go and carries on. The first try is straight away when
+                # they stopped at the end of a clip, as they often do after the DJ.
                 self._stalls += 1
-                if self._stalls < STALLED_READINGS:
+                first_try = self._retried != lined_up.id
+                at_once = first_try and controller.stopped_after_clip
+                if self._stalls < STALLED_READINGS and not at_once:
                     return
                 self._stalls = 0
-                if self._retried != lined_up.id:
+                if first_try:
                     self._retried = lined_up.id
                     log.info(
                         "%s didn't start on the speakers; trying it again", lined_up.track.title

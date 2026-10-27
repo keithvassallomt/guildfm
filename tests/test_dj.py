@@ -39,7 +39,7 @@ def on_air(client: TestClient, openai: FakeOpenAI, **fields) -> dict:
 
 
 def line_up_next(client: TestClient, speakers: FakeSpeakers) -> None:
-    """Half a minute left: the next song goes to the speakers and the DJ has its say."""
+    """Nearly the end: the next song goes to the speakers and the DJ has its say."""
     speakers.track_position = 190
     read_speakers(client)
     client.portal.call(client.app.state.dj.settle)
@@ -126,6 +126,22 @@ def test_between_songs(client: TestClient, openai: FakeOpenAI, speakers) -> None
     assert speakers.clips == []
     # The DJ isn't an announcement, so it stays out of the announcements log.
     assert client.get("/api/announcements").json()["recent"] == []
+
+
+def test_speakers_that_stop_at_the_end_of_a_line_go_straight_on(client, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    openai.line = {"script": "That was Song 1. Here's Song 2."}
+    line_up_next(client, speakers)
+    tick(client)
+    speakers.song_ends()  # the DJ talks
+    read_speakers(client)
+    # As the office speakers often do, they stop at the end of the line and go back to the start
+    # of their queue instead of going on to Song 2. GuildFM starts it on the next reading.
+    speakers.next_song_fails()
+    read_speakers(client)
+    assert speakers.transport == "PLAYING"
+    assert client.get("/api/queue").json()["playing"]["track"]["title"] == "Song 2"
 
 
 def test_between_songs_with_a_pause_if_the_queue_wont_take_it(client, openai, speakers) -> None:
