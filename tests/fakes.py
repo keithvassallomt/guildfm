@@ -412,6 +412,9 @@ class FakeSpotify:
         self.not_ours = {spotify_id("editorial")}
         self.token_requests: list[str] = []
         self.refresh_fails = False
+        # The account signing in isn't the app's owner or on its Users and Access list, so
+        # Spotify won't tell GuildFM who it is.
+        self.unlisted = False
         # Real Spotify's search pages overlap now and then: each page after the first starts
         # this many tracks early, repeating the end of the page before.
         self.overlap = 0
@@ -563,6 +566,8 @@ class FakeSpotify:
         if path == "/v1/search":
             return httpx2.Response(200, json=self._search(dict(request.url.params)))
         if path == "/v1/me":
+            if self.unlisted:
+                return httpx2.Response(403)
             return httpx2.Response(200, json={"id": "office", "display_name": "Office Spotify"})
         if path == "/v1/me/playlists":
             return httpx2.Response(200, json={"total": 7, "items": []})

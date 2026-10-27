@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from html import escape
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,13 @@ from guildfm.auth import require
 from guildfm.db import get_session
 from guildfm.models import SpotifyAccount, User
 from guildfm.permissions import Permission
-from guildfm.spotify import RECONNECT_SECONDS, NotConnected, SpotifyClient, SpotifyError
+from guildfm.spotify import (
+    RECONNECT_SECONDS,
+    NotConnected,
+    SpotifyClient,
+    SpotifyError,
+    SpotifyForbidden,
+)
 
 router = APIRouter(prefix="/spotify")
 # Spotify sends people back here, outside /api, after they sign in on its page.
@@ -116,8 +122,17 @@ async def callback(
         return _page("That link has expired", "Start again from GuildFM's Admin page.")
     try:
         account = await spotify(request).connect(db, code)
+    except SpotifyForbidden:
+        # Apps in Spotify's development mode only work for their owner and the accounts listed
+        # under Users and Access.
+        return _page(
+            "Spotify wasn't connected",
+            "Spotify won't let GuildFM's Spotify app use this account. Sign in with the account "
+            "that owns the app, or add this one under Users and Access in the app's settings at "
+            "developer.spotify.com, then try again from Admin.",
+        )
     except SpotifyError as problem:
-        raise HTTPException(502, str(problem)) from None
+        return _page("Spotify wasn't connected", f"{problem} Try again from Admin.")
     return _page(
         "Spotify connected",
         f"GuildFM can now read {account.display_name}'s playlists. "

@@ -144,6 +144,14 @@ def test_declining_on_spotifys_page(client: TestClient) -> None:
     assert "Spotify wasn't connected" in page.text
 
 
+def test_an_account_the_app_wont_serve(client: TestClient, spotify: FakeSpotify) -> None:
+    spotify.unlisted = True
+    page = connect(client)
+    assert "Spotify wasn't connected" in page
+    assert "Users and Access" in page
+    assert client.get("/api/spotify/account").json()["connected"] is False
+
+
 def test_spotify_signing_the_account_out(client: TestClient, spotify: FakeSpotify, monkeypatch):
     connect(client)
     spotify.refresh_fails = True
