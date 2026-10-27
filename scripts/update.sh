@@ -4,6 +4,8 @@
 # from the checkout. Restarting asks for sudo.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# uv's installer puts it here, which only login shells have on their PATH.
+export PATH="$HOME/.local/bin:$PATH"
 
 git pull --ff-only
 uv sync --no-dev --frozen
