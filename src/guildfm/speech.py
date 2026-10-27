@@ -171,7 +171,8 @@ class SpeechClient:
             text = without_tags(text)
             recipe = [self._model, voice, instructions, text]
         if self._loudness is not None:
-            recipe.append(f"{self._loudness} LUFS")
+            # Clips used to come out mono: "stereo" keeps those from being used again.
+            recipe.append(f"{self._loudness} LUFS stereo")
         name = hashlib.sha256(json.dumps(recipe).encode()).hexdigest()[:32]
         path = self._folder / f"{name}.mp3"
         if path.exists():

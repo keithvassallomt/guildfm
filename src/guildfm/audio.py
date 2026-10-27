@@ -37,8 +37,12 @@ async def _ffmpeg(data: bytes, *args: str) -> tuple[bytes, str]:
 
 
 async def level(data: bytes, loudness: float | None) -> bytes:
-    """The MP3 in `data` at `loudness` LUFS, as an MP3. Unchanged for None, without ffmpeg, or
-    if ffmpeg can't make sense of it."""
+    """The MP3 in `data` at `loudness` LUFS, as a stereo MP3. Unchanged for None, without
+    ffmpeg, or if ffmpeg can't make sense of it.
+
+    Stereo because text to speech comes out mono, and the office speakers often stopped dead
+    at the end of a mono clip in their queue instead of going on to the Spotify song after it.
+    """
     if loudness is None or not FFMPEG:
         return data
     target = f"I={loudness}:TP={PEAK}:LRA={RANGE}"
@@ -57,6 +61,8 @@ async def level(data: bytes, loudness: float | None) -> bytes:
             f"loudnorm={target}:{measured}:linear=true",
             "-ar",
             "44100",
+            "-ac",
+            "2",
             "-c:a",
             "libmp3lame",
             "-b:a",

@@ -37,6 +37,18 @@ def test_quiet_audio_is_brought_up_to_the_target() -> None:
     assert loudness(after) == pytest.approx(-14, abs=1)
 
 
+def test_mono_audio_comes_out_in_stereo() -> None:
+    def layout(data: bytes) -> str:
+        report = subprocess.run(
+            [FFMPEG, "-hide_banner", "-i", "pipe:0"], input=data, capture_output=True
+        ).stderr.decode()
+        return re.search(r"Audio: mp3.*?Hz, (\w+)", report).group(1)
+
+    before = quiet_tone()
+    assert layout(before) == "mono"
+    assert layout(asyncio.run(level(before, -14))) == "stereo"
+
+
 def test_audio_that_cant_be_measured_is_left_alone() -> None:
     silence = mp3(1.0)
     assert asyncio.run(level(silence, -14)) == silence
