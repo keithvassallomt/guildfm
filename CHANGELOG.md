@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-30
+
 ### Added
 
 - GuildFM at `https://guildfm.com` in the office, with a Let's Encrypt certificate that Caddy
