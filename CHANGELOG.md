@@ -7,6 +7,11 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Long song titles in search results and album track lists wrap onto a second line instead of
+  being cut short. A title longer than two lines still ends with "…", so rows stay tidy.
+
 ## [0.1.1] - 2026-10-30
 
 ### Added

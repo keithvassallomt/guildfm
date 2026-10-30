@@ -175,29 +175,34 @@
   gap: 3px;
 }
 
+/* A long title wraps onto a second line, then stops with "…", so no row grows past two. The
+   explicit badge follows its last word. */
 .titleLine {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.3;
 }
 
 .title {
-  font-size: 15px;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .explicit {
-  flex-shrink: 0;
+  display: inline-block;
+  margin-left: 6px;
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--line-strong);
   font-size: 10px;
   font-weight: 700;
+  line-height: 1.4;
   text-decoration: none;
+  vertical-align: middle;
 }
 
 .meta {
