@@ -5,6 +5,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusChip } from "../components/StatusChip";
 import { chipLabel, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
+import { useVersion } from "../live/useVersion";
 import type { Permission } from "../api";
 import admin from "./AdminPage.module.css";
 import styles from "./Page.module.css";
@@ -53,6 +54,7 @@ const PLACES: Place[] = [
 export function AdminPage() {
   const { can } = useAuth();
   const { state } = usePlayback();
+  const version = useVersion();
 
   return (
     <div className={`${styles.page} ${styles.narrow}`}>
@@ -65,6 +67,13 @@ export function AdminPage() {
       </header>
 
       <nav aria-label="Admin" className={admin.links}>
+        <div className={`${admin.link} ${admin.still}`}>
+          <Icon name="info" />
+          <span className={admin.linkText}>
+            <span className={admin.linkTitle}>Version {version ?? "…"}</span>
+            <span className={admin.linkHint}>The GuildFM running on the office machine</span>
+          </span>
+        </div>
         {PLACES.filter((place) => can(place.needs)).map((place) => (
           <Link key={place.to} to={place.to} className={admin.link}>
             <Icon name={place.icon} />

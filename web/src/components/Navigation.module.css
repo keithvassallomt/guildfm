@@ -112,6 +112,15 @@
     margin-top: auto;
   }
 
+  /* The version GuildFM is running, small and centred at the very foot. */
+  .version {
+    justify-content: center;
+    margin: 6px 0 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
   /* Pages under a tab, such as Admin's, indented beneath it. */
   .under,
   .under:hover {

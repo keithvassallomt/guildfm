@@ -20,6 +20,11 @@
   background: var(--surface-raised);
 }
 
+/* Information rather than a way in, so it doesn't light up. */
+.still:hover {
+  background: none;
+}
+
 .link + .link {
   border-top: 1px solid var(--line);
 }

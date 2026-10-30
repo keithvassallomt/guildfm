@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { NavLink } from "react-router";
 import type { Permission } from "../api";
 import { useAuth } from "../auth/AuthProvider";
+import { useVersion } from "../live/useVersion";
 import { Icon, type IconName } from "./Icon";
 import { Logo } from "./Logo";
 import styles from "./Navigation.module.css";
@@ -46,6 +47,7 @@ const tabs: Tab[] = [
 export function Navigation() {
   const { can } = useAuth();
   const wide = useWide();
+  const version = useVersion();
   const allowed = (page: Page) => !page.needs || can(page.needs);
 
   return (
@@ -100,6 +102,7 @@ export function Navigation() {
         <Icon name="help" />
         Help
       </NavLink>
+      {version && <p className={`${styles.wideOnly} ${styles.version}`}>GuildFM {version}</p>}
     </nav>
   );
 }
