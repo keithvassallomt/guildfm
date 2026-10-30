@@ -26,5 +26,6 @@
 .inline {
   display: inline-flex;
   margin-right: 5px;
-  vertical-align: -0.25em;
+  /* Centred on the text, photo or letter alike. */
+  vertical-align: middle;
 }
