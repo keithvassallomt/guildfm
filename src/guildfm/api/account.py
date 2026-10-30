@@ -20,6 +20,7 @@ from guildfm.auth import (
 )
 from guildfm.db import get_session
 from guildfm.models import AVATARS, Role, User
+from guildfm.names import name_problem
 from guildfm.permissions import ROLE_PERMISSIONS, Permission
 
 router = APIRouter()
@@ -55,6 +56,9 @@ def forget_avatar(request: Request, user: User) -> None:
 async def register(body: RegisterIn, request: Request, db: Db) -> MeOut:
     if await find_user(db, body.username):
         raise HTTPException(status_code=409, detail="That username is taken.")
+    problem = await name_problem(request.app.state.ai, body.display_name, body.username)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
     try:
         user = await create_user(
             db, username=body.username, display_name=body.display_name, password=body.password
@@ -95,8 +99,11 @@ async def roles(_: ActiveUser) -> dict[Role, list[Permission]]:
 
 
 @router.patch("/me")
-async def update_me(body: ProfileIn, user: ActiveUser, db: Db) -> MeOut:
-    if body.display_name is not None:
+async def update_me(body: ProfileIn, user: ActiveUser, request: Request, db: Db) -> MeOut:
+    if body.display_name is not None and body.display_name != user.display_name:
+        problem = await name_problem(request.app.state.ai, body.display_name)
+        if problem:
+            raise HTTPException(status_code=422, detail=problem)
         user.display_name = body.display_name
     if body.announce_requests is not None:
         user.announce_requests = body.announce_requests

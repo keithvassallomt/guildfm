@@ -17,7 +17,7 @@ Click **Profile** in the menu on the left.
 
 ## Your name
 
-Your **Display name** is how you appear beside your requests, and what the DJ reads out when your request plays. To change it, edit it under **On air**, then tap **Save**.
+Your **Display name** is how you appear beside your requests, and what the DJ reads out when your request plays. To change it, edit it under **On air**, then tap **Save**. The same rule applies as when you signed up: your name, or what people call you, and nothing rude.
 
 ## Your photo
 

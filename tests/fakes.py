@@ -234,6 +234,8 @@ class FakeOpenAI:
         self.heard = ["Guild F M!"]
         self.listened = 0
         self.hearing_down = False
+        # What it makes of names people pick, by name; any other name is fine.
+        self.names: dict[str, str] = {}
         # Jingle descriptions it writes, in the generator, handed out in turn.
         self.ideas = [
             {"name": f"Idea {n}", "description": f"Bright sting number {n}.", "seconds": 6 + n}
@@ -253,6 +255,8 @@ class FakeOpenAI:
             text = json.dumps({"songs": self.picks})
         elif name == "dj_line":
             text = json.dumps(self.line)
+        elif name == "name_check":
+            text = json.dumps({"verdict": self.names.get(body["input"], "fine")})
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})

@@ -15,8 +15,8 @@ public: yes
 
 ![Creating an account](shot:welcome-create)
 
-- Your **display name** is how everyone sees you, and what the DJ reads out when your request plays.
-- Your **username** is what you sign in with. It can have letters, numbers, dots, dashes and underscores.
+- Your **display name** is how everyone sees you, and what the DJ reads out when your request plays. Use your name, or what people in the office call you: GuildFM turns down rude names and words that aren't names.
+- Your **username** is what you sign in with. It can have letters, numbers, dots, dashes and underscores, and it has to be clean too.
 - Your **password** needs at least 8 characters.
 
 You're signed in straight away, with a user account.
