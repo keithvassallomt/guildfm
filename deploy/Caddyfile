@@ -1,0 +1,19 @@
+# GuildFM over HTTPS at guildfm.com, for browsers in the office. guildfm.com points at the office
+# machine's private address, so it only leads anywhere from inside the office. The certificate
+# comes from Let's Encrypt through a record Caddy writes in Route 53, with the key in
+# /etc/caddy/route53.env, which may only write that record.
+#
+# GuildFM itself stays on port 80: the speakers fetch the DJ, jingles and announcements from it
+# there, and it sends browsers that arrive over plain HTTP on to https://guildfm.com.
+{
+	# Port 80 is GuildFM's, so Caddy doesn't redirect from it.
+	auto_https disable_redirects
+	http_port 8081
+}
+
+guildfm.com {
+	tls {
+		dns route53
+	}
+	reverse_proxy 127.0.0.1:80
+}

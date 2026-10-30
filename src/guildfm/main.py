@@ -33,7 +33,7 @@ from guildfm.schedule import Scheduler
 from guildfm.speakers import SocoSystem, SpeakerSystem
 from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
-from guildfm.web import mount_web
+from guildfm.web import mount_web, send_browsers_to
 
 SESSION_DAYS = 180
 
@@ -213,4 +213,6 @@ def create_app(
     app.mount("/media", StaticFiles(directory=media), name="media")
     # Last, so its catch-all route doesn't shadow the API.
     mount_web(app, settings.web_dist)
+    if settings.public_url:
+        send_browsers_to(app, settings.public_url)
     return app

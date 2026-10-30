@@ -44,6 +44,9 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
+    # Where people open GuildFM over HTTPS, such as https://guildfm.com behind Caddy. Browsers
+    # opening a page over plain HTTP by name are sent there. Empty leaves them where they are.
+    public_url: str = ""
 
     # Comma-separated speaker addresses. Empty means find them on the network.
     sonos_hosts: str = ""

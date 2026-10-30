@@ -7,6 +7,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- GuildFM at `https://guildfm.com` in the office, with a Let's Encrypt certificate that Caddy
+  gets and renews through Route 53. The name points at the office machine's private address, so
+  it only works inside the office. `deploy/setup-https.sh` sets it up, and the README says how
+  it fits together.
+- `PUBLIC_URL` in `.env`: browsers that open a page over plain HTTP by name, such as
+  `http://guildfm.local`, are sent there. The speakers, the API and Spotify's sign-in carry on
+  as they are.
+
 ### Changed
 
 - Long song titles in search results and album track lists wrap onto a second line instead of

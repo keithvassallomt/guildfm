@@ -85,6 +85,17 @@ If the machine has a firewall, allow TCP port 80 and UDP port 5353 (mDNS) from t
 
 Some older Android phones can't open `.local` names. If one can't, use the machine's address instead (reserve one for it on the router, so it doesn't change).
 
+## HTTPS at guildfm.com
+
+Browsers more and more insist on HTTPS, and some refuse `http://guildfm.local` outright. So GuildFM is also served at `https://guildfm.com`, which only works inside the office:
+
+- **The name:** `guildfm.com` is in Route 53, pointing at the office machine's private address, 10.240.1.61. It's public, since the office uses Google's DNS, but from outside the office that address leads nowhere. Nothing in the office is opened to the internet.
+- **The certificate:** Let's Encrypt, through Caddy, which proves the domain by writing one record in Route 53 (the DNS challenge, since Let's Encrypt can't reach the machine). Caddy renews it by itself. Its AWS user, `guildfm-office-certificates`, may only write that record (`_acme-challenge.guildfm.com`).
+- **Ports:** Caddy answers HTTPS on 443 and hands everything to GuildFM on port 80, where the speakers still fetch the DJ, jingles and announcements. With `PUBLIC_URL=https://guildfm.com` in `.env`, GuildFM sends browsers that open a page over plain HTTP by name, such as `http://guildfm.local`, on to `https://guildfm.com`. Requests by address, like the speakers', are left alone.
+- **The address:** the machine is set to 10.240.1.61 itself, since the router isn't ours to change. If the router ever hands that address to something else as well, the two will clash, so if `guildfm.com` stops working, check that first.
+
+To set it up, put the AWS user's key in `~guildfm/.caddy-route53.env` (`AWS_ACCESS_KEY_ID=` and `AWS_SECRET_ACCESS_KEY=` lines), then run `sudo deploy/setup-https.sh` in `~/guildfm`. It sets the fixed address (from the next restart of the machine), installs Caddy with its Route 53 module, waits for the certificate and turns `PUBLIC_URL` on. It's safe to run again. Caddy's settings are `deploy/Caddyfile`; its logs are `journalctl -u caddy`.
+
 ## Connecting Spotify
 
 Only needed for importing playlists. Spotify only sends people back to `http://127.0.0.1:8000` after they sign in, which on the office machine is nothing, since GuildFM listens on port 80 there. Connect from a laptop through an SSH tunnel instead, so that address on the laptop reaches GuildFM on the office machine:
