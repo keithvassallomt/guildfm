@@ -1,4 +1,4 @@
-.PHONY: install dev build serve backup update test lint format migration screenshots
+.PHONY: install dev build serve backup update test lint format migration screenshots preview-card
 
 install:  ## Install Python and front end dependencies
 	uv sync
@@ -34,6 +34,9 @@ format:  ## Fix Python formatting and lint issues
 screenshots: build  ## Take the help's screenshots in a staged office: make screenshots [only="queue-*"]
 	uv run python -m tools.screenshots $(only)
 	cd web && npm run build
+
+preview-card:  ## Draw the picture chats show for a link to GuildFM, into web/public/og-image.png
+	uv run python -m tools.preview_card
 
 migration:  ## Create a migration from model changes: make migration m="add users"
 	uv run alembic revision --autogenerate -m "$(m)"

@@ -67,3 +67,14 @@ def test_media_is_served_without_signing_in(client: TestClient, settings: Settin
     response = client.get("/media/chime.mp3")
     assert response.status_code == 200
     assert response.content == b"ID3 fake mp3"
+
+
+def test_link_previews_get_the_full_address_of_the_picture(settings: Settings) -> None:
+    settings.web_dist.mkdir(parents=True)
+    (settings.web_dist / "index.html").write_text(
+        '<meta property="og:image" content="__ORIGIN__/og-image.png" />'
+    )
+    with TestClient(create_app(settings, FakeSpeakers(), poll=False)) as client:
+        for path in ("/", "/queue", "/index.html"):
+            page = client.get(f"https://guildfm.com{path}").text
+            assert 'content="https://guildfm.com/og-image.png"' in page

@@ -5,7 +5,13 @@ import mimetypes
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 
 # Browsers expect the app manifest as this; Python doesn't know the extension.
@@ -65,12 +71,18 @@ def mount_web(app: FastAPI, dist: Path) -> None:
     root = dist.resolve()
     if (dist / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+    page = index.read_text()
+
+    def index_page(request: Request) -> HTMLResponse:
+        # Link previews need the full address of the picture, which is wherever GuildFM was
+        # reached: https://guildfm.com through Caddy, or this machine while developing.
+        return HTMLResponse(page.replace("__ORIGIN__", str(request.base_url).rstrip("/")))
 
     @app.get("/{path:path}", include_in_schema=False)
-    async def spa(path: str) -> FileResponse:
+    async def spa(path: str, request: Request) -> Response:
         if path == "api" or path.startswith("api/"):
             raise HTTPException(status_code=404)
         file = (dist / path).resolve()
-        if path and file.is_file() and root in file.parents:
+        if path and file.is_file() and root in file.parents and file != index.resolve():
             return FileResponse(file)
-        return FileResponse(index)
+        return index_page(request)

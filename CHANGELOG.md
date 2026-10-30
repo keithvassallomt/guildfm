@@ -7,6 +7,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A preview for links to GuildFM in chats: the logo above a radio dial, "The office jukebox"
+  and what GuildFM does. Chats that build previews on the sender's phone or computer, such as
+  iMessage and WhatsApp, show it for links sent from the office. Slack and Teams build them on
+  their own servers, which can't reach GuildFM. `make preview-card` draws the picture again.
+
 ## [0.1.2] - 2026-10-30
 
 ### Added
