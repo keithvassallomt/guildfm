@@ -79,6 +79,38 @@ def test_a_lined_up_song_that_wont_play_is_skipped(client: TestClient, speakers)
     assert "Song 2 wouldn't play, so it was skipped" in activity
 
 
+def test_a_second_try_goes_by_the_speakers_own_queue(client: TestClient, speakers, caplog) -> None:
+    started(client, speakers, "fm1", "fm2", "fm3")
+    song_change(client, speakers)  # Song 2 on, Song 1 has played
+    line_up_next(client, speakers)  # Song 3 lined up
+    # Something takes Song 1 off the speakers behind GuildFM's back, so its copy of their
+    # queue has one more song in it than they have.
+    speakers.remove(1)
+    speakers.next_song_fails()
+    for _ in range(3):
+        read_speakers(client)
+    assert (speakers.queue[speakers.position - 1].key, speakers.transport) == (
+        key("fm3"),
+        "PLAYING",
+    )
+    assert playing(client) == "Song 3"
+    assert "out of step" in caplog.text
+
+
+def test_a_song_the_speakers_wont_try_again_is_skipped_at_once(
+    client: TestClient, speakers
+) -> None:
+    started(client, speakers, "fm1", "fm2", "fm3")
+    line_up_next(client, speakers)
+    speakers.wont_seek = key("fm2")
+    speakers.next_song_fails()
+    for _ in range(3):
+        read_speakers(client)
+    assert playing(client) == "Song 3"
+    assert speakers.transport == "PLAYING"
+    assert key("fm2") not in keys(speakers)
+
+
 def test_play_carries_on_from_guildfms_place_not_the_start(client: TestClient, speakers) -> None:
     started(client, speakers, "fm1", "fm2", "fm3")
     song_change(client, speakers)  # Song 2 on, Song 1 has played

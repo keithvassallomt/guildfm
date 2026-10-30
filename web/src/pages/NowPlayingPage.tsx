@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import {
   api,
+  COMMAND_TIMEOUT,
   errorText,
   type Play,
   type PlaybackState,
@@ -60,7 +61,7 @@ export function NowPlayingPage() {
   const send: Send = async (method, path, body) => {
     setBusy(true);
     try {
-      apply(await api<PlaybackState>(method, `/playback${path}`, body));
+      apply(await api<PlaybackState>(method, `/playback${path}`, body, COMMAND_TIMEOUT));
     } catch (caught) {
       show(errorText(caught));
     } finally {

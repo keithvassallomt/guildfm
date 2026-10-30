@@ -317,8 +317,9 @@ class QueueEngine:
             if lined_up and status == Status.IDLE:
                 # The speakers stopped with a song lined up, so it couldn't play, often just a
                 # hiccup. After a few readings GuildFM has them try it again, and if they stop
-                # again, it lets the song go and carries on. The first try is straight away when
-                # they stopped at the end of a clip, as they often do after the DJ.
+                # again, or won't try, it lets the song go and carries on. The first try is
+                # straight away when they stopped at the end of a clip, as they often do after
+                # the DJ.
                 self._stalls += 1
                 first_try = self._retried != lined_up.id
                 at_once = first_try and controller.stopped_after_clip
@@ -327,11 +328,22 @@ class QueueEngine:
                 self._stalls = 0
                 if first_try:
                     self._retried = lined_up.id
+                    title = lined_up.track.title
                     log.info(
-                        "%s didn't start on the speakers; trying it again", lined_up.track.title
+                        "%s didn't start on the speakers; trying it again: %s",
+                        title,
+                        controller.where(),
                     )
-                    if await controller.play_again(self.item(lined_up)):
+                    try:
+                        if await controller.play_again(self.item(lined_up)):
+                            return
+                    except SpeakersUnavailable:
+                        # The try never reached them: it gets another once they answer.
+                        self._retried = None
+                        log.warning("Couldn't reach the speakers to try %s again", title)
                         return
+                    except SpeakersRefused as error:
+                        log.warning("The speakers wouldn't try %s again: %s", title, error)
                 await self._let_go(db, lined_up)
                 lined_up = None
             # Anything else after the current song had played, and the speakers went back to it.
@@ -474,7 +486,11 @@ class QueueEngine:
             log.warning("Couldn't take a song that wouldn't play off the speakers", exc_info=True)
         await db.delete(entry)
         await db.commit()
-        log.warning("%s wouldn't play on the speakers, so GuildFM skipped it", title)
+        log.warning(
+            "%s wouldn't play on the speakers, so GuildFM skipped it: %s",
+            title,
+            self._controller.where(),
+        )
         self.note(f"{title} wouldn't play, so it was skipped")
 
     async def _prepare_shows(self, db: AsyncSession, ahead: float) -> None:

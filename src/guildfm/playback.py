@@ -84,6 +84,12 @@ def _in_place(snapshot: Snapshot, items: list[QueueItem]) -> bool:
     )
 
 
+def _listed(items: list[QueueItem]) -> str:
+    """A queue in short, for the journal: Spotify track ids and clip file names."""
+    names = (item.key.rsplit("%3a", 1)[-1].rsplit("/", 1)[-1] for item in items)
+    return f"[{', '.join(names)}]"
+
+
 TrackChange = Callable[[str | None, str | None], Awaitable[None]]
 Source = Callable[[], Awaitable[list[QueueItem]]]
 
@@ -242,6 +248,15 @@ class PlaybackController:
         if snapshot.rooms:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
+        moved = previous and previous.transport != snapshot.transport
+        if moved and not {previous.transport, snapshot.transport} <= set(ACTIVE):
+            # Stopping and pausing, and starting again, but not the moment between two songs.
+            log.info(
+                "The speakers went from %s to %s: %s",
+                previous.transport,
+                snapshot.transport,
+                self.where(),
+            )
         if snapshot.transport in ACTIVE and self.current_key in self._clips:
             self._clip_heard_at = self._clock()
         await self._trim()
@@ -387,6 +402,20 @@ class PlaybackController:
     def position(self) -> int:
         """Where in GuildFM's queue the speakers are, 1-based."""
         return self._position
+
+    def where(self) -> str:
+        """Where the speakers and GuildFM have got to, for the journal."""
+        snapshot = self._snapshot
+        track = snapshot.track if snapshot else None
+        speakers = (
+            f"speakers at {snapshot.queue_position or '-'} ({track.title if track else 'no track'})"
+            if snapshot
+            else "speakers not read yet"
+        )
+        return (
+            f"{speakers}; GuildFM {self.status.value}, at {self._position} of "
+            f"{_listed(self._items)}"
+        )
 
     def seconds_left(self) -> float | None:
         """Like `time_left`, but counting on from when the speakers were last read."""
@@ -591,9 +620,10 @@ class PlaybackController:
         await self._fit_crossfade()
 
     async def play_again(self, item: QueueItem) -> bool:
-        """Have stopped speakers try the lined-up `item` once more. False if it isn't on them
-        any more."""
+        """Have stopped speakers try the lined-up `item` once more, at its place in their queue
+        as they have it. False if it isn't on them any more."""
         self._require_control()
+        await self._match_queue()
         ahead = range(self._position, len(self._items))
         index = next((i for i in ahead if self._items[i].key == item.key), None)
         if index is None:
@@ -602,6 +632,33 @@ class PlaybackController:
         self._settle()
         await self.poll()
         return True
+
+    async def _match_queue(self) -> None:
+        """Read the speakers' queue, and if GuildFM's copy has drifted from it, take theirs, so
+        a position GuildFM sends them is the one it means. GuildFM's place stays with the song
+        it was at, or the nearest one before it that's still there."""
+        real = await self._call(self._speakers.queued)
+        keys = [item.key for item in real]
+        if keys == [item.key for item in self._items]:
+            return
+        log.warning(
+            "GuildFM's copy of the speakers' queue was out of step: it had %s, at %s, and the "
+            "speakers have %s",
+            _listed(self._items),
+            self._position,
+            _listed(real),
+        )
+        place = 0  # before the start, when none of it is still there
+        for item in reversed(self._items[: self._position]):
+            places = [n for n, key in enumerate(keys, 1) if key == item.key]
+            if places:
+                place = min(places, key=lambda n: abs(n - self._position))
+                break
+        known = {item.key: item for item in self._items}
+        self._items = [known.get(item.key, item) for item in real]
+        self._position = place
+        self._clips = {key: clip for key, clip in self._clips.items() if key in keys}
+        self._remember()
 
     async def queue_before(self, item: QueueItem, key: str, kind: str) -> bool:
         """Line the clip `item` up to play just before the song `key`, which is lined up after

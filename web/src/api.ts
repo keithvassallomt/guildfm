@@ -87,13 +87,29 @@ export class ApiError extends Error {
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-/** Calls the GuildFM API and returns its JSON, or throws an ApiError with a readable message. */
-export async function api<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+/** How long a command to the speakers gets before the buttons are given back. */
+export const COMMAND_TIMEOUT = 20_000;
+
+/** Calls the GuildFM API and returns its JSON, or throws an ApiError with a readable message.
+ * With `timeout`, it gives up waiting after that many milliseconds. */
+export async function api<T>(method: Method, path: string, body?: unknown, timeout?: number): Promise<T> {
+  const abort = new AbortController();
+  const timer = timeout === undefined ? undefined : setTimeout(() => abort.abort(), timeout);
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      method,
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: abort.signal,
+    });
+  } catch (caught) {
+    // GuildFM may still do it, so the person checks before trying again.
+    if (abort.signal.aborted) throw new ApiError(0, "No answer from GuildFM yet. Check what's playing before trying again.");
+    throw caught;
+  } finally {
+    clearTimeout(timer);
+  }
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new ApiError(response.status, errorMessage(data));

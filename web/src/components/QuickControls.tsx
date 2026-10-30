@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { api, errorText, type PlaybackState } from "../api";
+import { api, COMMAND_TIMEOUT, errorText, type PlaybackState } from "../api";
 import { chipLabel, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import { Dialog } from "./Dialog";
@@ -22,7 +22,7 @@ export function QuickControls() {
     setBusy(true);
     setError(null);
     try {
-      apply(await api<PlaybackState>(method, `/playback${path}`, body));
+      apply(await api<PlaybackState>(method, `/playback${path}`, body, COMMAND_TIMEOUT));
     } catch (caught) {
       setError(errorText(caught));
     } finally {

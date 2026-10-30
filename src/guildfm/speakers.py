@@ -16,6 +16,7 @@ from xml.sax.saxutils import escape
 
 import soco
 from soco import SoCo
+from soco.data_structures import to_didl_string
 from soco.exceptions import SoCoUPnPException
 from websockets.sync.client import connect
 
@@ -149,6 +150,7 @@ class SpeakerSystem(Protocol):
     def add_next(self, item: QueueItem) -> int: ...
     def add_at(self, item: QueueItem, position: int) -> int: ...
     def remove(self, position: int) -> None: ...
+    def queued(self) -> list[QueueItem]: ...
     def play_position(self, position: int) -> None: ...
     def play_clip(
         self, uid: str, url: str, volume: int, start: threading.Barrier | None = None
@@ -336,6 +338,25 @@ class SocoSystem:
 
     def remove(self, position: int) -> None:
         self._guard(lambda: self._coordinator.remove_from_queue(position - 1))
+
+    def queued(self) -> list[QueueItem]:
+        """What's in the queue, as the speakers have it."""
+
+        def read() -> list[QueueItem]:
+            items: list[QueueItem] = []
+            while True:
+                page = self._coordinator.get_queue(len(items), 100)
+                items += [
+                    QueueItem(
+                        uri=entry.resources[0].uri if entry.resources else "",
+                        metadata=to_didl_string(entry),
+                    )
+                    for entry in page
+                ]
+                if not page or len(items) >= page.total_matches:
+                    return items
+
+        return self._guard(read)
 
     def play_position(self, position: int) -> None:
         self._guard(lambda: self._coordinator.play_from_queue(position - 1))

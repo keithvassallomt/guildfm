@@ -229,6 +229,10 @@ class MonitorSystem:
                 self._position -= 1
             self._changed()
 
+    def queued(self) -> list[QueueItem]:
+        with self._lock:
+            return list(self._queue)
+
     def play_position(self, position: int) -> None:
         with self._lock:
             self._start(position)

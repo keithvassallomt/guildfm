@@ -60,6 +60,7 @@ class FakeSpeakers:
         self.queue_refuses_clips = False  # MP3s from GuildFM can't go in the queue
         self.crossfade = False
         self.wont_start: str | None = None  # a song's key that never starts, however often tried
+        self.wont_seek: str | None = None  # a song's key the speakers refuse to jump to
         self.played: list[QueueItem] = []  # what played to the end from the queue, in order
 
     # Things that happen in the office
@@ -181,8 +182,16 @@ class FakeSpeakers:
         if self.position and position < self.position:
             self.position -= 1
 
+    def queued(self) -> list[QueueItem]:
+        self._check()
+        return list(self.queue)
+
     def play_position(self, position: int) -> None:
         self._check()
+        if not 0 < position <= len(self.queue):
+            raise SpeakersRefused("The speakers wouldn't do that (Illegal seek target).")
+        if self.queue[position - 1].key == self.wont_seek:
+            raise SpeakersRefused("The speakers wouldn't do that (Transition not available).")
         if self.queue[position - 1].key == self.wont_start:
             self.next_song_fails()
             return
