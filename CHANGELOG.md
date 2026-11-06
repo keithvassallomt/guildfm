@@ -14,6 +14,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   iMessage and WhatsApp, show it for links sent from the office. Slack and Teams build them on
   their own servers, which can't reach GuildFM. `make preview-card` draws the picture again.
 
+### Fixed
+
+- After the office machine restarted on 5 November, GuildFM couldn't reach Spotify, OpenAI,
+  ElevenLabs or the weather, so searching for songs failed and the DJ and stations' AI went
+  quiet. `deploy/setup-https.sh` wrote the machine's nameservers where the old network client
+  wiped them as it shut down. It now writes them where they're kept.
+
 ## [0.1.2] - 2026-10-30
 
 ### Added

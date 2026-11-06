@@ -25,8 +25,10 @@ if grep -q "^iface $DEVICE inet dhcp$" /etc/network/interfaces; then
 	sed -i "s|^iface $DEVICE inet dhcp$|iface $DEVICE inet static\n    address $ADDRESS\n    gateway $GATEWAY|" \
 		/etc/network/interfaces
 fi
-# dhcpcd wrote this and won't run again, so it says the same thing for good.
-printf "nameserver 8.8.8.8\nnameserver 8.8.4.4\n" > /etc/resolv.conf
+# The nameservers go in resolv.conf.head as well. dhcpcd keeps running until the restart (and
+# runs again if the Wi-Fi backup comes up), and when it stops it rewrites resolv.conf with only
+# the head, which on 2026-11-05 left the machine unable to look up any name.
+printf "nameserver 8.8.8.8\nnameserver 8.8.4.4\n" | tee /etc/resolv.conf.head > /etc/resolv.conf
 ifquery "$DEVICE" > /dev/null # stops here if the file no longer reads
 
 echo "== Caddy, with its Route 53 module"
