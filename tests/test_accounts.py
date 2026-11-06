@@ -1,5 +1,8 @@
+import sqlite3
+
 from fastapi.testclient import TestClient
 
+from guildfm import __version__, news
 from tests.fakes import spotify_id
 from tests.helpers import ADMIN, PASSWORD, register, sign_in
 
@@ -157,3 +160,41 @@ def test_deleting_someone_deletes_their_photo(client: TestClient, people) -> Non
     sign_in(client, *ADMIN)
     client.delete(f"/api/users/{user['id']}").raise_for_status()
     assert client.get(url).status_code == 404
+
+
+def test_whats_new_is_shown_once(client: TestClient, settings) -> None:
+    # A new account has nothing new to hear about.
+    assert register(client, "dan")["news_seen"] == __version__
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        db.execute("UPDATE users SET news_seen = '0.1.2' WHERE username = 'dan'")
+    assert client.get("/api/me").json()["news_seen"] == "0.1.2"
+
+    assert client.post("/api/me/news").json()["news_seen"] == __version__
+    assert client.get("/api/me").json()["news_seen"] == __version__
+
+
+def test_notes_wait_for_their_version_and_are_shown_newest_first(tmp_path) -> None:
+    for version in ("0.1.1", "0.1.3", "0.1.4", "0.1.10", "0.2.0"):
+        (tmp_path / f"{version}.md").write_text(f"What's new in {version}")
+    found = news.unseen("0.1.2", "0.1.10", tmp_path)
+    # Not 0.1.1, already seen, nor 0.2.0, not out yet. At most the last three.
+    assert [note["version"] for note in found] == ["0.1.10", "0.1.4", "0.1.3"]
+    assert news.unseen("0.1.2", "0.1.3", tmp_path) == [
+        {"version": "0.1.3", "text": "What's new in 0.1.3"}
+    ]
+    assert news.unseen("0.1.10", "0.1.10", tmp_path) == []
+
+
+def test_whats_new_is_there_until_its_seen(client: TestClient, settings, tmp_path, monkeypatch):
+    monkeypatch.setattr(news, "FOLDER", tmp_path)
+    (tmp_path / f"{__version__}.md").write_text("## Vote on what's playing")
+    register(client, "dan")
+    assert client.get("/api/me/news").json() == {"notes": []}  # new, so nothing's new to them
+
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        db.execute("UPDATE users SET news_seen = '0.0.1' WHERE username = 'dan'")
+    notes = client.get("/api/me/news").json()["notes"]
+    assert notes == [{"version": __version__, "text": "## Vote on what's playing"}]
+    assert client.get("/api/me/news").json()["notes"] == notes  # until it's seen
+    client.post("/api/me/news").raise_for_status()
+    assert client.get("/api/me/news").json() == {"notes": []}

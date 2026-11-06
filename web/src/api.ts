@@ -26,6 +26,9 @@ export type User = {
   avatar_url: string | null;
 };
 
+/** A version's "What's new": Markdown, read like a help topic. */
+export type Note = { version: string; text: string };
+
 /** Someone, as shown beside their requests. */
 export type Person = { id: number; display_name: string; avatar_url: string | null };
 

@@ -5,6 +5,8 @@ from typing import Any
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from guildfm import __version__
+
 AVATARS = "avatars"  # the folder for people's photos, inside the media folder
 JINGLES = "jingles"  # the folder for jingles, inside the media folder
 COVERS = "covers"  # the folder for stations' covers, inside the media folder
@@ -45,6 +47,9 @@ class User(Base):
     must_change_password: Mapped[bool] = mapped_column(default=False)
     # Part of every session cookie. Bumping it signs the user out everywhere.
     session_version: Mapped[int] = mapped_column(default=0)
+    # The newest version whose "What's new" they've seen. A new account starts at the version
+    # it was made on, so nobody is told what's new about things they never knew otherwise.
+    news_seen: Mapped[str] = mapped_column(String(20), default=__version__)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     @property

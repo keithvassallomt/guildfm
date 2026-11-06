@@ -7,6 +7,7 @@ import { MonitorBar } from "./components/MonitorBar";
 import { Navigation } from "./components/Navigation";
 import { QuickControls } from "./components/QuickControls";
 import { LiveProvider } from "./live/LiveProvider";
+import { WhatsNew } from "./news/WhatsNew";
 import { AdminPage } from "./pages/AdminPage";
 import { AnnouncementEditor } from "./pages/AnnouncementEditor";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
@@ -43,6 +44,7 @@ function Shell() {
         <Outlet />
       </main>
       {quick && <QuickControls />}
+      <WhatsNew />
     </div>
   );
 }

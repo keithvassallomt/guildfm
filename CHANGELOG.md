@@ -21,6 +21,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that just played, the votes on a request coming up, thumbs down on a station's song that
   weren't enough to skip it, and how the song coming up did the last time it played. It only
   knows the numbers, never who voted.
+- "What's new in GuildFM": after an update that has something to tell, everyone sees a short
+  note about it once, the next time they open GuildFM or come back to it, without signing in
+  again. Not every version has one. New accounts don't get the notes from before they joined.
 
 ### Changed
 

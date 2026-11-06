@@ -5,9 +5,11 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm import __version__
 from guildfm.accounts import create_user, find_user
 from guildfm.api.schemas import MeOut, PasswordIn, ProfileIn, RegisterIn, SignInIn
 from guildfm.auth import (
@@ -21,6 +23,7 @@ from guildfm.auth import (
 from guildfm.db import get_session
 from guildfm.models import AVATARS, Role, User
 from guildfm.names import name_problem
+from guildfm.news import unseen
 from guildfm.permissions import ROLE_PERMISSIONS, Permission
 
 router = APIRouter()
@@ -86,6 +89,30 @@ async def logout(request: Request) -> None:
 
 @router.get("/me")
 async def me(user: CurrentUser) -> MeOut:
+    return MeOut.of(user)
+
+
+class NoteOut(BaseModel):
+    version: str
+    text: str  # Markdown, read like a help topic
+
+
+class NewsOut(BaseModel):
+    notes: list[NoteOut]  # newest first; none when there's nothing they haven't seen
+
+
+@router.get("/me/news")
+async def news(user: ActiveUser) -> NewsOut:
+    """What's new since they last looked. Asked each time GuildFM is opened or come back to, so
+    a page left open across an update still shows it."""
+    return NewsOut(notes=[NoteOut(**note) for note in unseen(user.news_seen)])
+
+
+@router.post("/me/news")
+async def news_seen(user: ActiveUser, db: Db) -> MeOut:
+    """They've seen what's new, up to the version running now."""
+    user.news_seen = __version__
+    await db.commit()
     return MeOut.of(user)
 
 

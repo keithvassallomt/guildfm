@@ -85,12 +85,14 @@ class MeOut(UserOut):
     """The signed-in user, plus what they're allowed to do, so the UI needn't repeat the rules."""
 
     permissions: list[Permission]
+    news_seen: str  # the newest version whose "What's new" they've seen
 
     @classmethod
     def of(cls, user: User) -> MeOut:
         return cls(
             **UserOut.model_validate(user).model_dump(),
             permissions=sorted(ROLE_PERMISSIONS[user.role]),
+            news_seen=user.news_seen,
         )
 
 

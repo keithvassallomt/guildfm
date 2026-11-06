@@ -1,0 +1,46 @@
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+
+/* Notes from more than one version, newest first, with a line between. */
+.note + .note {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.note h2,
+.note h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.note p,
+.note ul,
+.note ol {
+  margin: 0 0 14px;
+}
+
+.note ul,
+.note ol {
+  padding-left: 1.3em;
+}
+
+.note > :last-child {
+  margin-bottom: 0;
+}
+
+.note strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.note a {
+  color: var(--accent);
+}
