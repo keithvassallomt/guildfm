@@ -1,0 +1,48 @@
+.votes {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.vote {
+  width: var(--touch);
+  height: var(--touch);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vote:hover {
+  color: var(--text);
+}
+
+.vote.up {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.vote.down {
+  background: var(--down-soft);
+  color: var(--down);
+}
+
+.score {
+  min-width: 30px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.score.up {
+  color: var(--accent);
+}
+
+.score.down {
+  color: var(--down);
+}

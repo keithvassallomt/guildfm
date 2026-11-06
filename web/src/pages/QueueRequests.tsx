@@ -19,6 +19,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import type { QueueEntry, QueueSource } from "../api";
 import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
+import { Votes } from "../components/Votes";
 import { ago } from "../live/status";
 import q from "./QueuePage.module.css";
 
@@ -101,9 +102,6 @@ type RequestProps = {
 function Request({ entry, rank, last, curator, trayOpen, onTray, onMove, act }: RequestProps) {
   const title = entry.track.title;
   const sortable = useSortable({ id: entry.id, disabled: !curator });
-  const voteFor = (value: -1 | 1) =>
-    act("POST", `/queue/${entry.id}/vote`, { value: entry.my_vote === value ? 0 : value });
-  const scoreClass = entry.my_vote === 1 ? q.up : entry.my_vote === -1 ? q.down : "";
   const canRemove = entry.mine || curator;
 
   return (
@@ -135,29 +133,12 @@ function Request({ entry, rank, last, curator, trayOpen, onTray, onMove, act }: 
           </span>
           <span className={q.meta}>{entry.track.artists}</span>
         </div>
-        <div className={q.votes}>
-          <button
-            type="button"
-            aria-label={`Thumbs up for ${title}`}
-            aria-pressed={entry.my_vote === 1}
-            className={`${q.vote} ${entry.my_vote === 1 ? q.up : ""}`}
-            onClick={() => voteFor(1)}
-          >
-            <Icon name="thumbUp" size={20} filled={entry.my_vote === 1} />
-          </button>
-          <span className={`${q.score} ${scoreClass}`} aria-label={`Score ${entry.score}`}>
-            {entry.score > 0 ? `+${entry.score}` : entry.score}
-          </span>
-          <button
-            type="button"
-            aria-label={`Thumbs down for ${title}`}
-            aria-pressed={entry.my_vote === -1}
-            className={`${q.vote} ${entry.my_vote === -1 ? q.down : ""}`}
-            onClick={() => voteFor(-1)}
-          >
-            <Icon name="thumbDown" size={20} filled={entry.my_vote === -1} />
-          </button>
-        </div>
+        <Votes
+          title={title}
+          mine={entry.my_vote}
+          score={entry.score}
+          onVote={(value) => act("POST", `/queue/${entry.id}/vote`, { value })}
+        />
       </div>
       <div className={q.requestBottom}>
         <span className={q.meta}>

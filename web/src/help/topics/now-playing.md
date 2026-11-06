@@ -23,6 +23,8 @@ While an announcement, the DJ or a jingle is on, GuildFM's logo takes the place 
 
 The bar shows how far through the song it is. The badge at the top right says what the music is doing, such as **On air** or **Paused**. See [When the music stops](topic:when-the-music-stops).
 
+Under the bar are thumbs for voting on the song while it plays. Thumbs down never stop it, but the votes count: see [Requesting songs and voting](topic:requesting).
+
 ## Where the music comes from
 
 Requests always play first. Between them, a playlist, a radio station or a line-up fills the gaps.
@@ -43,6 +45,6 @@ To change it, see [Choosing what plays between requests](topic:sources).
 
 ## Played today
 
-Underneath, **Played today** lists every song since the office opened, newest first: when it played, and where it came from. That's who requested it (with its score), or the playlist or station. **Show more** goes further back.
+Underneath, **Played today** lists every song since the office opened, newest first: when it played, and where it came from. That's who requested it, or the playlist or station, with the song's score once people have voted it up. **Show more** goes further back.
 
 ![Played today](shot:now-history)

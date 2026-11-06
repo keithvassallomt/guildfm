@@ -11,6 +11,7 @@ import { PlaybackBanner } from "../components/PlaybackBanner";
 import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
+import { Votes } from "../components/Votes";
 import { ago, chipLabel, ownClip, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
@@ -53,7 +54,12 @@ export function QueuePage() {
 
       <div className={q.layout}>
         <div className={q.now}>
-          <NowPlaying playback={playback} receivedAt={receivedAt} entry={queue?.playing ?? null} />
+          <NowPlaying
+            playback={playback}
+            receivedAt={receivedAt}
+            entry={queue?.playing ?? null}
+            act={can("vote") ? act : null}
+          />
         </div>
         {queue?.next && (
           <div className={q.next}>
@@ -166,9 +172,16 @@ function QuickSearch({ open, onClose, queue, onQueue }: QuickSearchProps) {
   );
 }
 
-type NowProps = { playback: PlaybackState | null; receivedAt: number; entry: QueueEntry | null };
+type NowProps = {
+  playback: PlaybackState | null;
+  receivedAt: number;
+  entry: QueueEntry | null;
+  act: Act | null; // null for someone who can't vote
+};
 
-function NowPlaying({ playback, receivedAt, entry }: NowProps) {
+/** What's playing, with thumbs to vote on it. Votes on it count as they do in the queue, but
+ *  nothing stops it. */
+function NowPlaying({ playback, receivedAt, entry, act }: NowProps) {
   const track = playback?.track;
   if (!track) {
     return (
@@ -203,9 +216,19 @@ function NowPlaying({ playback, receivedAt, entry }: NowProps) {
         <Progress track={track} receivedAt={receivedAt} />
       )}
       {queued && entry && (
-        <span className={q.requested}>
-          <Credit entry={entry} size={18} />
-        </span>
+        <div className={q.nowBottom}>
+          <span className={q.requested}>
+            <Credit entry={entry} size={18} />
+          </span>
+          {act && (
+            <Votes
+              title={entry.track.title}
+              mine={entry.my_vote}
+              score={entry.score}
+              onVote={(value) => act("POST", `/queue/${entry.id}/vote`, { value })}
+            />
+          )}
+        </div>
       )}
     </section>
   );

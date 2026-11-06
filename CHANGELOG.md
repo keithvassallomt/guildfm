@@ -13,6 +13,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and what GuildFM does. Chats that build previews on the sender's phone or computer, such as
   iMessage and WhatsApp, show it for links sent from the office. Slack and Teams build them on
   their own servers, which can't reach GuildFM. `make preview-card` draws the picture again.
+- Thumbs up and down for the song that's playing, on Now Playing and at the top of the Queue,
+  whether it was a request or came from a playlist or a station. No number of thumbs down stops
+  it, but its votes count as they do in the queue: they're kept with it in Played today, and
+  enough thumbs up put it in Best Voted. A request's votes from the queue carry on.
+
+### Changed
+
+- Played today shows the score of songs from a playlist or a station too, not only requests.
+- "Made it into Best Voted" in the activity only appears when a song first gets in, not each time
+  a song already there plays again.
 
 ### Fixed
 

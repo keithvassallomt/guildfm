@@ -30,6 +30,14 @@ async def now_history(s: Scene) -> Frame:
     return [history.get_by_role("heading"), history.locator("li").nth(4)]
 
 
+@shot("now-vote", ("user",))
+async def now_vote(s: Scene) -> Frame:
+    await open_now(s)
+    card = s.page.get_by_role("region", name="Now playing")
+    await s.ring(card.get_by_role("button", name=re.compile(r"^Thumbs up for")).locator(".."))
+    return card
+
+
 @shot("now-takeover", EVERYONE, phase="takeover")
 async def now_takeover(s: Scene) -> Frame:
     page = s.page

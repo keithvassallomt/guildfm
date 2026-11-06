@@ -546,22 +546,38 @@ class QueueEngine:
                         f"Now playing {entry.track.title}, "
                         f"requested by {entry.requester.display_name}"
                     )
-                    joined = await consider_for_best_voted(
-                        db,
-                        entry.track_id,
-                        tally.up,
-                        more_than=await get_pref(db, "best_voted_min_upvotes"),
-                        size=await get_pref(db, "best_voted_size"),
-                    )
-                    if joined:
-                        self.note(f"{entry.track.title} made it into Best Voted")
                 elif entry.playlist:
                     self.note(f"Now playing {entry.track.title} from {entry.playlist.name}")
                 elif entry.station:
                     self.note(f"Now playing {entry.track.title} on {entry.station.name}")
+                if await self._into_best_voted(db, entry.track_id, tally.up):
+                    self.note(f"{entry.track.title} made it into Best Voted")
             await db.commit()
         if finished or started:
             await self.changed()
+
+    async def count_votes_on_playing(self, db: AsyncSession, entry: QueueEntry) -> bool:
+        """Votes on the song that's playing count as they would have in the queue, though nothing
+        stops it: its play in the history takes the new tally, and enough thumbs up put it in
+        Best Voted, whether it was a request or came from a playlist or a station. True when
+        that's just put it in Best Voted."""
+        tally = (await tallies(db, [entry.id])).get(entry.id, Tally())
+        play = await db.scalar(
+            select(Play).where(Play.track_id == entry.track_id).order_by(Play.id.desc()).limit(1)
+        )
+        if play:
+            play.upvotes, play.downvotes = tally.up, tally.down
+        await db.commit()
+        return await self._into_best_voted(db, entry.track_id, tally.up)
+
+    async def _into_best_voted(self, db: AsyncSession, track_id: str, upvotes: int) -> bool:
+        return await consider_for_best_voted(
+            db,
+            track_id,
+            upvotes,
+            more_than=await get_pref(db, "best_voted_min_upvotes"),
+            size=await get_pref(db, "best_voted_size"),
+        )
 
 
 async def recent_plays(

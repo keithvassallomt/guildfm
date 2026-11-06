@@ -259,9 +259,15 @@ class VoteIn(BaseModel):
 
 @router.post("/{entry_id}/vote")
 async def vote(entry_id: int, body: VoteIn, user: Voter, request: Request, db: Db) -> QueueOut:
+    """A vote on a waiting request, or on the song that's playing. Enough thumbs down take a
+    request out of the queue, but nothing stops the song that's playing: its votes are kept with
+    its play. The song locked in to play next can't be voted on."""
     queue = engine(request)
     async with queue.lock:
-        entry = await waiting_entry(db, entry_id)
+        entry = await db.get(QueueEntry, entry_id)
+        playing = entry is not None and entry.state == EntryState.PLAYING
+        if not playing:
+            entry = await waiting_entry(db, entry_id)
         title = entry.track.title
         existing = await db.get(Vote, (entry_id, user.id))
         thumbs_up = body.value == 1 and (existing is None or existing.value != 1)
@@ -272,8 +278,12 @@ async def vote(entry_id: int, body: VoteIn, user: Voter, request: Request, db: D
             await db.merge(Vote(entry_id=entry_id, user_id=user.id, value=body.value))
         await db.commit()
 
-        tally = (await tallies(db, [entry_id])).get(entry_id, Tally())
-        removed = tally.score <= await get_pref(db, "downvote_threshold")
+        joined = removed = False
+        if playing:
+            joined = await queue.count_votes_on_playing(db, entry)
+        else:
+            tally = (await tallies(db, [entry_id])).get(entry_id, Tally())
+            removed = tally.score <= await get_pref(db, "downvote_threshold")
         if removed:
             await db.delete(entry)
             await db.commit()
@@ -282,6 +292,8 @@ async def vote(entry_id: int, body: VoteIn, user: Voter, request: Request, db: D
         queue.note(f"{title} was removed after too many thumbs down")
     elif thumbs_up:
         queue.note(f"{user.display_name} gave {title} a thumbs up")
+    if joined:
+        queue.note(f"{title} made it into Best Voted")
     await queue.changed()
     return await view(db, user, queue)
 

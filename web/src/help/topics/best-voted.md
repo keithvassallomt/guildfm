@@ -6,7 +6,7 @@ order: 3
 needs: switch_source
 ---
 
-**Best Voted** is a playlist that looks after itself. When a request gets more than five thumbs up, it joins Best Voted.
+**Best Voted** is a playlist that looks after itself. When a song gets more than five thumbs up, it joins Best Voted. A request counts its votes from the queue and while it plays; a song from a playlist or a station counts the votes it gets while it plays.
 
 ![Best Voted](shot:best-voted)
 

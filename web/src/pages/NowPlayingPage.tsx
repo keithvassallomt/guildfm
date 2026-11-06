@@ -9,6 +9,7 @@ import {
   type LineupTile,
   type PlaylistTile,
   type QueueEntry,
+  type QueueState,
   type SourceKind,
   type StationTile,
 } from "../api";
@@ -23,6 +24,7 @@ import { PlaybackBanner } from "../components/PlaybackBanner";
 import { Progress } from "../components/Progress";
 import { StatusChip } from "../components/StatusChip";
 import { useToast } from "../components/Toast";
+import { type VoteValue, Votes } from "../components/Votes";
 import { useWide } from "../components/useWide";
 import { RoomVolumes } from "../components/RoomVolumes";
 import { VolumeSlider } from "../components/VolumeSlider";
@@ -50,7 +52,7 @@ export function NowPlayingPage() {
   const wide = useWide();
   const { can, me } = useAuth();
   const { state: playback, receivedAt, apply } = usePlayback();
-  const { queue } = useQueue();
+  const { queue, apply: applyQueue } = useQueue();
   const { now } = useNow();
   const history = useHistory();
   const { show, toast } = useToast();
@@ -116,6 +118,16 @@ export function NowPlayingPage() {
     }
   };
 
+  // Votes on the song that's playing count as they do in the queue, but nothing stops it.
+  const vote = async (value: VoteValue) => {
+    if (!queue?.playing) return;
+    try {
+      applyQueue(await api<QueueState>("POST", `/queue/${queue.playing.id}/vote`, { value }));
+    } catch (caught) {
+      show(errorText(caught));
+    }
+  };
+
   const requestsOnly = async () => {
     if (now?.requests_only) return;
     try {
@@ -143,6 +155,7 @@ export function NowPlayingPage() {
       receivedAt={receivedAt}
       entry={queue?.playing ?? null}
       onAir={now?.on_air ?? null}
+      onVote={can("vote") ? vote : null}
       busy={busy}
       send={send}
       transport={can("transport")}
@@ -199,6 +212,7 @@ type NowCardProps = {
   receivedAt: number;
   entry: QueueEntry | null;
   onAir: SourceKind | null;
+  onVote: ((value: VoteValue) => void) | null;
   busy: boolean;
   send: Send;
   transport: boolean;
@@ -212,6 +226,7 @@ function NowCard({
   receivedAt,
   entry,
   onAir,
+  onVote,
   busy,
   send,
   transport,
@@ -256,15 +271,25 @@ function NowCard({
               </span>
               <span className={n.nowTitle}>{queued?.title ?? (track.title || "Untitled")}</span>
               <span className={n.nowArtist}>{queued?.artists ?? track.artist}</span>
-              {queued && entry && (
-                <span className={n.nowFrom}>
-                  <Credit entry={entry} />
-                </span>
-              )}
             </div>
           </div>
           {track.duration > 0 && (
             <Progress track={track} receivedAt={receivedAt} />
+          )}
+          {queued && entry && (
+            <div className={n.nowBottom}>
+              <span className={n.nowFrom}>
+                <Credit entry={entry} />
+              </span>
+              {onVote && (
+                <Votes
+                  title={entry.track.title}
+                  mine={entry.my_vote}
+                  score={entry.score}
+                  onVote={onVote}
+                />
+              )}
+            </div>
           )}
         </>
       ) : (
@@ -388,11 +413,10 @@ function OfficeControls({ playback, busy, send, onAnnounce }: OfficeProps) {
 }
 
 function source(play: Play): string {
-  if (play.requested_by) {
-    const votes = play.upvotes - play.downvotes;
-    return `Requested by ${play.requested_by.display_name}${votes > 0 ? ` · +${votes}` : ""}`;
-  }
-  return play.playlist ?? play.station ?? "Played";
+  const votes = play.upvotes - play.downvotes;
+  const score = votes > 0 ? ` · +${votes}` : "";
+  if (play.requested_by) return `Requested by ${play.requested_by.display_name}${score}`;
+  return `${play.playlist ?? play.station ?? "Played"}${score}`;
 }
 
 function time(iso: string): string {

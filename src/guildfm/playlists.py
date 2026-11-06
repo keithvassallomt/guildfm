@@ -97,9 +97,11 @@ async def add_track(db: AsyncSession, playlist: Playlist, track_id: str, upvotes
 async def consider_for_best_voted(
     db: AsyncSession, track_id: str, upvotes: int, *, more_than: int, size: int
 ) -> bool:
-    """A request has just started playing with `upvotes`. If that's more than `more_than`, it
-    joins Best Voted, pushing out the track with the fewest upvotes (the oldest on a tie) when
-    the playlist is full. A newcomer needs at least as many upvotes as the track it replaces."""
+    """A track has `upvotes`: a request just starting to play, or any song while it plays. If
+    that's more than `more_than`, it joins Best Voted, pushing out the track with the fewest
+    upvotes (the oldest on a tie) when the playlist is full. A newcomer needs at least as many
+    upvotes as the track it replaces. One already in keeps its best count. True only when the
+    track has just joined."""
     if upvotes <= more_than:
         return False
     playlist = await best_voted(db)
@@ -107,7 +109,7 @@ async def consider_for_best_voted(
     if existing:
         existing.upvotes = max(existing.upvotes, upvotes)
         await db.commit()
-        return True
+        return False
 
     entries = await tracks_of(db, playlist.id)
     if len(entries) >= size:

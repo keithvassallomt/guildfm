@@ -362,6 +362,27 @@ def test_well_liked_requests_join_best_voted(client: TestClient, speakers) -> No
     assert [(item["title"], item["upvotes"]) for item in items] == [("Song 2", 2)]
 
 
+def test_a_playlist_song_voted_up_while_it_plays_joins_best_voted(client, speakers) -> None:
+    sign_in(client, *ADMIN)
+    client.patch("/api/settings", json={"best_voted_min_upvotes": 1}).raise_for_status()
+    playlist = make(client, "Fridays", ["fm1", "fm2"])
+    client.post(f"/api/playlists/{playlist['id']}/play").raise_for_status()
+    client.post("/api/playback/play").raise_for_status()
+    playing = queue(client)["playing"]
+    assert playing["playlist"] == "Fridays"
+    for name in ("dan", "eve", "fay"):
+        register(client, name)
+        body = client.post(f"/api/queue/{playing['id']}/vote", json={"value": 1}).json()
+
+    # It joined on the second thumbs up, and the third only raised its count.
+    notes = [item["text"] for item in body["activity"]]
+    assert notes.count("Song 1 made it into Best Voted") == 1
+    sign_in(client, *ADMIN)
+    best = client.get("/api/playlists").json()[0]
+    items = client.get(f"/api/playlists/{best['id']}").json()["items"]
+    assert [(item["title"], item["upvotes"]) for item in items] == [("Song 1", 3)]
+
+
 async def _evictions(sessionmaker) -> list[tuple[str, int]]:
     async with sessionmaker() as db:
         playlist = await best_voted(db)

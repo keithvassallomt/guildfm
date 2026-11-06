@@ -98,6 +98,12 @@ UNFIX = """() => {
 SETTLED = """() => document.fonts.status === "loaded"
   && [...document.images].every((image) => image.complete)"""
 
+# Pictures the browser only loads once they're scrolled to, such as covers far down a long list
+# of search results on a phone, would never be complete, so they're loaded now.
+EAGER = """() => document.querySelectorAll('img[loading="lazy"]').forEach((image) => {
+  image.loading = "eager";
+})"""
+
 
 class Scene:
     """One shot being set up: the page, and whose eyes and what size of screen it's for."""
@@ -126,6 +132,7 @@ class Scene:
     async def settle(self) -> None:
         """Waits for fonts and pictures, and for the live updates to have arrived."""
         await self.page.wait_for_load_state("load")
+        await self.page.evaluate(EAGER)
         await self.page.wait_for_function(SETTLED)
         await self.page.wait_for_timeout(400)
 

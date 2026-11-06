@@ -165,6 +165,45 @@ def test_the_downvote_threshold_is_a_setting(client: TestClient, people, setting
     assert titles(vote(client, entry_for(client, "Song 1"), -1).json()) == []
 
 
+def test_no_amount_of_thumbs_down_stops_the_song_thats_playing(client, people, speakers) -> None:
+    sign_in(client, *ADMIN)
+    request(client, "fm1")
+    client.post("/api/playback/play").raise_for_status()
+    playing = queue(client)["playing"]
+    for name in ("dan", "eve", "fay", "gus"):
+        register(client, name)
+        assert vote(client, playing, -1).status_code == 200
+    body = queue(client)
+    assert body["playing"]["track"]["title"] == "Song 1"
+    assert body["playing"]["score"] == -4
+    assert body["playing"]["my_vote"] == -1
+    assert client.get("/api/playback").json()["status"] == "playing"
+
+
+def test_votes_on_the_playing_song_are_kept_with_its_play(client, people, speakers) -> None:
+    sign_in(client, *people["user"])
+    request(client, "fm1")
+    vote(client, entry_for(client, "Song 1"), 1)  # while it waits
+    sign_in(client, *ADMIN)
+    client.post("/api/playback/play").raise_for_status()
+    playing = queue(client)["playing"]
+
+    # Votes cast in the queue carry on, and more come in while it plays.
+    sign_in(client, *people["curator"])
+    body = vote(client, playing, 1).json()
+    assert body["playing"]["score"] == 2
+    assert body["activity"][0]["text"] == "Curator gave Song 1 a thumbs up"
+    sign_in(client, *ADMIN)
+    vote(client, playing, -1)
+    play = client.get("/api/history").json()["plays"][0]
+    assert (play["upvotes"], play["downvotes"]) == (2, 1)
+
+    # Taking a vote back takes it off the play too.
+    vote(client, playing, 0)
+    play = client.get("/api/history").json()["plays"][0]
+    assert (play["upvotes"], play["downvotes"]) == (2, 0)
+
+
 # Removing and moving
 
 

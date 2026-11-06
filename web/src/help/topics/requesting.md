@@ -52,9 +52,19 @@ The number between the thumbs is the song's score: its thumbs up minus its thumb
 - The queue keeps itself in order, highest score first. With equal scores, the one asked for first goes first.
 - A song that gets too many thumbs down is taken out of the queue. That's a score of -3, unless an admin has changed it.
 
+## Vote on the song that's playing
+
+The song that's on has thumbs too, on Now Playing and at the top of the Queue. Vote on it the same way, whether someone asked for it or it came from a playlist or a station.
+
+![Voting on the song that's playing](shot:now-vote)
+
+- Thumbs down never stop it, however many it gets. It plays to the end.
+- Its votes still count: **Played today** shows its score, and enough thumbs up put it in the Best Voted playlist.
+- Votes it got in the queue carry on, so if you voted on a request, your vote is still there when it plays.
+
 ## Up next is locked in
 
-About a minute and a half before a song ends, GuildFM sends the next request to the speakers, so it starts on time. It moves up to **Up next**, with a padlock, and votes can't move it any more.
+About a minute and a half before a song ends, GuildFM sends the next request to the speakers, so it starts on time. It moves up to **Up next**, with a padlock, and votes can't move it any more. You can vote on it again once it's playing.
 
 ![The song up next, locked in](shot:queue-up-next)
 
@@ -62,7 +72,7 @@ About a minute and a half before a song ends, GuildFM sends the next request to 
 
 A playlist or an AI radio station keeps the music going between requests. The Queue shows its next three songs under the requests, after **Then from** and its name.
 
-These songs have no thumbs up, since a playlist or a station keeps its own order, but you can give one a thumbs down. If enough people do (three, unless an admin has changed it), that song is skipped this time round. The count beside it, such as **1/3**, shows how close it is.
+These songs have no thumbs up, since a playlist or a station keeps its own order, but you can give one a thumbs down. If enough people do (three, unless an admin has changed it), that song is skipped this time round. The count beside it, such as **1/3**, shows how close it is. Once one of them is playing, it has both thumbs, like a request.
 
 ![The playlist's next songs](shot:queue-upcoming)
 

@@ -521,6 +521,10 @@ async def seed(app: FastAPI, speakers: DemoSpeakers) -> Office:
     await office.people["owen"].call(
         "POST", "/source/vote", {"track_id": upcoming[1]["track"]["id"], "down": True}
     )
+    # Votes on the song that's playing. Priya, who reads the help as a user, liked it.
+    playing = queue["playing"]["id"]
+    for username, value in {"priya": 1, "owen": 1, "ben": 1, "ellie": 1, "callum": -1}.items():
+        await office.people[username].call("POST", f"/queue/{playing}/vote", {"value": value})
 
     await announcements(office)
 

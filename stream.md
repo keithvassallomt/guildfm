@@ -65,6 +65,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 ## Queue and Voting
 - Users can vote tracks up or down, using thumbs up and thumbs down. The system automatically orders the queue by votes.
 - A track whose score falls to the downvote threshold is removed from the queue. The threshold is a setting.
+- Users can also vote on the song that's playing, whether it was a request or came from a playlist or a station, on Now Playing and at the top of the Queue. No number of thumbs down stops it. Its votes are kept with its play in the history and count towards Best Voted, as votes in the queue do, and votes it had as a request carry on. The song locked in as next can't be voted on.
 - Users can remove their own tracks, but only their own.
 - Each user can have a limited number of tracks in the queue at once. The cap is a setting (default: 5). Admins have no cap.
 - A track that is already in the queue cannot be added again.
@@ -111,11 +112,11 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Curators and admins can play any playlist. A playing playlist fills the gaps: requests always play first.
 - Switching to another playlist takes effect after the current song. A playlist that's switched away from keeps its place, and carries on from there when it's put back on; once it plays to the end, it starts afresh.
 - Each playlist has a Shuffle switch: off by default, on by default for Best Voted.
-- While a playlist is playing, the Queue screen shows its next 3 songs under the requests. Anyone can give them a thumbs down; enough of them (the same threshold as requests) skips that song this time round. There's no thumbs up for them, since a playlist keeps its own order.
+- While a playlist is playing, the Queue screen shows its next 3 songs under the requests. Anyone can give them a thumbs down; enough of them (the same threshold as requests) skips that song this time round. There's no thumbs up for them, since a playlist keeps its own order. Once one is playing, it can be voted up or down like any other song.
 
 ### Best Voted playlist
 - There is one Best Voted playlist, maintained automatically.
-- A track that gets more than X upvotes goes into it (setting, default: 5).
+- A track that gets more than X upvotes goes into it (setting, default: 5): a request's votes from the queue and while it plays, or a playlist's or station's song's while it plays.
 - The playlist holds up to Y tracks (setting, default: 50).
 - When the playlist is full and a new track qualifies, the track with the fewest upvotes drops out. If several tracks tie on fewest upvotes, the oldest entry drops out.
 - A new track only gets in if it has at least as many upvotes as the track it would replace.

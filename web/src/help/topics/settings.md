@@ -18,7 +18,7 @@ pages: /admin/settings
 
 ## Best Voted playlist
 
-- **Upvotes to get in**: a request joins Best Voted once it has more thumbs up than this.
+- **Upvotes to get in**: a song joins Best Voted once it has more thumbs up than this.
 - **Playlist size**: the most songs it holds. When it's full, the song with the fewest thumbs up drops out (the oldest, if several are level).
 
 ![Queue and voting, and Best Voted](shot:settings-voting)

@@ -4,7 +4,7 @@
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "4bb9062e",
+    "v": "5700863c",
     "screen": true
    }
   },
@@ -12,7 +12,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "bf4cbee6",
+    "v": "5ccc802c",
     "screen": true
    }
   }
@@ -22,15 +22,15 @@
    "admin": {
     "w": 386,
     "h": 244,
-    "v": "a5ddad09",
+    "v": "5fb15100",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 193,
-    "v": "a7555937",
+    "h": 194,
+    "v": "ddf48ed2",
     "screen": false
    }
   }
@@ -39,16 +39,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 501,
-    "v": "9330ad69",
+    "h": 502,
+    "v": "8b215570",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 449,
-    "v": "6a0296bd",
+    "h": 450,
+    "v": "3bbac2b8",
     "screen": false
    }
   }
@@ -57,16 +57,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 875,
-    "v": "7c22da9c",
+    "h": 876,
+    "v": "d244e625",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 857,
-    "v": "2d4e167a",
+    "h": 858,
+    "v": "c3960862",
     "screen": false
    }
   }
@@ -84,7 +84,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "0f1c0935",
+    "v": "a8f00349",
     "screen": true
    }
   }
@@ -102,7 +102,7 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "4d256833",
+    "v": "fc191300",
     "screen": true
    }
   }
@@ -166,7 +166,7 @@
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "698bcba4",
+    "v": "3e8013a3",
     "screen": true
    }
   },
@@ -174,7 +174,7 @@
    "curator": {
     "w": 760,
     "h": 688,
-    "v": "8f44de9a",
+    "v": "2252d3e2",
     "screen": false
    }
   }
@@ -184,7 +184,7 @@
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "d5bc3750",
+    "v": "da1ae1e5",
     "screen": true
    }
   },
@@ -192,7 +192,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "b4abc3e5",
+    "v": "4864fee6",
     "screen": true
    }
   }
@@ -210,7 +210,7 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "50b1b48c",
+    "v": "a35269f7",
     "screen": true
    }
   }
@@ -252,13 +252,13 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "377c8fed",
+    "v": "d1724d3b",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "8f9b5637",
+    "v": "e2431318",
     "screen": true
    }
   }
@@ -268,7 +268,7 @@
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "ddb1af38",
+    "v": "fd813377",
     "screen": true
    }
   },
@@ -276,7 +276,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "6ffef130",
+    "v": "c281f00c",
     "screen": true
    }
   }
@@ -285,28 +285,28 @@
   "phone": {
    "curator": {
     "w": 386,
-    "h": 267,
-    "v": "2c60a1cd",
+    "h": 301,
+    "v": "203c4677",
     "screen": false
    },
    "admin": {
     "w": 386,
-    "h": 453,
-    "v": "a5f590d0",
+    "h": 487,
+    "v": "c15316d5",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
     "w": 328,
-    "h": 570,
-    "v": "4e26d0de",
+    "h": 588,
+    "v": "0c46270a",
     "screen": false
    },
    "admin": {
     "w": 328,
-    "h": 758,
-    "v": "f5cfd6c9",
+    "h": 776,
+    "v": "590536a8",
     "screen": false
    }
   }
@@ -316,7 +316,7 @@
    "user": {
     "w": 386,
     "h": 401,
-    "v": "1276c94d",
+    "v": "72ae25fc",
     "screen": false
    }
   },
@@ -324,7 +324,7 @@
    "user": {
     "w": 499,
     "h": 265,
-    "v": "c960ecd9",
+    "v": "f016a87e",
     "screen": false
    }
   }
@@ -333,28 +333,28 @@
   "phone": {
    "user": {
     "w": 386,
-    "h": 541,
-    "v": "5f996edc",
+    "h": 542,
+    "v": "e8116633",
     "screen": false
    },
    "curator": {
     "w": 386,
-    "h": 597,
-    "v": "05feb603",
+    "h": 598,
+    "v": "8b589883",
     "screen": false
    }
   },
   "desktop": {
    "user": {
-    "w": 651,
-    "h": 293,
-    "v": "8fb9810b",
+    "w": 652,
+    "h": 294,
+    "v": "2f2b5922",
     "screen": false
    },
    "curator": {
-    "w": 651,
-    "h": 293,
-    "v": "75fc1ecc",
+    "w": 652,
+    "h": 294,
+    "v": "c0d0c75d",
     "screen": false
    }
   }
@@ -364,19 +364,19 @@
    "user": {
     "w": 390,
     "h": 844,
-    "v": "d23fb26a",
+    "v": "35633469",
     "screen": true
    },
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "9c8241ed",
+    "v": "920509f3",
     "screen": true
    },
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "df7e8ee4",
+    "v": "a1e6f5c4",
     "screen": true
    }
   },
@@ -384,19 +384,19 @@
    "user": {
     "w": 1280,
     "h": 800,
-    "v": "39aef1d3",
+    "v": "24417fcf",
     "screen": true
    },
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "1fe2e1e0",
+    "v": "b675377f",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "cccda9ff",
+    "v": "aa7a015e",
     "screen": true
    }
   }
@@ -406,21 +406,21 @@
    "curator": {
     "w": 386,
     "h": 833,
-    "v": "02ffb198",
+    "v": "fe661f1a",
     "screen": false
    },
    "admin": {
     "w": 386,
     "h": 833,
-    "v": "59e1c9ee",
+    "v": "2f0201c2",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 651,
+    "w": 652,
     "h": 347,
-    "v": "1d6ed7c5",
+    "v": "8612b824",
     "screen": false
    }
   }
@@ -429,16 +429,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 807,
-    "v": "7dbae263",
+    "h": 841,
+    "v": "beaf7637",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 328,
-    "h": 1112,
-    "v": "1ee9e37a",
+    "h": 1130,
+    "v": "207d77c6",
     "screen": false
    }
   }
@@ -448,21 +448,21 @@
    "curator": {
     "w": 386,
     "h": 481,
-    "v": "da5710fe",
+    "v": "6a86fbef",
     "screen": false
    },
    "admin": {
     "w": 386,
     "h": 481,
-    "v": "c2e8fc9c",
+    "v": "516c89b9",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 651,
+    "w": 652,
     "h": 1418,
-    "v": "652368bd",
+    "v": "63f49039",
     "screen": false
    }
   }
@@ -478,7 +478,7 @@
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "26a33943",
+    "v": "35cf1bd7",
     "screen": true
    },
    "admin": {
@@ -492,20 +492,38 @@
    "user": {
     "w": 1280,
     "h": 800,
-    "v": "879f0771",
+    "v": "d1c40906",
     "screen": true
    },
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "52d2505f",
+    "v": "b5b85323",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "0ba01d91",
+    "v": "74373189",
     "screen": true
+   }
+  }
+ },
+ "now-vote": {
+  "phone": {
+   "user": {
+    "w": 386,
+    "h": 219,
+    "v": "0eb0ec16",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "user": {
+    "w": 328,
+    "h": 496,
+    "v": "44c9157f",
+    "screen": false
    }
   }
  },
@@ -522,26 +540,26 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "b2dc618b",
+    "v": "a84090c8",
     "screen": true
    }
   }
  },
  "playlist-add": {
-  "phone": {
-   "curator": {
-    "w": 390,
-    "h": 844,
-    "v": "227e39f2",
-    "screen": true
-   }
-  },
   "desktop": {
    "curator": {
     "w": 760,
     "h": 688,
-    "v": "4ae93e05",
+    "v": "342beeb9",
     "screen": false
+   }
+  },
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "92463a9c",
+    "screen": true
    }
   }
  },
@@ -564,13 +582,13 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "13aa6189",
+    "v": "d6bb6471",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "bcd73e5c",
+    "v": "f09d5fd2",
     "screen": true
    }
   }
@@ -618,19 +636,19 @@
    "user": {
     "w": 1280,
     "h": 800,
-    "v": "c84fe54f",
+    "v": "09208688",
     "screen": true
    },
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "a1935548",
+    "v": "8ca40234",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "6d196588",
+    "v": "6e66a33d",
     "screen": true
    }
   }
@@ -676,7 +694,7 @@
    "user": {
     "w": 386,
     "h": 354,
-    "v": "8a6d11ec",
+    "v": "0a5c3d1b",
     "screen": false
    }
   },
@@ -684,7 +702,7 @@
    "user": {
     "w": 490,
     "h": 362,
-    "v": "ede79a07",
+    "v": "5fcddaef",
     "screen": false
    }
   }
@@ -712,19 +730,19 @@
    "user": {
     "w": 390,
     "h": 844,
-    "v": "f5bb8ea2",
+    "v": "42e05484",
     "screen": true
    },
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "24bc10aa",
+    "v": "d022ba5f",
     "screen": true
    },
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "e4824fa0",
+    "v": "6800a18f",
     "screen": true
    }
   },
@@ -732,19 +750,19 @@
    "user": {
     "w": 1280,
     "h": 800,
-    "v": "df7f379a",
+    "v": "e3e8c7dd",
     "screen": true
    },
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "5d6c9999",
+    "v": "86527d1b",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "7d865968",
+    "v": "99af94a0",
     "screen": true
    }
   }
@@ -754,19 +772,19 @@
    "user": {
     "w": 386,
     "h": 134,
-    "v": "a616c0be",
+    "v": "b95e07c8",
     "screen": false
    },
    "curator": {
     "w": 386,
     "h": 134,
-    "v": "4cbd6c57",
+    "v": "a9e89223",
     "screen": false
    },
    "admin": {
     "w": 386,
     "h": 134,
-    "v": "ab949f02",
+    "v": "6a15a3f8",
     "screen": false
    }
   },
@@ -774,19 +792,19 @@
    "user": {
     "w": 567,
     "h": 134,
-    "v": "69a279b0",
+    "v": "81a7c268",
     "screen": false
    },
    "curator": {
     "w": 567,
     "h": 134,
-    "v": "95ddcedb",
+    "v": "928e4c18",
     "screen": false
    },
    "admin": {
     "w": 567,
     "h": 134,
-    "v": "29cfebcb",
+    "v": "792c6de8",
     "screen": false
    }
   }
@@ -796,19 +814,19 @@
    "user": {
     "w": 390,
     "h": 844,
-    "v": "1137c754",
+    "v": "92e1f42f",
     "screen": true
    },
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "ca40c646",
+    "v": "06650f86",
     "screen": true
    },
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "84c7fd13",
+    "v": "8720fe99",
     "screen": true
    }
   },
@@ -816,19 +834,19 @@
    "user": {
     "w": 760,
     "h": 688,
-    "v": "cb36a007",
+    "v": "e7436773",
     "screen": false
    },
    "curator": {
     "w": 760,
     "h": 688,
-    "v": "10f4c9af",
+    "v": "d9902f97",
     "screen": false
    },
    "admin": {
     "w": 760,
     "h": 688,
-    "v": "99607ae1",
+    "v": "e36551d8",
     "screen": false
    }
   }
@@ -837,16 +855,16 @@
   "phone": {
    "user": {
     "w": 386,
-    "h": 127,
-    "v": "b1e15489",
+    "h": 128,
+    "v": "20f5f458",
     "screen": false
    }
   },
   "desktop": {
    "user": {
     "w": 413,
-    "h": 127,
-    "v": "e3b3f83e",
+    "h": 128,
+    "v": "d4d7f312",
     "screen": false
    }
   }
@@ -856,13 +874,13 @@
    "user": {
     "w": 386,
     "h": 255,
-    "v": "62672fd7",
+    "v": "c2270a7a",
     "screen": false
    },
    "curator": {
     "w": 386,
     "h": 255,
-    "v": "3ee9eb73",
+    "v": "9c745714",
     "screen": false
    }
   },
@@ -886,13 +904,13 @@
    "user": {
     "w": 386,
     "h": 118,
-    "v": "001b5c90",
+    "v": "7eb5b8d7",
     "screen": false
    },
    "curator": {
     "w": 386,
     "h": 134,
-    "v": "8ea10004",
+    "v": "ba0e59f4",
     "screen": false
    }
   },
@@ -900,13 +918,13 @@
    "user": {
     "w": 567,
     "h": 118,
-    "v": "23dc884e",
+    "v": "dab8eac2",
     "screen": false
    },
    "curator": {
     "w": 567,
     "h": 134,
-    "v": "ba1a0091",
+    "v": "5e45f11e",
     "screen": false
    }
   }
@@ -916,7 +934,7 @@
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "45767b15",
+    "v": "02f0000c",
     "screen": true
    }
   },
@@ -924,7 +942,7 @@
    "admin": {
     "w": 440,
     "h": 451,
-    "v": "11ccddfa",
+    "v": "19442ee6",
     "screen": false
    }
   }
@@ -934,7 +952,7 @@
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "db38c8ed",
+    "v": "b153b52c",
     "screen": true
    }
   },
@@ -942,7 +960,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "0e55443e",
+    "v": "cf29c1c1",
     "screen": true
    }
   }
@@ -966,13 +984,13 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "4428351e",
+    "v": "3e36b7e0",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "e07df5a6",
+    "v": "09ffe07c",
     "screen": true
    }
   }
@@ -981,16 +999,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 361,
-    "v": "6101665f",
+    "h": 362,
+    "v": "dc3a1d58",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 377,
-    "v": "7a5dddef",
+    "h": 378,
+    "v": "6a0d9521",
     "screen": false
    }
   }
@@ -1017,16 +1035,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 331,
-    "v": "7b4ad785",
+    "h": 332,
+    "v": "c8d73801",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 279,
-    "v": "3f472637",
+    "h": 280,
+    "v": "cd77abd6",
     "screen": false
    }
   }
@@ -1035,16 +1053,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 422,
-    "v": "4d667cb9",
+    "h": 423,
+    "v": "9c2a6b24",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 391,
-    "v": "f69992aa",
+    "h": 392,
+    "v": "303c76a7",
     "screen": false
    }
   }
@@ -1053,16 +1071,16 @@
   "phone": {
    "admin": {
     "w": 386,
-    "h": 511,
-    "v": "bf526f10",
+    "h": 512,
+    "v": "dca81f3e",
     "screen": false
    }
   },
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 519,
-    "v": "2ed4eb17",
+    "h": 520,
+    "v": "a9b65b93",
     "screen": false
    }
   }
@@ -1079,8 +1097,8 @@
   "desktop": {
    "admin": {
     "w": 490,
-    "h": 677,
-    "v": "54f90fe2",
+    "h": 678,
+    "v": "22405c1a",
     "screen": false
    }
   }
@@ -1089,16 +1107,16 @@
   "phone": {
    "curator": {
     "w": 352,
-    "h": 170,
-    "v": "c4e5cdd6",
+    "h": 171,
+    "v": "9e8c6361",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
     "w": 448,
-    "h": 152,
-    "v": "25f99c8d",
+    "h": 153,
+    "v": "47c95c7d",
     "screen": false
    }
   }
@@ -1107,16 +1125,16 @@
   "phone": {
    "curator": {
     "w": 369,
-    "h": 429,
-    "v": "af1c670e",
+    "h": 430,
+    "v": "3bef31a6",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
     "w": 469,
-    "h": 433,
-    "v": "81de74cd",
+    "h": 434,
+    "v": "cf2d54a1",
     "screen": false
    }
   }
@@ -1134,7 +1152,7 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "b6925a2c",
+    "v": "8eb899a4",
     "screen": true
    }
   }
@@ -1143,8 +1161,8 @@
   "phone": {
    "curator": {
     "w": 386,
-    "h": 651,
-    "v": "7123dfa6",
+    "h": 652,
+    "v": "855bd138",
     "screen": false
    }
   },
@@ -1152,7 +1170,7 @@
    "curator": {
     "w": 490,
     "h": 624,
-    "v": "cd9b7bf8",
+    "v": "589917c5",
     "screen": false
    }
   }
@@ -1169,8 +1187,8 @@
   "desktop": {
    "curator": {
     "w": 448,
-    "h": 323,
-    "v": "795ea5d6",
+    "h": 324,
+    "v": "847569c8",
     "screen": false
    }
   }
@@ -1188,7 +1206,7 @@
    "curator": {
     "w": 448,
     "h": 404,
-    "v": "52992fa5",
+    "v": "3ecd0f55",
     "screen": false
    }
   }
@@ -1198,7 +1216,7 @@
    "curator": {
     "w": 352,
     "h": 694,
-    "v": "d6ce3254",
+    "v": "5147247f",
     "screen": false
    }
   },
@@ -1216,7 +1234,7 @@
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "56ae9f09",
+    "v": "b82586f4",
     "screen": true
    }
   },
@@ -1224,7 +1242,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "3d743697",
+    "v": "7e068102",
     "screen": true
    }
   }
@@ -1242,7 +1260,7 @@
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "a6bf2246",
+    "v": "05d88558",
     "screen": true
    }
   }

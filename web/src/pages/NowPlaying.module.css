@@ -191,7 +191,18 @@
   color: var(--muted);
 }
 
+/* The credit, with the thumbs at the end. The thumbs' touch targets reach into the card's gap
+   and padding, so they add little to the card's height. */
+.nowBottom {
+  margin: -10px -6px -10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .nowFrom {
+  min-width: 0;
   font-size: 12px;
   color: var(--muted);
 }
