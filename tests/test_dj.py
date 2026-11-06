@@ -296,6 +296,70 @@ def test_the_dj_knows_about_repeat_requests(client: TestClient, people, openai, 
     assert "teasing" in openai.asked_for("dj_line")[-1]["instructions"]
 
 
+def vote_on_playing(client: TestClient, value: int) -> None:
+    playing = client.get("/api/queue").json()["playing"]
+    client.post(f"/api/queue/{playing['id']}/vote", json={"value": value}).raise_for_status()
+
+
+def test_the_dj_knows_the_votes_on_the_song_that_just_played(client, people, openai, speakers):
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    vote_on_playing(client, 1)
+    sign_in(client, *people["user"])
+    vote_on_playing(client, 1)
+    sign_in(client, *people["curator"])
+    vote_on_playing(client, -1)
+    line_up_next(client, speakers)
+    prompt = lines(openai)[0]
+    assert "Votes on the song that just played, so far: 2 up, 1 down." in prompt
+    assert "Bring up the votes only now and then, not every time" in prompt
+
+
+def test_no_votes_nothing_about_them(client: TestClient, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    line_up_next(client, speakers)
+    assert "vote" not in lines(openai)[0].lower()
+
+
+def test_the_dj_knows_about_thumbs_down_on_a_station_song(client, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    coming = client.get("/api/queue").json()["source"]["upcoming"][0]["track"]["id"]
+    client.post("/api/source/vote", json={"track_id": coming, "down": True}).raise_for_status()
+    line_up_next(client, speakers)
+    assert (
+        "1 person gave the song up next a thumbs down while it was coming up, not enough to "
+        "skip it." in lines(openai)[0]
+    )
+
+
+def test_votes_on_a_request_dont_give_it_away_as_one(client, people, openai, speakers) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai, announce_requests=False)
+    sign_in(client, *people["user"])
+    client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
+    entry = client.get("/api/queue").json()["waiting"][0]
+    client.post(f"/api/queue/{entry['id']}/vote", json={"value": 1}).raise_for_status()
+    line_up_next(client, speakers)
+    prompt = lines(openai)[0]
+    assert "Votes on the song up next: 1 up, 0 down." in prompt
+    assert "request" not in prompt
+
+
+def test_the_dj_knows_the_votes_from_the_last_time_it_played(client, people, openai, speakers):
+    sign_in(client, *ADMIN)
+    on_air(client, openai, talk_every=10)
+    sign_in(client, *people["user"])
+    client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
+    next_song(client, speakers)  # Dreams, for User
+    vote_on_playing(client, 1)
+    next_song(client, speakers)  # Song 2, from the station
+    client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
+    line_up_next(client, speakers)
+    assert "Votes on the song up next the last time it played: 1 up, 0 down." in lines(openai)[-1]
+
+
 def test_people_who_opted_out_arent_named_in_the_history(client, people, openai, speakers):
     sign_in(client, *ADMIN)
     on_air(client, openai, talk_every=10)

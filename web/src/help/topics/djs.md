@@ -7,7 +7,7 @@ needs: create_stations
 pages: /radio/new, /radio/:id
 ---
 
-A DJ talks between songs on a station: introducing what's next, sharing a bit of trivia, mentioning the weather, and giving shout-outs when requests play.
+A DJ talks between songs on a station: introducing what's next, sharing a bit of trivia, mentioning the weather, giving shout-outs when requests play, and now and then saying how the office voted. The DJ only knows how many votes a song got, never who voted.
 
 ## Add a DJ
 

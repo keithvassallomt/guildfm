@@ -17,6 +17,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   whether it was a request or came from a playlist or a station. No number of thumbs down stops
   it, but its votes count as they do in the queue: they're kept with it in Played today, and
   enough thumbs up put it in Best Voted. A request's votes from the queue carry on.
+- The DJ knows how the office voted, and brings it up now and then: the votes so far on the song
+  that just played, the votes on a request coming up, thumbs down on a station's song that
+  weren't enough to skip it, and how the song coming up did the last time it played. It only
+  knows the numbers, never who voted.
 
 ### Changed
 

@@ -15,7 +15,7 @@ import logging
 import math
 import time
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -118,9 +118,9 @@ async def history(
     db: AsyncSession, entry: QueueEntry, requests: bool, named: str | None
 ) -> list[str]:
     """What the DJ might pick up on about the song coming up: how often it and its artist have
-    played lately, and for a request, who asked for it before, the votes, and what else the
-    requester has asked for. Nothing about requests unless the station announces them, and
-    nobody named who opted out."""
+    played lately, and for a request, who asked for it before and what else the requester has
+    asked for. Nothing about requests unless the station announces them, and nobody named who
+    opted out. The votes are in `votes`."""
     now = time.time()
     since = now - HISTORY_DAYS * 24 * 60 * 60
     track = entry.track
@@ -156,24 +156,63 @@ async def history(
     if artist_plays >= 2:
         lines.append(f"{artist} has played {artist_plays} times in the last week.")
 
-    if requests and entry.requested_by:
-        tally = (await tallies(db, [entry.id])).get(entry.id)
-        if tally and (tally.up or tally.down):
-            lines.append(f"Votes on this request: {tally.up} up, {tally.down} down.")
-        if named:
-            theirs = list(
-                (
-                    await db.scalars(
-                        select(Play).where(
-                            Play.requested_by == entry.requested_by, Play.played_at >= since
-                        )
+    if requests and entry.requested_by and named:
+        theirs = list(
+            (
+                await db.scalars(
+                    select(Play).where(
+                        Play.requested_by == entry.requested_by, Play.played_at >= since
                     )
-                ).unique()
-            )
-            if theirs:
-                same = sum(play.track.artists.split(", ")[0] == artist for play in theirs)
-                line = f"Requests from {named} that played in the last week: {len(theirs)}"
-                lines.append(line + (f", {same} of them by {artist}." if same else "."))
+                )
+            ).unique()
+        )
+        if theirs:
+            same = sum(play.track.artists.split(", ")[0] == artist for play in theirs)
+            line = f"Requests from {named} that played in the last week: {len(theirs)}"
+            lines.append(line + (f", {same} of them by {artist}." if same else "."))
+    return lines
+
+
+async def votes(
+    db: AsyncSession,
+    entry: QueueEntry,
+    playing: QueueEntry | None,
+    thumbs_down: int,
+    requests: bool,
+) -> list[str]:
+    """How the office voted, for the DJ to bring up now and then: on the song that just played
+    (so far, since the line is written before it ends), and on the song coming up, while it
+    waited and the last time it played. `thumbs_down` is how many people thumbed it down while
+    it was among a playlist's or station's next songs. Counts only, so the DJ never knows who
+    voted, and the song coming up is only called a request while the station announces them."""
+    lines = []
+    found = await tallies(db, [song.id for song in (playing, entry) if song])
+    if playing and (tally := found.get(playing.id)):
+        lines.append(
+            f"Votes on the song that just played, so far: {tally.up} up, {tally.down} down."
+        )
+    if entry.requested_by:
+        if tally := found.get(entry.id):
+            what = "this request" if requests else "the song up next"
+            lines.append(f"Votes on {what}: {tally.up} up, {tally.down} down.")
+    elif thumbs_down:
+        people = "person" if thumbs_down == 1 else "people"
+        lines.append(
+            f"{thumbs_down} {people} gave the song up next a thumbs down while it was coming "
+            "up, not enough to skip it."
+        )
+    since = time.time() - HISTORY_DAYS * 24 * 60 * 60
+    last = await db.scalar(
+        select(Play)
+        .where(Play.track_id == entry.track_id, Play.played_at >= since)
+        .order_by(Play.id.desc())
+        .limit(1)
+    )
+    if last and (last.upvotes or last.downvotes):
+        lines.append(
+            "Votes on the song up next the last time it played: "
+            f"{last.upvotes} up, {last.downvotes} down."
+        )
     return lines
 
 
@@ -208,15 +247,22 @@ async def write_line(
     said: list[str],
     *,
     aware: bool,
+    votes: Sequence[str] = (),
 ) -> str:
     """What the DJ says before the next song. `said` is what it said the last few times.
-    `aware` says whether the context has the weather and the news as well as the time."""
+    `aware` says whether the context has the weather and the news as well as the time. `votes`
+    is how the office voted, for the DJ to mention now and then."""
     parts = [context]
     if before:
         parts.append(f"Just played: {before}.")
     parts.append(up_next)
     if remarks:
         parts.append(" ".join(remarks))
+    if votes:
+        parts.append(
+            " ".join(votes) + " Bring up the votes only now and then, not every time, and only "
+            "as numbers: you don't know who voted."
+        )
     if said:
         parts.append(
             "What you said the last few times, oldest first. Don't repeat yourself, and vary how "
@@ -319,6 +365,8 @@ class DJ:
                 else None
             )
             remarks = await history(db, entry, station.announce_requests, named)
+            thumbs_down = len(source.downvotes.get(entry.track_id, []))
+            voted = await votes(db, entry, playing, thumbs_down, station.announce_requests)
             picked = await db.get(PickNote, entry.track_id)
             note = picked.note if picked else None
             album = entry.track.album if entry.album_id else None
@@ -364,7 +412,7 @@ class DJ:
             up_next += f" Why it was picked: {note}"
         said = memory.get("said", [])
         script = await write_line(
-            self._ai, persona, context, before, up_next, remarks, said, aware=aware
+            self._ai, persona, context, before, up_next, remarks, said, aware=aware, votes=voted
         )
         if not script:
             return None

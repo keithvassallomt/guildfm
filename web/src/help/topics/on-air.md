@@ -9,6 +9,8 @@ Some of GuildFM's AI radio stations have a DJ: an AI voice with a name and a per
 
 The DJ always talks between songs, never over one, so every room hears them at the same time.
 
+Now and then the DJ mentions how the office voted, such as how many thumbs up the last song got, or that a few people tried to skip the next one. They only know the numbers, never who voted.
+
 ## The DJ and your requests
 
 When your request plays on a station with a DJ, the DJ might say your name, such as "This one's for Priya, who asked for some Fleetwood Mac." If it suits their personality, they may gently tease you for asking for the same artist again.
