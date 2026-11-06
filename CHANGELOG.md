@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-06
+
 ### Added
 
 - A preview for links to GuildFM in chats: the logo above a radio dial, "The office jukebox"

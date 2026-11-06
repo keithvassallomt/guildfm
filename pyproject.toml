@@ -1,6 +1,6 @@
 [project]
 name = "guildfm"
-version = "0.1.2"
+version = "0.1.3"
 description = "Office music, voted on by everyone."
 authors = [
     { name = "Keith Vassallo", email = "keith@vassallo.cloud" }
