@@ -7,6 +7,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Ready for guildfm.com to be served through Cloudflare, so Android phones no longer need
+  Chrome's Local network permission to open it. Visitors who arrive through Cloudflare from
+  anywhere but the office's own public address see "Connect to TJardinePrivate" instead of
+  GuildFM. The office's address is looked up by the office machine itself, so it can change.
+
 ## [0.1.3] - 2026-11-06
 
 ### Added

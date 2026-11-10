@@ -24,6 +24,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 12: Line-ups
 - [ ] Stage 13: Jingle generator
 - [x] Stage 14: Help
+- [ ] Stage 15: Cloudflare migration
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -262,3 +263,15 @@ Goal: help inside GuildFM, in plain words with screenshots, covering every featu
 - [x] The office in phases, so screens that only show in other states can be shot too: a line-up on, the jingle generator's drafts, someone taking over from the Sonos app, and monitor mode. The clock goes back to 11:24 for each, and a role's shot that's the same as the role's below is dropped, since the help falls back to it. Signed out, the sign-in page's link opens the three getting-started topics. A page with several topics opens a list of them from its ?, and curators can read the help as a user too. Covers, photos and songs are gathered once by `tools/screenshots/fetch.py` (decided while building)
 
 Done when: a user, a curator and an admin each open Help on a phone and on a desktop, see only what they can do, with screenshots that match the screen in front of them, and the ? on every page opens the right topic.
+
+## Stage 15: Cloudflare migration
+Goal: guildfm.com served through a Cloudflare Tunnel from the office machine, so phones reach it at a public address and Android 17 doesn't ask for Chrome's Local network permission, while only the office's own public address (which can change) gets in. Asked for by Keith on 2026-11-10, after two Pixels couldn't open it.
+- [x] Change DNS server to Cloudflare
+- [x] Prepare code changes for GuildFM: visitors through Cloudflare whose address isn't the office's (looked up by the machine itself, IPv4 and its IPv6 /64) see "Connect to TJardinePrivate" instead
+- [x] Commit and push
+- [ ] Deploy to office box
+- [ ] Create Cloudflare tunnel
+- [ ] Add public hostname
+- [ ] Test
+
+Done when: a Pixel on TJardinePrivate opens guildfm.com without the Local network permission, and a phone on mobile data sees the Wi-Fi page.

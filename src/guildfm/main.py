@@ -25,6 +25,7 @@ from guildfm.jingles import JinglePlayer
 from guildfm.live import LiveHub, live_socket
 from guildfm.logs import Recent, to_console
 from guildfm.monitor import MonitorRelay, MonitorSystem
+from guildfm.office import Office, OfficeOnly
 from guildfm.playback import PlaybackController
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine
@@ -48,6 +49,7 @@ def create_app(
     ai: AIClient | None = None,
     awareness: Awareness | None = None,
     monitor: MonitorSystem | None = None,
+    office: Office | None = None,
 ) -> FastAPI:
     """Build the app. Tests pass fakes, so nothing touches the office speakers, Spotify, OpenAI
     or the weather, turn off `poll` so they decide when the speakers are read and announcements
@@ -215,4 +217,6 @@ def create_app(
     mount_web(app, settings.web_dist)
     if settings.public_url:
         send_browsers_to(app, settings.public_url)
+    # Outermost, so visitors from outside the office get no further.
+    app.add_middleware(OfficeOnly, office=office or Office())
     return app
