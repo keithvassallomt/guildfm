@@ -7,10 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-12
+
 ### Added
 
-- Ready for guildfm.com to be served through Cloudflare, so Android phones no longer need
-  Chrome's Local network permission to open it. Visitors who arrive through Cloudflare from
+- guildfm.com is served through a Cloudflare Tunnel from the office machine, so Android phones
+  no longer need Chrome's Local network permission to open it. Visitors who arrive through Cloudflare from
   anywhere but the office's own public address see "Connect to TJardinePrivate" instead of
   GuildFM. The office's address is looked up by the office machine itself, so it can change.
 - Admins can rename people on Admin, Users: their display name, the username they sign in
