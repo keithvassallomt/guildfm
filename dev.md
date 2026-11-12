@@ -24,7 +24,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 12: Line-ups
 - [ ] Stage 13: Jingle generator
 - [x] Stage 14: Help
-- [ ] Stage 15: Cloudflare migration
+- [x] Stage 15: Cloudflare migration
 - [ ] Stage 16: Spotify rate limits
 - [ ] Stage 17: Renaming people
 
@@ -271,10 +271,10 @@ Goal: guildfm.com served through a Cloudflare Tunnel from the office machine, so
 - [x] Change DNS server to Cloudflare
 - [x] Prepare code changes for GuildFM: visitors through Cloudflare whose address isn't the office's (looked up by the machine itself, IPv4 and its IPv6 /64) see "Connect to TJardinePrivate" instead
 - [x] Commit and push
-- [ ] Deploy to office box
-- [ ] Create Cloudflare tunnel
-- [ ] Add public hostname
-- [ ] Test
+- [x] Deploy to office box
+- [x] Create Cloudflare tunnel
+- [x] Add public hostname
+- [x] Test
 
 Done when: a Pixel on TJardinePrivate opens guildfm.com without the Local network permission, and a phone on mobile data sees the Wi-Fi page.
 
@@ -285,7 +285,7 @@ Goal: GuildFM stays under Spotify's rate limit, and when it does go over, it wai
 - [x] The DJ waits it out: while paused, stations don't ask the AI for picks and play songs from before (no Spotify needed). The hour preview says Spotify is paused
 - [x] Fewer calls: the same search within 10 minutes is answered from memory, the DJ looks its picks up in songs GuildFM has found before and searches Spotify only for new ones, and search asks for 10 songs at a time, the next 10 loading by themselves when "Show more" scrolls into view
 - [x] Tests, the changelog, and the Requesting help topic
-- [ ] Deploy to office box
+- [x] Deploy to office box
 
 Done when: the office box is on this, and a 429 from Spotify pauses GuildFM for the time Spotify gives, with search saying until when.
 
@@ -294,6 +294,6 @@ Goal: an admin can rename someone, their display name, their username or both. A
 - [x] Renaming, for admins only and not their own account (as for roles): the same rules as adding someone (a username 3 to 32 letters, numbers, dots, dashes or underscores, not taken; a display name up to 40), and not checked by the AI, as names admins give aren't. They stay signed in, and the queue and Now Playing show the new name straight away
 - [x] Rename beside Reset password on Admin, Users, opening a dialog like Add someone's with both names filled in. A new username is said afterwards ("Priya now signs in as priya.s. Let them know.")
 - [x] Tests, the changelog, the Users help topic and its screenshots
-- [ ] Deploy to office box
+- [x] Deploy to office box
 
 Done when: an admin renames someone at the office, who stays signed in, sees the new name on their requests, and signs in with the new username next time.
