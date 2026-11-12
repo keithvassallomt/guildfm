@@ -69,6 +69,11 @@ class RoleIn(BaseModel):
     role: Role
 
 
+class NameIn(BaseModel):
+    username: Username
+    display_name: DisplayName
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

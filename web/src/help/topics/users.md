@@ -38,6 +38,14 @@ You can't change your own account. Another admin has to.
 
 New accounts start as users.
 
+## Rename someone
+
+1. Tap **Rename** beside them.
+2. Change their **Display name**, their **Username**, or both.
+3. Tap **Save**.
+
+A new display name shows everywhere straight away, on requests in the queue too. A new username is the one they sign in with from then on, so let them know. They stay signed in meanwhile.
+
 ## Reset a password
 
 Tap **Reset password**, then **Reset**. GuildFM signs them out everywhere, and shows a temporary password to pass on. They choose a new one when they sign in.

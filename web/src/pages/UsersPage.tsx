@@ -91,6 +91,9 @@ function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
   const [confirming, setConfirming] = useState<Confirming>(null);
   const [temporary, setTemporary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  // Said after a new username, for the admin to pass on.
+  const [renamed, setRenamed] = useState<string | null>(null);
   const controlsId = useId();
   const name = user.display_name;
 
@@ -127,7 +130,18 @@ function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
   const ask = (what: Confirming) => {
     setConfirming(what);
     setTemporary(null);
+    setRenamed(null);
     setError(null);
+  };
+
+  const rename = (updated: User) => {
+    onChange(updated);
+    setRenaming(false);
+    setRenamed(
+      updated.username === user.username
+        ? null
+        : `${updated.display_name} now signs in as ${updated.username}. Let them know.`,
+    );
   };
 
   return (
@@ -167,6 +181,16 @@ function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
               disabled={busy}
             />
             <span className={users.actions}>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  ask(null);
+                  setRenaming(true);
+                }}
+              >
+                Rename
+              </Button>
               <Button variant="secondary" disabled={busy} onClick={() => ask("reset")}>
                 Reset password
               </Button>
@@ -178,7 +202,7 @@ function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
         )}
       </div>
 
-      {(confirming || temporary || error) && (
+      {(confirming || temporary || renamed || error) && (
         <div className={users.extra}>
           {confirming && (
             <div className={users.confirm}>
@@ -198,10 +222,95 @@ function UserRow({ user, isSelf, onChange, onDeleted }: RowProps) {
             </div>
           )}
           {temporary && <TemporaryPasswordBox name={name} password={temporary} />}
+          {renamed && (
+            <p role="status" className={styles.muted}>
+              {renamed}
+            </p>
+          )}
           <FormError message={error} />
         </div>
       )}
+
+      <RenameDialog
+        user={user}
+        open={renaming}
+        onClose={() => setRenaming(false)}
+        onRenamed={rename}
+      />
     </li>
+  );
+}
+
+type RenameProps = {
+  user: User;
+  open: boolean;
+  onClose: () => void;
+  onRenamed: (user: User) => void;
+};
+
+/** A new display name, username or both, the same two fields as adding someone. */
+function RenameDialog({ user, open, onClose, onRenamed }: RenameProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const close = () => {
+    setError(null);
+    onClose();
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setBusy(true);
+    setError(null);
+    try {
+      onRenamed(
+        await api<User>("PUT", `/users/${user.id}/name`, {
+          display_name: String(form.get("display_name") ?? ""),
+          username: String(form.get("username") ?? ""),
+        }),
+      );
+    } catch (caught) {
+      setError(errorText(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={close} title={`Rename ${user.display_name}`}>
+      <form className={users.form} onSubmit={submit}>
+        <TextField
+          label="Display name"
+          name="display_name"
+          required
+          maxLength={40}
+          autoComplete="off"
+          defaultValue={user.display_name}
+        />
+        <TextField
+          label="Username"
+          name="username"
+          required
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          defaultValue={user.username}
+        />
+        <p className={styles.muted}>
+          A new username is the one they sign in with from now on. They stay signed in.
+        </p>
+        <FormError message={error} />
+        <div className={users.formButtons}>
+          <Button variant="secondary" onClick={close}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={busy}>
+            Save
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 

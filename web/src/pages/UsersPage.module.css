@@ -90,9 +90,13 @@
 }
 
 .actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.actions > * {
+  flex: 1 1 auto;
 }
 
 .confirm {
@@ -174,8 +178,8 @@
     width: 260px;
   }
 
-  .actions {
-    display: flex;
+  .actions > * {
+    flex: none;
   }
 
   .extra,

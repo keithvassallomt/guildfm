@@ -26,6 +26,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 14: Help
 - [ ] Stage 15: Cloudflare migration
 - [ ] Stage 16: Spotify rate limits
+- [ ] Stage 17: Renaming people
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -287,3 +288,12 @@ Goal: GuildFM stays under Spotify's rate limit, and when it does go over, it wai
 - [ ] Deploy to office box
 
 Done when: the office box is on this, and a 429 from Spotify pauses GuildFM for the time Spotify gives, with search saying until when.
+
+## Stage 17: Renaming people
+Goal: an admin can rename someone, their display name, their username or both. Asked for by the office's owner through Keith on 2026-11-12.
+- [x] Renaming, for admins only and not their own account (as for roles): the same rules as adding someone (a username 3 to 32 letters, numbers, dots, dashes or underscores, not taken; a display name up to 40), and not checked by the AI, as names admins give aren't. They stay signed in, and the queue and Now Playing show the new name straight away
+- [x] Rename beside Reset password on Admin, Users, opening a dialog like Add someone's with both names filled in. A new username is said afterwards ("Priya now signs in as priya.s. Let them know.")
+- [x] Tests, the changelog, the Users help topic and its screenshots
+- [ ] Deploy to office box
+
+Done when: an admin renames someone at the office, who stays signed in, sees the new name on their requests, and signs in with the new username next time.

@@ -53,6 +53,7 @@ USER_ROUTES = [
     ("get", "/api/users", None),
     ("post", "/api/users", {"username": "lena", "display_name": "Lena"}),
     ("patch", "/api/users/{id}", {"role": "curator"}),
+    ("put", "/api/users/{id}/name", {"username": "lena", "display_name": "Lena"}),
     ("post", "/api/users/{id}/reset-password", None),
     ("delete", "/api/users/{id}", None),
 ]
@@ -80,6 +81,8 @@ def test_admins_manage_users(client: TestClient, people, method, path, body) -> 
 def test_admins_cant_change_their_own_account(client: TestClient) -> None:
     me = sign_in(client, *ADMIN)
     assert client.patch(f"/api/users/{me['id']}", json={"role": "user"}).status_code == 403
+    name = {"username": "boss", "display_name": "Boss"}
+    assert client.put(f"/api/users/{me['id']}/name", json=name).status_code == 403
     assert client.post(f"/api/users/{me['id']}/reset-password").status_code == 403
     assert client.delete(f"/api/users/{me['id']}").status_code == 403
 

@@ -1,4 +1,4 @@
-"""User management for admins: list, add, change roles, reset passwords, delete."""
+"""User management for admins: list, add, rename, change roles, reset passwords, delete."""
 
 from typing import Annotated
 
@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.accounts import create_user, find_user, reset_password, temporary_password
 from guildfm.api.account import forget_avatar
-from guildfm.api.schemas import NewUserIn, RoleIn, TemporaryPasswordOut, UserOut
+from guildfm.api.schemas import NameIn, NewUserIn, RoleIn, TemporaryPasswordOut, UserOut
 from guildfm.auth import require
 from guildfm.db import get_session
 from guildfm.models import User
@@ -59,6 +59,25 @@ async def change_role(user_id: int, body: RoleIn, admin: Admin, db: Db) -> UserO
     user = await someone_else(user_id, admin, db)
     user.role = body.role
     await db.commit()
+    return UserOut.model_validate(user)
+
+
+@router.put("/{user_id}/name")
+async def rename(user_id: int, body: NameIn, admin: Admin, db: Db, request: Request) -> UserOut:
+    """A new display name, username or both. Unlike names people pick for themselves, these
+    aren't checked by the AI, as when an admin adds someone. They stay signed in, and sign in
+    with the new username from then on."""
+    user = await someone_else(user_id, admin, db)
+    taken = await find_user(db, body.username)
+    if taken and taken.id != user.id:
+        raise HTTPException(status_code=409, detail="That username is taken.")
+    user.username, user.display_name = body.username, body.display_name
+    try:
+        await db.commit()
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="That username is taken.") from None
+    # Their name shows on requests in the queue and on Now Playing.
+    await request.app.state.queue.changed()
     return UserOut.model_validate(user)
 
 

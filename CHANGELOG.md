@@ -13,6 +13,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Chrome's Local network permission to open it. Visitors who arrive through Cloudflare from
   anywhere but the office's own public address see "Connect to TJardinePrivate" instead of
   GuildFM. The office's address is looked up by the office machine itself, so it can change.
+- Admins can rename people on Admin, Users: their display name, the username they sign in
+  with, or both. They stay signed in, and sign in with the new username from then on.
 
 ### Changed
 

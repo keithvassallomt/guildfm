@@ -103,6 +103,40 @@ def test_deleting_a_user(client: TestClient) -> None:
     register(client, "priya")
 
 
+def test_renaming_someone(client: TestClient, people, openai) -> None:
+    priya = register(client, "priya")
+    client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
+    priya_cookies = dict(client.cookies)
+    openai.names["Big Ricky"] = "vulgar"  # not asked: names admins give aren't checked
+
+    sign_in(client, *ADMIN)
+    rename = f"/api/users/{priya['id']}/name"
+    taken = client.put(rename, json={"username": "User", "display_name": "Priya"})
+    assert (taken.status_code, taken.json()["detail"]) == (409, "That username is taken.")
+    assert client.put(rename, json={"username": "p", "display_name": "Priya"}).status_code == 422
+    renamed = client.put(rename, json={"username": " Big.Ricky ", "display_name": " Big  Ricky "})
+    assert renamed.status_code == 200, renamed.text
+    assert (renamed.json()["username"], renamed.json()["display_name"]) == (
+        "big.ricky",
+        "Big Ricky",
+    )
+    # Keeping the same username is fine.
+    client.put(rename, json={"username": "big.ricky", "display_name": "Ricky"}).raise_for_status()
+
+    # Their request shows the new name.
+    queue = client.get("/api/queue").json()
+    entries = [queue["playing"], queue["next"], *queue["waiting"]]
+    assert [e["requested_by"]["display_name"] for e in entries if e] == ["Ricky"]
+
+    # They stay signed in, and sign in with the new username from now on.
+    client.cookies.clear()
+    client.cookies.update(priya_cookies)
+    assert client.get("/api/me").json()["display_name"] == "Ricky"
+    old = client.post("/api/auth/login", json={"username": "priya", "password": PASSWORD})
+    assert old.status_code == 401
+    assert sign_in(client, "Big.Ricky")["display_name"] == "Ricky"
+
+
 def test_password_reset_signs_the_user_out_everywhere(client: TestClient) -> None:
     priya = register(client, "priya")
     old_cookies = dict(client.cookies)
