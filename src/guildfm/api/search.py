@@ -17,12 +17,11 @@ from guildfm.models import QueueEntry, User
 from guildfm.permissions import Permission
 from guildfm.prefs import get_pref
 from guildfm.queue import recent_plays
-from guildfm.spotify import SpotifyAlbum, SpotifyBusy, SpotifyError, remember
+from guildfm.spotify import PAGE, SpotifyAlbum, SpotifyBusy, SpotifyError, remember
 
 router = APIRouter()
 Db = Annotated[AsyncSession, Depends(get_session)]
 Searcher = Annotated[User, require(Permission.ADD_TRACKS)]
-PER_PAGE = 20
 ALBUMS = 4  # albums suggested with the first page
 
 
@@ -109,5 +108,5 @@ async def search(
             for a in (found.artists[:4] if offset == 0 and not artist else [])
         ],
         albums=[AlbumOut.of(album) for album in found.albums[:ALBUMS]],
-        next_offset=offset + PER_PAGE if found.more else None,
+        next_offset=offset + PAGE if found.more else None,
     )

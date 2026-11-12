@@ -40,6 +40,7 @@ Admins can have as many requests waiting as they like.
 - A song that's already in the queue can't be added again. It says **In queue** instead of **Add**.
 - A clock badge such as **Played 40 min ago** means the song played recently. You can still add it, though people may not want it again so soon.
 - Some songs never show up: explicit ones (unless an admin has allowed them), and ones Spotify can't play in the UK.
+- If GuildFM searches Spotify too often, Spotify pauses it for a while, and the search says until when, such as **Spotify has paused searching until 08:47 tomorrow**. Songs already in the queue still play.
 
 ## Vote
 

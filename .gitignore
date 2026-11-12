@@ -1,5 +1,6 @@
 # Secrets
 .env
+.env.prod
 
 # Database, generated audio and other runtime files
 data/

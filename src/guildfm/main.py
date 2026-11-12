@@ -4,6 +4,7 @@ import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -69,6 +70,7 @@ def create_app(
         async with app.state.sessionmaker() as db:
             await seed_admin(db, settings)
             monitoring = await get_pref(db, "monitor")
+            app.state.spotify.zone = ZoneInfo(await get_pref(db, "timezone"))
         if monitoring:
             await app.state.playback.use(app.state.monitor, monitoring=True)
         await app.state.playback.pick_up()

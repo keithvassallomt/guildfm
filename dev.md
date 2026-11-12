@@ -25,6 +25,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [ ] Stage 13: Jingle generator
 - [x] Stage 14: Help
 - [ ] Stage 15: Cloudflare migration
+- [ ] Stage 16: Spotify rate limits
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -275,3 +276,14 @@ Goal: guildfm.com served through a Cloudflare Tunnel from the office machine, so
 - [ ] Test
 
 Done when: a Pixel on TJardinePrivate opens guildfm.com without the Local network permission, and a phone on mobile data sees the Wi-Fi page.
+
+## Stage 16: Spotify rate limits
+Goal: GuildFM stays under Spotify's rate limit, and when it does go over, it waits as long as Spotify asks instead of making the wait longer. Asked for by Keith on 2026-11-12, after searching at the office stopped for 18 hours ("Spotify is busy. Try again in 64890 seconds.").
+- [x] Waiting as asked: a 429's `Retry-After` pauses every call to Spotify (search, the DJ, imports, the app token) until it's over, refused without asking Spotify. The journal notes the wait and how many calls GuildFM made in the minute before
+- [x] Saying until when: a pause under two minutes reads "Spotify is busy. Try again in 7 seconds." and a longer one "Spotify has paused searching until 08:47 tomorrow.", in the office's time zone. The Status page shows the same
+- [x] The DJ waits it out: while paused, stations don't ask the AI for picks and play songs from before (no Spotify needed). The hour preview says Spotify is paused
+- [x] Fewer calls: the same search within 10 minutes is answered from memory, the DJ looks its picks up in songs GuildFM has found before and searches Spotify only for new ones, and search asks for 10 songs at a time, the next 10 loading by themselves when "Show more" scrolls into view
+- [x] Tests, the changelog, and the Requesting help topic
+- [ ] Deploy to office box
+
+Done when: the office box is on this, and a 429 from Spotify pauses GuildFM for the time Spotify gives, with search saying until when.

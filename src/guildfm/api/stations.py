@@ -39,6 +39,7 @@ from guildfm.playlists import current_source
 from guildfm.prefs import get_pref, set_pref
 from guildfm.rehearsal import rehearse
 from guildfm.speech import MAX_TEXT, SpeechError, Voice
+from guildfm.spotify import SpotifyBusy
 
 router = APIRouter(prefix="/stations")
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -251,6 +252,8 @@ async def preview_hour(body: HourIn, _: Maker, request: Request) -> HourOut:
         )
     except AIError as error:
         raise HTTPException(502, str(error)) from None
+    except SpotifyBusy as error:
+        raise HTTPException(503, str(error)) from None
     if not slots:
         raise HTTPException(502, "None of the AI's picks could be found on Spotify. Try again.")
     seconds = sum(slot.track.duration_ms for slot in slots) / 1000

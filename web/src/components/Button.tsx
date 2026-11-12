@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { Link, type LinkProps } from "react-router";
 import styles from "./Button.module.css";
 
@@ -12,6 +12,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
   block?: boolean;
   children: ReactNode;
+  ref?: Ref<HTMLButtonElement>;
 };
 
 export function Button({ variant = "primary", block = false, className, ...props }: ButtonProps) {

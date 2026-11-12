@@ -14,6 +14,21 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   anywhere but the office's own public address see "Connect to TJardinePrivate" instead of
   GuildFM. The office's address is looked up by the office machine itself, so it can change.
 
+### Changed
+
+- Search shows 10 songs at a time, and the next 10 load by themselves when you scroll down to
+  them, so GuildFM asks Spotify for less.
+- The same search within 10 minutes is answered from memory, and the DJ looks its picks up in
+  songs GuildFM has found before, asking Spotify only for new ones.
+
+### Fixed
+
+- When Spotify says GuildFM has asked too much, GuildFM now waits as long as Spotify asks
+  before asking again. It used to keep asking, which can make Spotify's wait longer: one in
+  November lasted 18 hours. Meanwhile stations play songs from before, without asking the AI
+  for picks, and search says when it will work again, such as "Spotify has paused searching
+  until 08:47 tomorrow". The journal notes how many calls GuildFM made in the minute before.
+
 ## [0.1.3] - 2026-11-06
 
 ### Added

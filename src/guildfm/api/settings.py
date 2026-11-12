@@ -111,6 +111,8 @@ async def change(body: SettingsIn, _: Admin, request: Request, db: Db) -> Settin
         raise HTTPException(422, "That station doesn't exist any more.")
     for key, value in changes.items():
         await set_pref(db, key, value)
+    if "timezone" in changes:
+        request.app.state.spotify.zone = ZoneInfo(changes["timezone"])
     # Request caps, schedules and the like show on other screens; tell them to refresh.
     await request.app.state.queue.changed()
     await request.app.state.schedule.tick()

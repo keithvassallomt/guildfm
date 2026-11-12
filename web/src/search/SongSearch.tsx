@@ -49,6 +49,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
   const [album, setAlbum] = useState<SearchAlbum | null>(null);
   const latest = useRef(0);
   const input = useRef<HTMLInputElement>(null);
+  const more = useRef<HTMLButtonElement>(null);
   const me = useMe();
   const { can } = useAuth();
   const queue = addTo.to === "queue" ? addTo.queue : null;
@@ -113,6 +114,23 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
     }
     run(0, false);
   }, [query, artist]);
+
+  // Spotify gives 10 songs at a time. The next 10 load by themselves when "Show more" scrolls
+  // into view, and again while it's still showing, so a tall screen fills up. Not after an
+  // error, so a busy Spotify isn't asked again and again; the button still works.
+  useEffect(() => {
+    const button = more.current;
+    const next = result?.next_offset;
+    if (!button || next == null || loading || error) return;
+    const watcher = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        watcher.disconnect();
+        run(next, true);
+      }
+    });
+    watcher.observe(button);
+    return () => watcher.disconnect();
+  }, [result, loading, error]);
 
   const add = async (track: SearchTrack) => {
     setError(null);
@@ -318,6 +336,7 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
           )}
           {result.next_offset !== null && (
             <Button
+              ref={more}
               variant="secondary"
               disabled={loading}
               onClick={() => run(result.next_offset ?? 0, true)}

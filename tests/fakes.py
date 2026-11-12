@@ -428,10 +428,9 @@ class FakeSpotify:
         # The account signing in isn't the app's owner or on its Users and Access list, so
         # Spotify won't tell GuildFM who it is.
         self.unlisted = False
-        # Real Spotify's search pages overlap now and then: each page after the first starts
-        # this many tracks early, repeating the end of the page before.
-        self.overlap = 0
         self.busy = False
+        self.retry_after = "7"  # how long Spotify asks GuildFM to wait while busy
+        self.searches: list[str] = []  # each search that reached Spotify
 
     @staticmethod
     def track(name: str, title: str, artist: str, album: str, explicit: bool = False):
@@ -508,10 +507,9 @@ class FakeSpotify:
         ]
         offset, limit = int(params["offset"]), int(params["limit"])
         assert limit <= 10, "development-mode apps can't ask for more than 10"
-        start = max(0, offset - self.overlap) if offset else 0
         page = [
             t | {"is_playable": t["id"] not in self.unplayable}
-            for t in matches[start : start + limit]
+            for t in matches[offset : offset + limit]
         ]
         result = {
             "tracks": {"items": page, "next": "more" if offset + limit < len(matches) else None}
@@ -567,8 +565,10 @@ class FakeSpotify:
             if form["grant_type"] == "authorization_code":
                 body["refresh_token"] = "refresh-1"
             return httpx2.Response(200, json=body)
+        if path == "/v1/search":
+            self.searches.append(request.url.params["q"])
         if self.busy:
-            return httpx2.Response(429, headers={"Retry-After": "7"})
+            return httpx2.Response(429, headers={"Retry-After": self.retry_after})
         if path.startswith("/v1/playlists/"):
             return self._playlist(path, dict(request.url.params))
         if path.startswith("/v1/albums/"):

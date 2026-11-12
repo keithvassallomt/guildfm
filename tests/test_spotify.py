@@ -1,5 +1,7 @@
 import sqlite3
+from datetime import datetime
 from urllib.parse import parse_qs, urlparse
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -30,27 +32,27 @@ def test_search_finds_tracks_with_artwork(client: TestClient, people) -> None:
     assert [artist["name"] for artist in result["artists"]] == ["Fleetwood Mac"]
 
 
-def test_search_pages_past_spotifys_limit_of_ten(client: TestClient, people) -> None:
+def test_search_pages_ten_at_a_time(client: TestClient, people, spotify) -> None:
     sign_in(client, *people["user"])
-    first = client.get("/api/search", params={"q": "fleetwood"}).json()
-    assert len(first["tracks"]) == 20
-    assert first["next_offset"] == 20
+    pages, offset = [], 0
+    while offset is not None:
+        page = client.get("/api/search", params={"q": "fleetwood", "offset": offset}).json()
+        pages.append(page)
+        offset = page["next_offset"]
+    # 23 songs, one of which can't play here. One call to Spotify each.
+    assert [len(page["tracks"]) for page in pages] == [10, 10, 2]
+    assert [page["next_offset"] for page in pages] == [10, 20, None]
+    assert [len(page["artists"]) for page in pages] == [1, 0, 0]
+    assert len({t["id"] for page in pages for t in page["tracks"]}) == 22
+    assert spotify.searches == ["fleetwood"] * 3
 
-    second = client.get("/api/search", params={"q": "fleetwood", "offset": 20}).json()
-    assert len(second["tracks"]) == 2  # three more, one of which can't play here
-    assert second["next_offset"] is None
-    assert second["artists"] == []
-    ids = [t["id"] for t in first["tracks"] + second["tracks"]]
-    assert len(set(ids)) == 22
 
-
-def test_search_leaves_out_tracks_spotify_repeats(client: TestClient, people, spotify) -> None:
-    spotify.overlap = 2
+def test_the_same_search_is_answered_from_memory(client: TestClient, people, spotify) -> None:
     sign_in(client, *people["user"])
-    tracks = client.get("/api/search", params={"q": "fleetwood"}).json()["tracks"]
-    ids = [t["id"] for t in tracks]
-    assert len(ids) == 18
-    assert len(set(ids)) == 18
+    for query in ("dreams", "Dreams ", "humble", "dreams"):
+        client.get("/api/search", params={"q": query}).raise_for_status()
+    client.get("/api/search", params={"q": "dreams", "offset": 10}).raise_for_status()
+    assert spotify.searches == ["dreams", "humble", "dreams"]  # the last is a new page
 
 
 def test_search_by_artist(client: TestClient, people) -> None:
@@ -97,6 +99,36 @@ def test_spotify_being_busy_reads_well(client: TestClient, people, spotify: Fake
     response = client.get("/api/search", params={"q": "dreams"})
     assert response.status_code == 503
     assert response.json()["detail"] == "Spotify is busy. Try again in 7 seconds."
+
+
+def test_nothing_goes_to_spotify_until_its_wait_is_over(
+    client: TestClient, people, spotify: FakeSpotify
+) -> None:
+    api = client.app.state.spotify
+    now = datetime(2026, 11, 11, 14, 45, tzinfo=ZoneInfo("Europe/London")).timestamp()
+    api._clock = lambda: now
+    sign_in(client, *people["user"])
+    client.get("/api/search", params={"q": "dreams"}).raise_for_status()
+    spotify.busy, spotify.retry_after = True, "64890"  # 18 hours
+    assert client.get("/api/search", params={"q": "humble"}).status_code == 503
+
+    spotify.busy = False
+    response = client.get("/api/search", params={"q": "fleetwood"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Spotify has paused searching until 08:47 tomorrow."
+    # A search made before the pause is still answered, from memory.
+    assert client.get("/api/search", params={"q": "dreams"}).status_code == 200
+    assert spotify.searches == ["dreams", "humble"]  # fleetwood was never sent
+
+    sign_in(client, *ADMIN)
+    client.patch("/api/settings", json={"timezone": "Europe/Malta"}).raise_for_status()
+    response = client.get("/api/search", params={"q": "fleetwood"})
+    assert response.json()["detail"] == "Spotify has paused searching until 09:47 tomorrow."
+    assert "Spotify has paused searching" in client.get("/api/status").text
+
+    now += 64890
+    assert client.get("/api/search", params={"q": "fleetwood"}).status_code == 200
+    assert spotify.searches == ["dreams", "humble", "fleetwood"]
 
 
 # Connecting an account for playlist import

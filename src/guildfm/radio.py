@@ -36,7 +36,7 @@ from guildfm.jingles import kinds, playable
 from guildfm.models import PickNote, Play, QueueEntry, Station, StationKind, Track
 from guildfm.playlists import best_voted, current_source, tracks_of
 from guildfm.prefs import get_pref
-from guildfm.spotify import SpotifyClient, SpotifyError, SpotifyTrack, remember
+from guildfm.spotify import SpotifyBusy, SpotifyClient, SpotifyError, SpotifyTrack, remember
 
 log = logging.getLogger(__name__)
 
@@ -113,6 +113,29 @@ def same_artist(wanted: str, found: str) -> bool:
 
 def _song(track: Track) -> str:
     return f"{track.artists} – {track.title}"
+
+
+async def _known(db: AsyncSession, title: str, artist: str, explicit: bool) -> SpotifyTrack | None:
+    """A song GuildFM has found on Spotify before, by its exact title and the same artist.
+    Where there are several versions, the one played most, then the one found most lately."""
+    plays = select(func.count(Play.id)).where(Play.track_id == Track.id).scalar_subquery()
+    found = await db.scalars(
+        select(Track)
+        .where(func.lower(Track.title) == title.strip().lower())
+        .order_by(plays.desc(), Track.updated_at.desc())
+    )
+    for track in found:
+        if same_artist(artist, track.artists) and (explicit or not track.explicit):
+            return SpotifyTrack(
+                id=track.id,
+                title=track.title,
+                artists=track.artists,
+                album=track.album,
+                duration_ms=track.duration_ms,
+                explicit=track.explicit,
+                art_url=track.art_url,
+            )
+    return None
 
 
 @dataclass(frozen=True)
@@ -199,6 +222,9 @@ class Radio:
         except AIError as error:
             log.warning("The AI couldn't pick songs for a station: %s", error)
             added = 0
+        except SpotifyBusy as error:
+            log.warning("Not picking songs for a station while Spotify is paused: %s", error)
+            added = 0
         except Exception:
             log.exception("Picking songs for a station failed")
             added = 0
@@ -284,7 +310,7 @@ class Radio:
                 await self._keep_notes(db, chosen)
                 await db.commit()
             log.info("%s picked its first songs ahead of its show", taste.name)
-        except AIError as error:
+        except (AIError, SpotifyBusy) as error:
             log.warning("A station couldn't pick ahead of its show: %s", error)
         except Exception:
             log.exception("Picking ahead of a show failed")
@@ -338,7 +364,9 @@ class Radio:
         """Up to `count` songs for a station like `taste`, found on Spotify, in the order the
         AI wants them played, each with why it fits and any ident to play before it. Anything
         played recently, queued, picked by the station lately or in `avoid` is left out.
-        Nothing is saved."""
+        Nothing is saved. While Spotify has GuildFM paused, raises SpotifyBusy without asking
+        the AI, since most of what it picks couldn't be looked up."""
+        self._spotify.not_paused()
         avoid = set(avoid or ())
         async with self._sessions() as db:
             explicit = await get_pref(db, "allow_explicit")
@@ -412,20 +440,31 @@ class Radio:
     async def _find_all(
         self, songs: list[dict[str, Any]], explicit: bool
     ) -> list[SpotifyTrack | None]:
+        """Each song from GuildFM's own records if it's been found before, otherwise from
+        Spotify. Searching Spotify less keeps GuildFM under its rate limit."""
+        async with self._sessions() as db:
+            known = [
+                await _known(db, song.get("title", ""), song.get("artist", ""), explicit)
+                for song in songs
+            ]
         searches = asyncio.Semaphore(SEARCHES)
 
-        async def find(song: dict[str, Any]) -> SpotifyTrack | None:
+        async def find(song: dict[str, Any], track: SpotifyTrack | None) -> SpotifyTrack | None:
+            if track:
+                return track
             async with searches:
                 return await self._find(song.get("title", ""), song.get("artist", ""), explicit)
 
-        return list(await asyncio.gather(*(find(song) for song in songs)))
+        return list(await asyncio.gather(*(find(s, t) for s, t in zip(songs, known, strict=True))))
 
     async def _find(self, title: str, artist: str, explicit: bool) -> SpotifyTrack | None:
         """The song on Spotify: by title and artist, then more loosely. The artist has to match
         either way, so a cover or a karaoke version doesn't slip in."""
         for query in (f'track:"{title}" artist:"{artist}"', f"{title} {artist}"):
             try:
-                found = await self._spotify.search(query, pages=1)
+                found = await self._spotify.search(query)
+            except SpotifyBusy:
+                return None  # said once already, when Spotify paused GuildFM
             except SpotifyError as error:
                 log.warning("Couldn't look %s by %s up on Spotify: %s", title, artist, error)
                 return None

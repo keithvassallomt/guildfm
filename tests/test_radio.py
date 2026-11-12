@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
 from guildfm.radio import same_artist
-from tests.fakes import FakeOpenAI, FakeSpeakers, FakeWeather, spotify_id
+from tests.fakes import FakeOpenAI, FakeSpeakers, FakeSpotify, FakeWeather, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
 FLEETWOOD = [
@@ -258,6 +258,42 @@ def test_when_the_ai_cant_pick_the_station_plays_songs_from_before(
     put_on(client, station)
     # Its earlier picks, the longest since played first.
     assert upcoming(client) == ["Dreams", "Go Your Own Way"]
+
+
+def test_songs_found_before_arent_searched_for_again(
+    client: TestClient, openai: FakeOpenAI, spotify: FakeSpotify, settings: Settings
+) -> None:
+    days = 24 * 60 * 60
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=3 * days)
+    openai.picks = [
+        {"title": "dreams", "artist": "Fleetwood Mac", "note": ""},  # known, whatever the case
+        {"title": "Song 1", "artist": "Fleetwood Mac", "note": ""},
+    ]
+    sign_in(client, *ADMIN)
+    put_on(client, make_station(client))
+    assert upcoming(client) == ["Dreams", "Song 1"]
+    assert spotify.searches == ['track:"Song 1" artist:"Fleetwood Mac"']
+
+
+def test_while_spotify_is_paused_the_station_plays_songs_from_before(
+    client: TestClient, openai: FakeOpenAI, settings: Settings
+) -> None:
+    days = 24 * 60 * 60
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=3 * days)
+    openai.picks = FLEETWOOD
+    client.app.state.spotify.paused_until = time.time() + 60 * 60
+    sign_in(client, *ADMIN)
+    station = make_station(client)
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        picked = json.dumps([spotify_id("dreams")])
+        db.execute("UPDATE stations SET picked = ? WHERE id = ?", (picked, station["id"]))
+
+    put_on(client, station)
+    assert upcoming(client) == ["Dreams"]
+    assert openai.asked_for("picks") == []  # no point asking the AI for songs it can't find
+    response = preview(client)
+    assert response.status_code == 503
+    assert response.json()["detail"].startswith("Spotify has paused searching until ")
 
 
 def test_same_artist() -> None:

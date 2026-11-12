@@ -4,14 +4,18 @@ Searching uses GuildFM's own app token. Playlist import needs a person's Spotify
 connected once through Spotify's sign-in page and kept fresh with its refresh token.
 """
 
-import asyncio
 import contextlib
+import logging
+import math
 import secrets
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 import httpx2
 from sqlalchemy import func
@@ -21,10 +25,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from guildfm.health import Health
 from guildfm.models import SpotifyAccount, Track
 
+log = logging.getLogger(__name__)
+
 API = "https://api.spotify.com/v1"
 ACCOUNTS = "https://accounts.spotify.com"
 SCOPES = "playlist-read-private playlist-read-collaborative"
 PAGE = 10  # the most results a development-mode app may ask for at once
+SEARCH_KEPT_SECONDS = 10 * 60  # how long a page of search results is reused
+SEARCHES_KEPT = 500  # pages of search results kept at once
+WAIT_UNSAID = 30  # seconds to hold off when Spotify says it's busy without saying how long
+SHORT_WAIT = 2 * 60  # a pause shorter than this is given in seconds, not as a time of day
 IMPORT_PAGE = 50  # playlist items Spotify returns at once
 IMPORT_LIMIT = 1000  # the most tracks GuildFM imports from one playlist
 STATE_SECONDS = 10 * 60  # how long a "connect Spotify" link stays valid
@@ -37,7 +47,11 @@ class SpotifyError(Exception):
 
 
 class SpotifyBusy(SpotifyError):
-    """Spotify is rate limiting GuildFM."""
+    """Spotify is rate limiting GuildFM, until `until` (seconds since the epoch)."""
+
+    def __init__(self, message: str, until: float) -> None:
+        super().__init__(message)
+        self.until = until
 
 
 class SpotifyNotFound(SpotifyError):
@@ -141,6 +155,12 @@ class SpotifyClient:
         self._http = http or httpx2.AsyncClient(timeout=10)
         self._clock = clock
         self._app_token: tuple[str, float] | None = None
+        # When Spotify rate limits GuildFM it says how long to wait. Nothing is sent before
+        # then, since asking again while paused can make Spotify pause GuildFM for longer.
+        self.paused_until = 0.0
+        self.zone = ZoneInfo("UTC")  # the office's, set by the app, for saying until when
+        self._calls: deque[float] = deque()  # when each call in the last minute was made
+        self._searches: dict[tuple[str, str, int], tuple[float, dict[str, Any]]] = {}
         # "Connect Spotify" links handed out, waiting for Spotify to send people back.
         self._states: dict[str, float] = {}
         self.health = Health()
@@ -150,17 +170,66 @@ class SpotifyClient:
 
     # Talking to Spotify
 
+    @property
+    def paused(self) -> bool:
+        return self.paused_until > self._clock()
+
+    def not_paused(self) -> None:
+        """Raises SpotifyBusy while Spotify has GuildFM paused."""
+        if self.paused:
+            raise self._busy()
+
+    def _busy(self) -> SpotifyBusy:
+        now = self._clock()
+        seconds = math.ceil(self.paused_until - now)
+        if seconds < SHORT_WAIT:
+            plural = "" if seconds == 1 else "s"
+            return SpotifyBusy(
+                f"Spotify is busy. Try again in {seconds} second{plural}.", self.paused_until
+            )
+        # Rounded up to the minute, so it's over by the time it says.
+        at = datetime.fromtimestamp(math.ceil(self.paused_until / 60) * 60, self.zone)
+        days = (at.date() - datetime.fromtimestamp(now, self.zone).date()).days
+        day = "" if days == 0 else " tomorrow" if days == 1 else f" on {at:%A}"
+        message = f"Spotify has paused searching until {at:%H:%M}{day}."
+        return SpotifyBusy(message, self.paused_until)
+
+    def _calling(self) -> None:
+        """Before each call: refuse while paused, and count it."""
+        self.not_paused()
+        now = self._clock()
+        self._calls.append(now)
+        while self._calls[0] < now - 60:
+            self._calls.popleft()
+
+    def _rate_limited(self, response: httpx2.Response) -> SpotifyBusy:
+        """Spotify said to slow down: pause for as long as it asked."""
+        try:
+            wait = max(1, int(response.headers["Retry-After"]))
+        except KeyError, ValueError:
+            wait = WAIT_UNSAID
+        self.paused_until = max(self.paused_until, self._clock() + wait)
+        log.warning(
+            "Spotify asked GuildFM to wait %s seconds, after %s calls in the last minute",
+            wait,
+            len(self._calls),
+        )
+        return self._busy()
+
     async def _token(self, form: dict[str, str]) -> dict[str, Any]:
         with self._noted():
             return await self._ask_token(form)
 
     async def _ask_token(self, form: dict[str, str]) -> dict[str, Any]:
+        self._calling()
         try:
             response = await self._http.post(
                 f"{ACCOUNTS}/api/token", data=form, auth=(self._id, self._secret)
             )
         except httpx2.HTTPError as error:
             raise SpotifyError("Couldn't reach Spotify. Check the internet connection.") from error
+        if response.status_code == 429:
+            raise self._rate_limited(response)
         if response.status_code == 400 and response.json().get("error") == "invalid_grant":
             raise NotConnected("Spotify signed GuildFM out of the account. Connect it again.")
         if response.status_code >= 400:
@@ -195,6 +264,7 @@ class SpotifyClient:
     async def _fetch(self, path: str, params: dict | None, user_token: str | None):
         for attempt in range(2):
             token = user_token or await self.app_token()
+            self._calling()
             try:
                 response = await self._http.get(
                     f"{API}{path}", params=params, headers={"Authorization": f"Bearer {token}"}
@@ -213,8 +283,7 @@ class SpotifyClient:
             if response.status_code == 403:
                 raise SpotifyForbidden("Spotify won't share that with GuildFM.")
             if response.status_code == 429:
-                wait = response.headers.get("Retry-After", "a few")
-                raise SpotifyBusy(f"Spotify is busy. Try again in {wait} seconds.")
+                raise self._rate_limited(response)
             if response.status_code >= 400:
                 raise SpotifyError("Spotify couldn't do that just now. Try again.")
             return response.json()
@@ -222,43 +291,41 @@ class SpotifyClient:
 
     # The catalogue
 
-    async def search(
-        self, query: str, offset: int = 0, pages: int = 2, albums: bool = False
-    ) -> SearchResults:
-        """Tracks matching `query` from `offset`, `pages` lots of 10 at a time, asked for in
-        parallel because Spotify caps each request at 10. Artists come with the first page, and
-        albums too when `albums` is set."""
-        extra = "artist,album" if albums else "artist"
-
-        async def page(number: int) -> dict[str, Any]:
-            first = offset == 0 and number == 0
-            return await self._get(
-                "/search",
-                {
-                    "q": query,
-                    "type": f"track,{extra}" if first else "track",
-                    "limit": PAGE,
-                    "offset": offset + number * PAGE,
-                    "market": self._market,
-                },
-            )
-
-        results = await asyncio.gather(*(page(number) for number in range(pages)))
-        # Spotify's pages overlap now and then, repeating a track. Each one appears once.
-        # Songs that can't play here are left out, as for albums and playlists.
+    async def search(self, query: str, offset: int = 0, albums: bool = False) -> SearchResults:
+        """A page of tracks matching `query` from `offset`: 10, Spotify's most for a
+        development-mode app. Artists come with the first page, and albums too when `albums`
+        is set. The same search within a few minutes is answered from memory."""
+        types = ("track,artist,album" if albums else "track,artist") if offset == 0 else "track"
+        result = await self._search_page(query, types, offset)
+        # A page can repeat a track; each one appears once. Songs that can't play here are left
+        # out, as for albums and playlists.
         found = {
             item["id"]: item
-            for result in results
             for item in result["tracks"]["items"]
             if item and item.get("is_playable", True)
         }
-        first = results[0]
         return SearchResults(
             tracks=[_track(item) for item in found.values()],
-            artists=[_artist(item) for item in first.get("artists", {}).get("items", []) if item],
-            albums=[_album(item) for item in first.get("albums", {}).get("items", []) if item],
-            more=results[-1]["tracks"].get("next") is not None,
+            artists=[_artist(item) for item in result.get("artists", {}).get("items", []) if item],
+            albums=[_album(item) for item in result.get("albums", {}).get("items", []) if item],
+            more=result["tracks"].get("next") is not None,
         )
+
+    async def _search_page(self, query: str, types: str, offset: int) -> dict[str, Any]:
+        now = self._clock()
+        key = (" ".join(query.lower().split()), types, offset)
+        kept = self._searches.get(key)
+        if kept and kept[0] > now:
+            return kept[1]
+        params = {"q": query, "type": types, "limit": PAGE, "offset": offset}
+        result = await self._get("/search", params | {"market": self._market})
+        self._searches.pop(key, None)  # so it goes to the end, as the newest
+        self._searches[key] = (now + SEARCH_KEPT_SECONDS, result)
+        if len(self._searches) > SEARCHES_KEPT:
+            self._searches = {k: v for k, v in self._searches.items() if v[0] > now}
+            while len(self._searches) > SEARCHES_KEPT:
+                del self._searches[next(iter(self._searches))]
+        return result
 
     async def track(self, track_id: str) -> SpotifyTrack | None:
         """One track by id, or None if Spotify doesn't have it."""
