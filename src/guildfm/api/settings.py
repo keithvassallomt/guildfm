@@ -66,6 +66,7 @@ class SettingsIn(BaseModel):
     queue_runs_out: Literal[QUEUE_RUNS_OUT] | None = None
     default_station: int | None = Field(None, ge=0)  # 0 for none
     schedule: Week | None = None
+    after_hours_play_hours: int | None = Field(None, ge=1, le=12)
     timezone: Annotated[str, AfterValidator(_zone)] | None = None
     weather_location: str | None = Field(None, min_length=1, max_length=120)
     announcement_voice: Voice | None = None

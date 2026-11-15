@@ -60,10 +60,11 @@ async def state(_: ActiveUser, request: Request) -> dict[str, Any]:
 
 @router.post("/play")
 async def play(_: Transport, request: Request) -> dict[str, Any]:
-    """Play, at any time: outside playback hours this overrides the schedule until Stop or the
-    next closing time."""
+    """Play, at any time: outside playback hours it plays for the after-hours time, then stops
+    again."""
     async with speakers_errors():
         await controller(request).play()
+    await request.app.state.schedule.played_by_hand()
     return controller(request).state()
 
 

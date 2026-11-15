@@ -190,6 +190,28 @@ async def test_speakers_going_away_and_coming_back(controller, speakers) -> None
     assert controller.status == Status.PLAYING
 
 
+def test_speakers_restarting_while_paused_dont_start_the_music(client: TestClient, speakers):
+    """Paused from the Sonos app, then the speakers restart and come back stopped, as they do
+    overnight. That isn't GuildFM's queue running out, so nothing starts by itself."""
+    sign_in(client, *ADMIN)
+    for name in ("fm1", "fm2"):
+        client.post("/api/queue", json={"track_id": spotify_id(name)}).raise_for_status()
+    client.post("/api/playback/play").raise_for_status()
+    speakers.pause()
+    read_speakers(client)
+    speakers.available = False
+    read_speakers(client)
+    speakers.available = True
+    speakers.transport = "STOPPED"
+    for _ in range(5):
+        read_speakers(client)
+    assert speakers.transport == "STOPPED"
+    assert client.get("/api/playback").json()["status"] == "paused"
+
+    # Play still works, and carries on with the next song.
+    assert client.post("/api/playback/play").json()["status"] == "playing"
+
+
 async def test_tv_takes_only_the_arc_out_of_the_group(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
     steady.advance(5)

@@ -16,7 +16,7 @@ The playback controls are under the song on **Now Playing**.
 - **Skip** moves on to the next song.
 - **Previous** goes back a song in the first few seconds of one, and otherwise starts the song again. It's greyed out when going back would jump over a song that's already been sent to the speakers.
 
-**Play** works at any time, even outside playback hours. The music then plays until someone presses Stop, or the next closing time.
+**Play** works at any time, even outside playback hours. The music then plays for the after-hours time set in Settings (4 hours to start with), then stops again by itself.
 
 ::: lacks control_playback
 Only admins change the volume or stop the music altogether.

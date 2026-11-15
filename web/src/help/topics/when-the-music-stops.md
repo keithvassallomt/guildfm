@@ -21,7 +21,7 @@ The badge at the top right of **Now Playing** and the **Queue** says what the mu
 GuildFM plays during set hours, such as 08:00 to 18:00 on weekdays. It starts by itself at opening time, if there's anything to play, and stops at closing time. Requests made while it's closed wait in the queue until it opens.
 
 ::: needs transport
-Pressing **Play** outside playback hours starts the music anyway. It then plays until someone presses Stop, or the next closing time.
+Pressing **Play** outside playback hours starts the music anyway. It then plays for the after-hours time set in Settings (4 hours to start with), then stops again by itself.
 :::
 
 ## Someone's using the Sonos app

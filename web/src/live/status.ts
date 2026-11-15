@@ -38,6 +38,19 @@ export function opensAgain(hours: { next_change: string | null }): string {
   return `Opens again ${today ? "today" : day} at ${time}.`;
 }
 
+/** "Playing after hours until 22:01." when Play was pressed outside the hours, else "". */
+export function playingUntil(hours: { after_hours_until: string | null }): string {
+  if (!hours.after_hours_until) return "";
+  const when = new Date(hours.after_hours_until);
+  const time = when.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return `Playing after hours until ${time}.`;
+}
+
+/** "for 4 hours", "for an hour": how long Play outside the hours plays for. */
+export function forHours(hours: { after_hours: number }): string {
+  return hours.after_hours === 1 ? "for an hour" : `for ${hours.after_hours} hours`;
+}
+
 /** Whether GuildFM's own sound is on: an announcement, the DJ or a jingle. */
 export function ownClip(state: PlaybackState): boolean {
   return state.announcing || state.dj_talking || state.jingle;

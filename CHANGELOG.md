@@ -7,6 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- An After-hours play setting, under Playback hours: 4 hours to start with. Pressing Play
+  outside the playback hours plays for that long, then GuildFM stops again by itself. Settings
+  says until when it's playing after hours.
+
 ### Changed
 
 - Stations repeat themselves far less. A station doesn't pick a song that's been heard in the
@@ -18,6 +24,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Paused music stays paused when the speakers restart, as they sometimes do overnight. GuildFM
+  used to take the speakers coming back stopped for its queue running out, and start the next
+  song in an empty office.
 - Another version of a song that just played, such as a remaster or the single, no longer gets
   past a station. Every version of a song counts as the same song.
 

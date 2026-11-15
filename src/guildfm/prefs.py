@@ -25,6 +25,7 @@ DEFAULTS: dict[str, Any] = {
     "best_voted_size": 50,
     "queue_runs_out": "ai_pick",
     "default_station": None,  # a station id, for queue_runs_out "default_station"
+    "after_hours_play_hours": 4,  # how long Play outside the playback hours plays for
     "schedule": {
         day: {"on": day not in ("sat", "sun"), "start": "08:00", "end": "18:00"} for day in DAYS
     },

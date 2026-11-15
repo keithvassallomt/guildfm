@@ -1,5 +1,5 @@
 import type { PlaybackState } from "../api";
-import { opensAgain } from "../live/status";
+import { forHours, opensAgain } from "../live/status";
 import styles from "./PlaybackBanner.module.css";
 
 type Props = {
@@ -32,7 +32,7 @@ export function PlaybackBanner({ playback, canPlay = false }: Props) {
     messages.stopped = [
       "Outside playback hours",
       canPlay
-        ? `${opensAgain(playback.hours)} Pressing Play overrides that, until Stop or the next closing time.`
+        ? `${opensAgain(playback.hours)} Pressing Play plays ${forHours(playback.hours)}, then stops again.`
         : `${opensAgain(playback.hours)} Requests still queue up until then.`,
     ];
   }

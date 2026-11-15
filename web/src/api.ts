@@ -73,8 +73,7 @@ export type PlaybackState = {
   jingle: boolean;
   group_volume: number | null;
   rooms: Room[];
-  /** Whether playback hours are open now, and when that next changes. */
-  hours: { open: boolean; next_change: string | null } | null;
+  hours: PlaybackHours | null;
   /** Monitor mode: GuildFM plays in browsers instead of on the speakers. */
   monitor: boolean;
 };
@@ -261,11 +260,22 @@ export type SpotifyAccount = {
 
 export type Hours = { on: boolean; start: string; end: string };
 
+/** Whether playback hours are open now, and when that next changes. */
+export type PlaybackHours = {
+  open: boolean;
+  next_change: string | null;
+  /** How many hours Play outside the hours plays for. */
+  after_hours: number;
+  /** Until when it's playing after hours, after Play was pressed. */
+  after_hours_until: string | null;
+};
+
 export type SettingsValues = {
   allow_explicit: boolean;
   request_cap: number;
   downvote_threshold: number;
   recently_played_hours: number;
+  after_hours_play_hours: number;
   best_voted_min_upvotes: number;
   best_voted_size: number;
   queue_runs_out: "restart_playlist" | "default_station" | "ai_pick";
@@ -282,7 +292,7 @@ export type SettingsValues = {
 export type SettingsState = {
   values: SettingsValues;
   timezones: string[];
-  hours: { open: boolean; next_change: string | null };
+  hours: PlaybackHours;
   /** For the default station. AI picks is the fallback anyway, so it isn't listed. */
   stations: { id: number; name: string }[];
 };

@@ -2,6 +2,7 @@
 
 At opening time it starts playing if there's anything to play, or as soon as there is. At
 closing time it stops everything. A Stop in between lasts until Play or the next opening.
+Play pressed outside the hours plays for the after-hours time, then GuildFM stops again.
 """
 
 import asyncio
@@ -59,6 +60,8 @@ class Scheduler:
         self._was_open: bool | None = None
         # Opened, but there was nothing to play yet: start as soon as there is.
         self.waiting_to_start = False
+        # Playing outside the hours, after Play: when GuildFM stops again.
+        self.after_hours_until: datetime | None = None
 
     async def _now(self) -> tuple[datetime, dict[str, Any]]:
         async with self._sessions() as db:
@@ -75,14 +78,26 @@ class Scheduler:
         now, _ = await self._now()
         return now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
 
+    async def _after_hours(self) -> float:
+        async with self._sessions() as db:
+            return await get_pref(db, "after_hours_play_hours")
+
     async def summary(self) -> dict[str, Any]:
-        """For screens: whether GuildFM is open, and when that changes."""
+        """For screens: whether GuildFM is open, when that changes, how long Play plays for
+        outside the hours, and until when it's playing after hours, if it is."""
         now, schedule = await self._now()
         change = next_change(schedule, now)
-        return {"open": is_open(schedule, now), "next_change": change and change.isoformat()}
+        until = self.after_hours_until
+        return {
+            "open": is_open(schedule, now),
+            "next_change": change and change.isoformat(),
+            "after_hours": await self._after_hours(),
+            "after_hours_until": until and until.isoformat(),
+        }
 
     async def tick(self) -> None:
-        open_now = await self.open_now()
+        now, schedule = await self._now()
+        open_now = is_open(schedule, now)
         was_open, self._was_open = self._was_open, open_now
         # On startup there's no edge: GuildFM waits for the next opening time, or for Play.
         if was_open is not None and open_now != was_open:
@@ -93,8 +108,32 @@ class Scheduler:
                 log.info("Closing time")
                 self.waiting_to_start = False
                 await self._controller.stop()
+        if open_now or not self._controller.in_control:
+            self.after_hours_until = None
+        elif self.after_hours_until is None:
+            # Driving the speakers after hours without Play: picked back up after a restart,
+            # say. The time starts now.
+            await self._play_after_hours(now)
+        elif now >= self.after_hours_until:
+            log.info("After-hours play is over")
+            self.after_hours_until = None
+            await self._controller.stop()
         await self.try_start()
         self._controller.hours = await self.summary()
+
+    async def played_by_hand(self) -> None:
+        """Play was pressed. Outside the hours, GuildFM plays for the after-hours time from now,
+        then stops again."""
+        now, schedule = await self._now()
+        if not is_open(schedule, now):
+            await self._play_after_hours(now)
+        self._controller.hours = await self.summary()
+
+    async def _play_after_hours(self, now: datetime) -> None:
+        # Counted in UTC, so a clock change in between doesn't make it an hour more or less.
+        hours = timedelta(hours=await self._after_hours())
+        self.after_hours_until = (now.astimezone(UTC) + hours).astimezone(now.tzinfo)
+        log.info("Playing after hours until %s", f"{self.after_hours_until:%H:%M}")
 
     async def try_start(self) -> None:
         """Start playing if GuildFM opened and is still waiting for something to play."""
@@ -115,6 +154,7 @@ class Scheduler:
     def stopped_by_hand(self) -> None:
         """Stop was pressed: stay stopped until Play or the next opening time."""
         self.waiting_to_start = False
+        self.after_hours_until = None
 
     async def run(self) -> None:
         while True:

@@ -116,6 +116,10 @@ class PlaybackController:
 
         self._in_control = False
         self._overridden = False
+        # Paused, from GuildFM or the Sonos app. Speakers that stop after that, as they do when
+        # they restart, haven't run out of GuildFM's queue, so nothing starts by itself until
+        # Play, or until a song starts on the speakers.
+        self._held = False
         # Moved to other speakers since GuildFM last drove them, so Play takes them over afresh.
         self._switched = False
         self._items: list[QueueItem] = []  # GuildFM's part of the Sonos queue, in order
@@ -197,6 +201,7 @@ class PlaybackController:
                 self._remember()
             return False
         self._items, self._position, self._in_control = items, position, True
+        self._held = snapshot.transport not in ACTIVE
         self._clips = {key: tuple(clip) for key, clip in notes.get("clips", {}).items()}
         self._settle()  # the first readings can catch the speakers changing songs
         log.info("Picked the speakers back up where GuildFM left them")
@@ -248,6 +253,10 @@ class PlaybackController:
         if snapshot.rooms:
             self._rooms = snapshot.rooms
         self._follow(snapshot)
+        if snapshot.transport in ACTIVE:
+            self._held = False
+        elif snapshot.transport == "PAUSED_PLAYBACK" and self._in_control:
+            self._held = True
         moved = previous and previous.transport != snapshot.transport
         if moved and not {previous.transport, snapshot.transport} <= set(ACTIVE):
             # Stopping and pausing, and starting again, but not the moment between two songs.
@@ -434,7 +443,7 @@ class PlaybackController:
             return Status.STOPPED
         if self._snapshot.transport in ACTIVE:
             return Status.PLAYING
-        if self._snapshot.transport == "PAUSED_PLAYBACK":
+        if self._snapshot.transport == "PAUSED_PLAYBACK" or self._held:
             return Status.PAUSED
         return Status.IDLE
 
@@ -519,6 +528,7 @@ class PlaybackController:
             keys = {item.key for item in remaining}
             self._clips = {key: clip for key, clip in self._clips.items() if key in keys}
         self._in_control, self._overridden, self._switched = True, False, False
+        self._held = False
         self._remember()
         self._settle()
         await self.poll()
@@ -527,6 +537,7 @@ class PlaybackController:
         self._require_control()
         if self._snapshot and self._snapshot.transport in ACTIVE:
             await self._call(self._speakers.pause)
+        self._held = True
         self._settle()
         await self.poll()
 
@@ -554,6 +565,7 @@ class PlaybackController:
             await self._call(self._speakers.play_position, ended + 1)
         else:
             await self._call(self._speakers.play)
+        self._held = False
         self._settle()
         await self.poll()
 
@@ -561,7 +573,7 @@ class PlaybackController:
         """Silence the speakers and stop driving them, whoever was playing."""
         if self._snapshot and self._snapshot.transport in ACTIVE:
             await self._call(self._speakers.pause)
-        self._in_control, self._overridden = False, False
+        self._in_control, self._overridden, self._held = False, False, False
         self._remember()
         await self.poll()
 
@@ -577,7 +589,7 @@ class PlaybackController:
         async with self._lock:  # so no call to the old speakers is still under way
             self._speakers = speakers
         self.monitoring = monitoring
-        self._in_control = self._overridden = False
+        self._in_control = self._overridden = self._held = False
         self._crossfading = None
         self._switched = True
         self._snapshot, self._rooms, self._error, self._mismatches = None, [], None, 0
@@ -705,6 +717,7 @@ class PlaybackController:
             await self._call(self._speakers.take_over, [item])
             self._items, self._position, self._clips = [item], 1, {}
         self._in_control, self._overridden, self._switched = True, False, False
+        self._held = False
         self._remember()
         self._settle()
         await self.poll()

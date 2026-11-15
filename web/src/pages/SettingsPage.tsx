@@ -19,7 +19,7 @@ import { FormError, TextField } from "../components/TextField";
 import { Toggle } from "../components/Toggle";
 import { isEleven, useVoices, voiceName } from "../components/useVoices";
 import { VoicePreview } from "../components/VoicePreview";
-import { opensAgain } from "../live/status";
+import { opensAgain, playingUntil } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import styles from "./Page.module.css";
 import s from "./SettingsPage.module.css";
@@ -214,7 +214,11 @@ export function SettingsPage() {
           <div className={styles.stack}>
             <Section title="Playback hours">
               <p className={settings.hours.open ? s.open : styles.muted}>
-                {settings.hours.open ? "Open now." : `Closed. ${opensAgain(settings.hours)}`}
+                {settings.hours.open
+                  ? "Open now."
+                  : ["Closed.", playingUntil(settings.hours), opensAgain(settings.hours)]
+                      .filter(Boolean)
+                      .join(" ")}
               </p>
               <ul className={s.days}>
                 {DAYS.map(([day, name]) => (
@@ -238,6 +242,18 @@ export function SettingsPage() {
                   ))}
                 </select>
               </label>
+              <Row
+                label="After-hours play"
+                hint="Hours. Pressing Play outside the hours plays for this long, then it stops again."
+              >
+                <Stepper
+                  label="After-hours play"
+                  value={values.after_hours_play_hours}
+                  min={1}
+                  max={12}
+                  onChange={(after_hours_play_hours) => save({ after_hours_play_hours })}
+                />
+              </Row>
               <p className={styles.muted}>
                 At opening time GuildFM starts by itself if there's anything to play. At closing
                 time it stops everything.
