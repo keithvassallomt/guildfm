@@ -1,12 +1,13 @@
-import json
 import sqlite3
 import time
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
 from guildfm.config import Settings
 from guildfm.radio import same_artist
+from guildfm.songs import song_key, song_line
 from tests.fakes import FakeOpenAI, FakeSpeakers, FakeSpotify, FakeWeather, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
@@ -48,8 +49,16 @@ def song_ends(client: TestClient, speakers: FakeSpeakers) -> None:
     read_speakers(client)
 
 
-def played(settings: Settings, track_id: str, title: str, artists: str, ago: float = 0) -> None:
-    """Put a play in the history, as if it played just now, or `ago` seconds ago."""
+def played(
+    settings: Settings,
+    track_id: str,
+    title: str,
+    artists: str,
+    ago: float = 0,
+    station_id: int | None = None,
+) -> None:
+    """Put a play in the history, as if it played just now, or `ago` seconds ago, by the
+    station with `station_id` if given."""
     with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
         db.execute(
             "INSERT OR IGNORE INTO tracks (id, title, artists, album, duration_ms, explicit) "
@@ -57,9 +66,13 @@ def played(settings: Settings, track_id: str, title: str, artists: str, ago: flo
             (track_id, title, artists),
         )
         db.execute(
-            "INSERT INTO plays (track_id, played_at, upvotes, downvotes) VALUES (?, ?, 0, 0)",
-            (track_id, time.time() - ago),
+            "INSERT INTO plays (track_id, station_id, played_at, upvotes, downvotes) "
+            "VALUES (?, ?, ?, 0, 0)",
+            (track_id, station_id, time.time() - ago),
         )
+
+
+DAYS = 24 * 60 * 60
 
 
 # Making stations
@@ -149,23 +162,27 @@ def test_picks_leave_out_whats_recent_queued_or_explicit(
 
     assert upcoming(client) == ["Song 2"]
     asked = openai.asked_for("picks")[0]["input"]
-    assert "Fleetwood Mac – Dreams" in asked  # shown as played lately
+    # Shown, so the AI can pick around them.
+    assert "in any version:\nFleetwood Mac – Dreams" in asked
+    assert "Lined up to play. Don't pick these either:\nFleetwood Mac – Go Your Own Way" in asked
     assert "Don't pick explicit songs." in asked
 
 
 def test_a_station_tops_itself_up(client: TestClient, openai: FakeOpenAI, speakers) -> None:
-    openai.picks = FLEETWOOD[:4]
+    openai.picks_in_turn = [FLEETWOOD[:4], [], FLEETWOOD[4:]]  # 4, none more when asked again
     sign_in(client, *ADMIN)
     put_on(client, make_station(client))
     client.post("/api/playback/play").raise_for_status()
     assert playing(client) == "Song 1"
 
-    openai.picks = FLEETWOOD[4:8]
     song_ends(client, speakers)  # Song 2 taken: two left, so more are picked
     client.portal.call(client.app.state.radio.settle)
     assert upcoming(client) == ["Song 3", "Song 4", "Song 5"]
-    # It remembers what it picked, and tells the AI.
-    assert "Fleetwood Mac – Song 1" in openai.asked_for("picks")[1]["input"]
+    # The AI is told what's played and what's lined up.
+    asked = openai.asked_for("picks")[2]["input"]
+    heard, lined_up = asked.split("Heard in the office this past week")[1].split("Lined up")
+    assert "Fleetwood Mac – Song 1" in heard
+    assert "Fleetwood Mac – Song 3\nFleetwood Mac – Song 4" in lined_up
 
 
 def test_requests_still_play_first(client: TestClient, openai: FakeOpenAI, speakers) -> None:
@@ -235,36 +252,35 @@ def test_when_the_ai_finds_nothing_it_tries_again_later(client, openai: FakeOpen
     put_on(client, station)
     assert queue(client)["source"]["upcoming"] == []
     client.portal.call(client.app.state.radio.top_up)
-    assert len(openai.asked_for("picks")) == 1  # not straight away
+    assert len(openai.asked_for("picks")) == 2  # asked twice, then not again straight away
 
 
 def test_when_the_ai_cant_pick_the_station_plays_songs_from_before(
     client: TestClient, openai: FakeOpenAI, settings: Settings
 ) -> None:
-    days = 24 * 60 * 60
-    for name, title, artists, ago in [
-        ("dreams", "Dreams", "Fleetwood Mac", 3 * days),
-        ("gyow", "Go Your Own Way", "Fleetwood Mac", 2 * days),
-        ("chain", "The Chain", "Fleetwood Mac", 60 * 60),  # an hour ago: too recent
-    ]:
-        played(settings, spotify_id(name), title, artists, ago=ago)
     sign_in(client, *ADMIN)
     station = make_station(client)
-    picked = json.dumps([spotify_id(name) for name in ("gyow", "chain", "dreams")])
-    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
-        db.execute("UPDATE stations SET picked = ? WHERE id = ?", (picked, station["id"]))
+    for name, title, ago, here in [
+        ("gyow", "Go Your Own Way", 2 * DAYS, True),
+        ("dreams", "Dreams", 3 * DAYS, True),
+        ("chain", "The Chain", 60 * 60, True),  # an hour ago: too recent
+        ("fm2", "Song 2", 4 * DAYS, True),
+        ("fm2r", "Song 2 - Remastered", 30 * 60, False),  # requested, so too recent too
+        ("fm1", "Song 1", 5 * DAYS, False),  # not this station's
+    ]:
+        station_id = station["id"] if here else None
+        played(settings, spotify_id(name), title, "Fleetwood Mac", ago, station_id)
 
     openai.down = True
     put_on(client, station)
-    # Its earlier picks, the longest since played first.
+    # What it's played before, the longest unheard first.
     assert upcoming(client) == ["Dreams", "Go Your Own Way"]
 
 
 def test_songs_found_before_arent_searched_for_again(
     client: TestClient, openai: FakeOpenAI, spotify: FakeSpotify, settings: Settings
 ) -> None:
-    days = 24 * 60 * 60
-    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=3 * days)
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=9 * DAYS)
     openai.picks = [
         {"title": "dreams", "artist": "Fleetwood Mac", "note": ""},  # known, whatever the case
         {"title": "Song 1", "artist": "Fleetwood Mac", "note": ""},
@@ -278,15 +294,11 @@ def test_songs_found_before_arent_searched_for_again(
 def test_while_spotify_is_paused_the_station_plays_songs_from_before(
     client: TestClient, openai: FakeOpenAI, settings: Settings
 ) -> None:
-    days = 24 * 60 * 60
-    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=3 * days)
     openai.picks = FLEETWOOD
     client.app.state.spotify.paused_until = time.time() + 60 * 60
     sign_in(client, *ADMIN)
     station = make_station(client)
-    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
-        picked = json.dumps([spotify_id("dreams")])
-        db.execute("UPDATE stations SET picked = ? WHERE id = ?", (picked, station["id"]))
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", 3 * DAYS, station["id"])
 
     put_on(client, station)
     assert upcoming(client) == ["Dreams"]
@@ -301,6 +313,102 @@ def test_same_artist() -> None:
     assert same_artist("Earth, Wind & Fire", "Earth, Wind & Fire")
     assert same_artist("Fleetwood Mac", "Fleetwood Mac, Christine McVie")
     assert not same_artist("Fleetwood Mac", "The Corrs")
+
+
+# Fewer repeats
+
+
+def test_one_song_whatever_the_version() -> None:
+    def key(title: str, artists: str = "George Michael") -> str:
+        return song_key(SimpleNamespace(title=title, artists=artists))
+
+    assert key("Faith") == key("Faith - Remastered") == key("Faith - 2011 Remaster")
+    assert key("Faith") == key("Faith (Remastered)") == key("FAITH")
+    fascination = key("(Keep Feeling) Fascination", "The Human League")
+    assert fascination == key("(Keep Feeling) Fascination - 2003 Remaster", "Human League")
+    groovejet = key("Groovejet (If This Ain't Love)", "Spiller, Sophie Ellis-Bextor")
+    assert groovejet == key("Groovejet", "Spiller")
+    assert key("Faith") != key("Freedom! '90")
+    assert key("Faith") != key("Faith", "Limp Bizkit")
+    rio = SimpleNamespace(title="Rio - 2009 Remaster", artists="Duran Duran")
+    assert song_line(rio) == "Duran Duran – Rio"
+
+
+def test_a_station_rests_songs_heard_this_week(
+    client: TestClient, openai: FakeOpenAI, spotify: FakeSpotify, settings: Settings
+) -> None:
+    spotify.tracks.append(spotify.track("dreams04", "Dreams - 2004 Remaster", "Fleetwood Mac", ""))
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=6 * DAYS)
+    played(settings, spotify_id("fm1"), "Song 1", "Fleetwood Mac", ago=9 * DAYS)
+    openai.picks = [
+        {"title": "Dreams - 2004 Remaster", "artist": "Fleetwood Mac", "note": ""},
+        {"title": "Song 1", "artist": "Fleetwood Mac", "note": ""},  # over a week ago
+        {"title": "Song 2", "artist": "Fleetwood Mac", "note": ""},
+    ]
+    sign_in(client, *ADMIN)
+    put_on(client, make_station(client))
+    assert upcoming(client) == ["Song 1", "Song 2"]
+    asked = openai.asked_for("picks")[0]["input"]
+    assert (
+        "Heard in the office this past week, oldest first. Don't pick any of these, in any "
+        "version:\nFleetwood Mac – Dreams\n\n"
+    ) in asked
+
+
+def test_the_ai_is_asked_again_when_too_many_picks_are_out(
+    client: TestClient, openai: FakeOpenAI, settings: Settings, caplog
+) -> None:
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=60 * 60)
+    openai.picks_in_turn = [
+        [
+            {"title": "Song 1", "artist": "Fleetwood Mac", "note": ""},
+            {"title": "Dreams", "artist": "Fleetwood Mac", "note": ""},  # played an hour ago
+            {"title": "Not On Spotify", "artist": "Nobody", "note": ""},
+        ],
+        FLEETWOOD[1:],
+    ]
+    sign_in(client, *ADMIN)
+    put_on(client, make_station(client))
+    assert upcoming(client) == ["Song 1", "Song 2", "Song 3"]
+
+    first, again = (ask["input"] for ask in openai.asked_for("picks"))
+    assert first.endswith("Pick 16 songs, in the order they should play.")
+    assert "Your picks so far, which are in:\nFleetwood Mac – Song 1\n\n" in again
+    out = "These are out, as they've been heard this week or are lined up:\nFleetwood Mac – Dreams"
+    assert out in again
+    assert "These couldn't be found on Spotify:\nNobody – Not On Spotify" in again
+    assert again.endswith(
+        "Pick 15 more songs, different from all of these, to play after your picks so far."
+    )
+    # The journal says what happened, and what it cost.
+    assert (
+        "Lunchtime Grooves: 8 of the AI's 14 picks kept, 1 heard this week or lined up, "
+        "1 not on Spotify, after asking again. Tokens: 2,400 in (2,048 cached), 600 out"
+    ) in caplog.text
+
+
+def test_no_asking_again_once_spotify_pauses(
+    client: TestClient, openai: FakeOpenAI, spotify: FakeSpotify
+) -> None:
+    openai.picks = FLEETWOOD
+    spotify.busy = True
+    sign_in(client, *ADMIN)
+    put_on(client, make_station(client))
+    assert len(openai.asked_for("picks")) == 1
+
+
+def test_nor_another_version_of_a_song_a_request_played(
+    client: TestClient, openai: FakeOpenAI, spotify: FakeSpotify, speakers
+) -> None:
+    spotify.tracks.append(spotify.track("fm3r", "Song 3 - Remastered", "Fleetwood Mac", ""))
+    openai.picks = FLEETWOOD
+    sign_in(client, *ADMIN)
+    put_on(client, make_station(client))
+    client.post("/api/playback/play").raise_for_status()
+    client.post("/api/queue", json={"track_id": spotify_id("fm3r")}).raise_for_status()
+    song_ends(client, speakers)
+    assert playing(client) == "Song 3 - Remastered"
+    assert upcoming(client)[:2] == ["Song 2", "Song 4"]
 
 
 # When the queue runs out
@@ -420,10 +528,9 @@ def test_an_hour_of_songs_and_what_the_dj_says(client, openai: FakeOpenAI, setti
     assert 'Just played: "Song 4" by Fleetwood Mac.' in second
     assert "Don't repeat yourself" in second and "- Here's another." in second
 
-    # Nothing was kept: the station has no picks, and nothing is on.
+    # Nothing was kept: no notes on picks, and nothing is on.
     with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
-        row = db.execute("SELECT picked FROM stations WHERE id = ?", (station["id"],)).fetchone()
-    assert row == ("[]",)
+        assert db.execute("SELECT count(*) FROM pick_notes").fetchone() == (0,)
     assert queue(client)["source"] is None
 
 

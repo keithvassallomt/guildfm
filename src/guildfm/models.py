@@ -217,8 +217,6 @@ class Station(Base):
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
     created_at: Mapped[float]
-    # Track ids it picked lately, oldest first, so it doesn't repeat itself.
-    picked: Mapped[list[str]] = mapped_column(JSON, default=list)
     # Songs picked ahead of its show in a line-up, waiting for it to come on.
     ready: Mapped[list[str]] = mapped_column(JSON, default=list)
     # Its cover's file name in the media folder's covers, once OpenAI has painted one.

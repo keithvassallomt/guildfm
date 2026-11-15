@@ -4,6 +4,7 @@ for stations' covers."""
 
 import base64
 import json
+from dataclasses import dataclass
 from typing import Any
 
 import httpx2
@@ -17,6 +18,20 @@ IMAGE_SECONDS = 180  # painting can take a couple of minutes
 
 class AIError(Exception):
     """The AI didn't answer usefully. The message is fit to show people."""
+
+
+@dataclass
+class Usage:
+    """Tokens used, added up over one or more answers."""
+
+    input: int = 0
+    cached: int = 0  # of the input, the part OpenAI had cached, at a lower price
+    output: int = 0  # reasoning included
+
+    def add(self, usage: dict[str, Any]) -> None:
+        self.input += usage.get("input_tokens") or 0
+        self.cached += (usage.get("input_tokens_details") or {}).get("cached_tokens") or 0
+        self.output += usage.get("output_tokens") or 0
 
 
 class AIClient:
@@ -41,13 +56,15 @@ class AIClient:
     async def close(self) -> None:
         await self._http.aclose()
 
-    async def _ask(self, body: dict[str, Any]) -> str:
+    async def _ask(self, body: dict[str, Any], usage: Usage | None = None) -> str:
         body = {"model": self._model, **body}
         if self._effort:
             body["reasoning"] = {"effort": self._effort}
-        response = await self._post(API, body)
+        answer = (await self._post(API, body)).json()
+        if usage is not None:
+            usage.add(answer.get("usage") or {})
         # The answer is the message among the output items; others are reasoning and searches.
-        for item in response.json().get("output", []):
+        for item in answer.get("output", []):
             if item.get("type") == "message":
                 for part in item.get("content", []):
                     if part.get("type") == "output_text":
@@ -55,12 +72,19 @@ class AIClient:
         raise AIError("OpenAI didn't give an answer.")
 
     async def json(
-        self, instructions: str, prompt: str, name: str, schema: dict[str, Any]
+        self,
+        instructions: str,
+        prompt: str,
+        name: str,
+        schema: dict[str, Any],
+        usage: Usage | None = None,
     ) -> dict[str, Any]:
-        """An answer that fits `schema`, a JSON schema for an object."""
+        """An answer that fits `schema`, a JSON schema for an object. The tokens it took are
+        added to `usage`, if given."""
         answer_format = {"type": "json_schema", "name": name, "schema": schema, "strict": True}
         text = await self._ask(
-            {"instructions": instructions, "input": prompt, "text": {"format": answer_format}}
+            {"instructions": instructions, "input": prompt, "text": {"format": answer_format}},
+            usage,
         )
         try:
             return json.loads(text)

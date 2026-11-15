@@ -25,8 +25,9 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [ ] Stage 13: Jingle generator
 - [x] Stage 14: Help
 - [x] Stage 15: Cloudflare migration
-- [ ] Stage 16: Spotify rate limits
-- [ ] Stage 17: Renaming people
+- [x] Stage 16: Spotify rate limits
+- [x] Stage 17: Renaming people
+- [ ] Stage 18: Fewer repeats
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -297,3 +298,17 @@ Goal: an admin can rename someone, their display name, their username or both. A
 - [x] Deploy to office box
 
 Done when: an admin renames someone at the office, who stays signed in, sees the new name on their requests, and signs in with the new username next time.
+
+## Stage 18: Fewer repeats
+Goal: a station stops coming back to the same songs every day or two. Asked for by Keith on 2026-11-15, after people at the office said stations repeat songs. The office box showed why: Xennials' Delight played 689 songs in a week but only 352 different ones, and 379 in all since it went in, under three days of music. A third of its plays were songs back after 24 to 48 hours. Its memory of 150 picks covers about one office day, and the AI is shown 49 of the roughly 211 songs its picks are refused for, so whole batches come back refused and the station plays songs from before (51 times in a week). Those start from its most recent picks, so they're the songs from a day or two ago. A song under another Spotify id isn't avoided at all (Faith has three), so some came back within hours.
+- [x] One song, whatever the version: songs are matched by main artist and title, with remaster, single version and radio edit suffixes taken off, instead of by Spotify id. Everything that avoids a recent song uses it: the AI's picks, songs from before, and a station skipping a song that played lately (`playlists.py`)
+- [x] A week's rest: a station doesn't pick a song that played in the office in the last 7 days, or one it has lined up, instead of avoiding its last 150 picks and the last 24 hours. "Recently played means" stays as it is, for the badge on requests and for songs from before
+- [x] The AI sees what's refused: the prompt lists those songs, one line each (artist and title), oldest first, and asks it to look past the obvious hits. The list goes near the start of the prompt and drops songs a whole day at a time, so through the day it only grows at the end and OpenAI bills the repeated start at its cached rate. The last 30 plays stay, so it can follow on from what's playing
+- [x] Asking again: the AI is asked for 8 spares instead of 4, and when a batch comes back short it's asked once more, told which of its picks were refused and how many more are needed. Songs from before only when the second answer is short too
+- [x] Songs from before, longest unheard first: from everything the station has played, then Best Voted, the song not heard for longest first, instead of starting from its last 150 picks
+- [x] Saying what happened: each batch notes in the journal how many songs it got, how many of the AI's picks were refused as heard this week, how many Spotify couldn't find, and the tokens it used (in, of those cached, and out), so the real cost shows after a day at the office
+- [x] The hour preview picks the same way (`rehearsal.py`)
+- [x] Tests, the changelog, and the AI radio help topic (what a station avoids, and what it plays when the AI can't pick)
+- [ ] Deploy to office box
+
+Done when: after a week at the office, no song comes back within 24 hours in another version, a day without a Spotify pause has no songs from before, and songs back within 48 hours are under a tenth of the station's plays (from a third).

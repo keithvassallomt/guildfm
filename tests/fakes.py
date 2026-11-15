@@ -225,6 +225,7 @@ class FakeOpenAI:
         self.seconds = 3.0  # how long each clip it makes lasts
         self.asked: list[dict] = []  # the text model
         self.picks: list[dict] = []  # songs it suggests for a station
+        self.picks_in_turn: list[list[dict]] = []  # for the next few asks, before `picks`
         self.line = {"script": "That was lovely. Here's another."}
         self.news = "Nothing notable in music news this week."
         self.down = False  # the text model fails
@@ -252,7 +253,8 @@ class FakeOpenAI:
             return httpx2.Response(500, json={"error": {"message": "nope"}})
         name = body.get("text", {}).get("format", {}).get("name")
         if name == "picks":
-            text = json.dumps({"songs": self.picks})
+            picks = self.picks_in_turn.pop(0) if self.picks_in_turn else self.picks
+            text = json.dumps({"songs": picks})
         elif name == "dj_line":
             text = json.dumps(self.line)
         elif name == "name_check":
@@ -266,7 +268,13 @@ class FakeOpenAI:
             {"type": "reasoning", "summary": []},
             {"type": "message", "content": [{"type": "output_text", "text": text}]},
         ]
-        return httpx2.Response(200, json={"status": "completed", "output": output})
+        usage = {
+            "input_tokens": 1200,
+            "input_tokens_details": {"cached_tokens": 1024},
+            "output_tokens": 300,
+            "output_tokens_details": {"reasoning_tokens": 200},
+        }
+        return httpx2.Response(200, json={"status": "completed", "output": output, "usage": usage})
 
     def painted(self, number: int) -> bytes:
         """The made-up WebP it sends for the `number`th cover, from 1."""

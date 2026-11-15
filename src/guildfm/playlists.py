@@ -24,6 +24,7 @@ from guildfm.models import (
     Track,
 )
 from guildfm.prefs import get_pref
+from guildfm.songs import song_key
 
 BEST_VOTED = "Best Voted"
 UPCOMING = 3  # how many of the source's next songs the Queue screen shows
@@ -252,13 +253,19 @@ async def _still_in(db: AsyncSession, source: SourceState) -> set[str] | None:
 
 
 async def _played_lately(db: AsyncSession, source: SourceState) -> set[str]:
-    """For a station, songs played within the "recently played" time. A request can play a
-    song the station picked a while ago, and the station shouldn't play it again straight
-    after. A playlist keeps its own order, so it's empty for one."""
+    """For a station, the songs it has lined up that played within the "recently played" time,
+    in any version. A request can play a song the station picked a while ago, and the station
+    shouldn't play it again straight after. A playlist keeps its own order, so it's empty for
+    one."""
     if source.station_id is None:
         return set()
     since = time.time() - await get_pref(db, "recently_played_hours") * 3600
-    return set(await db.scalars(select(Play.track_id).where(Play.played_at >= since)))
+    played = select(Play.track_id).where(Play.played_at >= since)
+    heard = {
+        song_key(track) for track in await db.scalars(select(Track).where(Track.id.in_(played)))
+    }
+    ahead = await db.scalars(select(Track).where(Track.id.in_(source.order[source.cursor :])))
+    return {track.id for track in ahead if song_key(track) in heard}
 
 
 def _playable(track_id: str, still_in: set[str] | None, played: set[str]) -> bool:

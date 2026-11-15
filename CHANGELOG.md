@@ -7,6 +7,20 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Stations repeat themselves far less. A station doesn't pick a song that's been heard in the
+  office in the past week, and the AI is shown that week's songs so it can pick around them. If
+  too many of its picks have been heard anyway, it's asked once more before the station falls
+  back on songs from before.
+- When a station plays songs from before, it starts with the ones not heard for longest,
+  instead of the ones it picked most recently.
+
+### Fixed
+
+- Another version of a song that just played, such as a remaster or the single, no longer gets
+  past a station. Every version of a song counts as the same song.
+
 ## [0.1.4] - 2026-11-12
 
 ### Added

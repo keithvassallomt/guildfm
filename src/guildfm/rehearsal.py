@@ -16,7 +16,7 @@ from guildfm.announcements import GAP_SECONDS
 from guildfm.awareness import Awareness, clock_line
 from guildfm.dj import RECENT_LINES, Persona, Song, due, write_line
 from guildfm.jingles import Rotation, kinds, playable
-from guildfm.models import EntryState, Jingle, Station
+from guildfm.models import EntryState, Jingle
 from guildfm.prefs import get_pref
 from guildfm.queue import in_state
 from guildfm.radio import Radio, Taste
@@ -45,22 +45,15 @@ async def rehearse(
     station,  # a saved Station or the editor's form: the same fields either way
     station_id: int | None,
 ) -> list[Slot]:
-    """An hour of `station`, starting now. A saved station's recent picks are left out, as
-    they would be for real."""
+    """An hour of `station`, starting now. Songs heard this past week, lined up or queued are
+    left out, as they would be for real."""
     async with sessionmaker() as db:
-        saved = await db.get(Station, station_id) if station_id else None
         playing = await in_state(db, EntryState.PLAYING)
         before = playing and Song(playing.track.title, playing.track.artists)
         zone = ZoneInfo(await get_pref(db, "timezone"))
         location = await get_pref(db, "weather_location")
         jingles = await playable(db, station_id) if station.jingles else []
-    taste = Taste(
-        station.name,
-        station.description,
-        station.global_awareness,
-        saved.picked if saved else [],
-        kinds(jingles),
-    )
+    taste = Taste(station.name, station.description, station.global_awareness, kinds(jingles))
     found = await radio.candidates(taste, ASKED)
     rotation = Rotation()
 

@@ -2,16 +2,19 @@
 
 A station on as the source keeps a few songs picked ahead. When it runs low, GuildFM asks the AI
 for another batch, from the station's description and what has played lately (and the time,
-weather and music news, with global awareness on), then finds each on Spotify. Anything played
-recently, picked by the station lately, already queued, or explicit while that's turned off is
-left out. Votes never reach the AI, so a station's taste stays its own. With jingles to play, the
-AI also marks the odd song to have an ident before it (see jingles.py).
+weather and music news, with global awareness on), then finds each on Spotify. A station rests a
+song for a week: anything heard in the office in that time, lined up or queued, in any version
+(see songs.py), is left out, and the AI is shown all of those so it can pick around them. If too
+many of its picks are left out anyway, it's asked once more, told which. Explicit songs are left
+out while that's turned off. Votes never reach the AI, so a station's taste stays its own. With
+jingles to play, the AI also marks the odd song to have an ident before it (see jingles.py).
 
 A station with a show coming up in a line-up picks its first songs a few minutes ahead and keeps
 them until it comes on, so the show starts without waiting for the AI.
 
 When the AI can't pick (OpenAI or Spotify is down, or out of credit), the station carries on with
-songs heard before, so the music doesn't stop, and the AI is asked again when those run low.
+songs heard before, the longest unheard first, so the music doesn't stop, and the AI is asked
+again when those run low.
 
 The AI picks station, which GuildFM keeps itself, follows whatever has been playing. It takes
 over when the queue runs out, unless the settings say otherwise.
@@ -19,34 +22,33 @@ over when the queue runs out, unless the settings say otherwise.
 
 import asyncio
 import logging
-import re
 import time
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from guildfm.ai import AIClient, AIError, object_schema
+from guildfm.ai import AIClient, AIError, Usage, object_schema
 from guildfm.awareness import Awareness
 from guildfm.jingles import kinds, playable
 from guildfm.models import PickNote, Play, QueueEntry, Station, StationKind, Track
 from guildfm.playlists import best_voted, current_source, tracks_of
 from guildfm.prefs import get_pref
+from guildfm.songs import plain, song_key, song_line
 from guildfm.spotify import SpotifyBusy, SpotifyClient, SpotifyError, SpotifyTrack, remember
 
 log = logging.getLogger(__name__)
 
 LOW = 3  # songs left in a station's order before another batch is picked
 BATCH = 8  # songs added at a time
-SPARE = 4  # songs asked for on top, since the odd one isn't on Spotify
-REMEMBERED = 150  # picks a station remembers, so it doesn't repeat itself
+SPARE = 8  # songs asked for on top, since some were heard lately or aren't on Spotify
+REST_DAYS = 7  # a station doesn't pick a song heard in the office this many days back, or today
 KEPT_TAKEN = 5  # songs already taken that stay in the order, for give_back
-RECENT_PLAYS = 30  # recent plays shown to the AI
-SHOWN_PICKS = 40  # of the station's own picks, shown to the AI
+RECENT_PLAYS = 30  # recent plays shown to the AI, to follow on from
 RETRY_SECONDS = 60  # after a batch that found nothing, the wait before asking again
 SEARCHES = 4  # Spotify searches at once
 NOTES_KEPT = 500  # why each song was picked, for the DJ, and the idents to play
@@ -60,7 +62,9 @@ AI_PICKS_BRIEF = (
 INSTRUCTIONS = (
     "You are the music director of {name}, a radio station playing over the speakers in an "
     "office in the UK. Pick real, released recordings that are on Spotify, using each song's "
-    "best-known title and main artist. Vary the artists, and don't pick a song more than once."
+    "best-known title and main artist. Vary the artists, and don't pick a song more than once. "
+    "The office hears this station every day, so look past the most obvious hits: mix "
+    "well-known songs with others that fit just as well."
 )
 IDENTS = {
     "system": "system, an ident for GuildFM, the network the station is part of",
@@ -100,19 +104,37 @@ async def ai_picks(db: AsyncSession) -> Station:
     return station
 
 
-def _plain(text: str) -> str:
-    """Lower case, without "the", punctuation or brackets, for comparing artist names."""
-    words = re.sub(r"[^\w\s]", " ", re.sub(r"\(.*?\)|\[.*?\]", " ", text.lower())).split()
-    return " ".join(word for word in words if word != "the")
-
-
 def same_artist(wanted: str, found: str) -> bool:
-    wanted, found = _plain(wanted), _plain(found)
+    wanted, found = plain(wanted), plain(found)
     return bool(wanted) and (wanted in found or found in wanted)
 
 
-def _song(track: Track) -> str:
-    return f"{track.artists} – {track.title}"
+def _rest_start(now: float, zone: ZoneInfo, hours: float) -> float:
+    """When a station's week of rest starts: midnight a week ago, so the songs the AI is shown
+    drop off a whole day at a time. Never later than "recently played" reaches back."""
+    midnight = datetime.fromtimestamp(now, zone).replace(hour=0, minute=0, second=0, microsecond=0)
+    return min((midnight - timedelta(days=REST_DAYS)).timestamp(), now - hours * 3600)
+
+
+async def _heard_since(db: AsyncSession, since: float) -> list[Track]:
+    """Songs played since `since`, each once whatever the version, in the order first played."""
+    plays = await db.scalars(
+        select(Play).where(Play.played_at >= since).order_by(Play.played_at, Play.id)
+    )
+    heard: dict[str, Track] = {}
+    for play in plays.unique():
+        heard.setdefault(song_key(play.track), play.track)
+    return list(heard.values())
+
+
+async def _coming(db: AsyncSession) -> list[Track]:
+    """Songs about to play: the queue, and what a station that's on has lined up."""
+    ids = list(await db.scalars(select(QueueEntry.track_id)))
+    source = await current_source(db)
+    if source and source.station_id is not None:
+        ids += source.order[source.cursor :]
+    found = {track.id: track for track in await db.scalars(select(Track).where(Track.id.in_(ids)))}
+    return [found[track_id] for track_id in dict.fromkeys(ids) if track_id in found]
 
 
 async def _known(db: AsyncSession, title: str, artist: str, explicit: bool) -> SpotifyTrack | None:
@@ -145,14 +167,11 @@ class Taste:
     name: str
     brief: str
     aware: bool  # global awareness
-    picked: list[str]  # its recent picks, oldest first
     idents: tuple[str, ...] = ()  # the kinds of jingle it can play: "system", "station"
 
     @classmethod
     def of(cls, station: Station, idents: tuple[str, ...] = ()) -> Taste:
-        return cls(
-            station.name, station.description, station.global_awareness, station.picked, idents
-        )
+        return cls(station.name, station.description, station.global_awareness, idents)
 
 
 @dataclass(frozen=True)
@@ -248,11 +267,7 @@ class Radio:
                 return 0
             idents = kinds(await playable(db, station_id)) if station.jingles else ()
             taste = Taste.of(station, idents)
-            source = await current_source(db)
-            lined_up = set()
-            if source and source.station_id == station_id:
-                lined_up = set(source.order[source.cursor :])
-        chosen = await self.candidates(taste, BATCH, lined_up)
+        chosen = await self.candidates(taste, BATCH)
         if not chosen:
             log.warning("None of the AI's picks for %s could be played", taste.name)
             return 0
@@ -267,7 +282,6 @@ class Radio:
             ids = [pick.track.id for pick in chosen]
             source.order = source.order[keep:] + ids
             source.cursor -= keep
-            station.picked = (station.picked + ids)[-REMEMBERED:]
             await self._keep_notes(db, chosen)
             await db.commit()
         return len(chosen)
@@ -296,7 +310,7 @@ class Radio:
                     return
                 idents = kinds(await playable(db, station_id)) if station.jingles else ()
                 taste = Taste.of(station, idents)
-            chosen = await self.candidates(taste, BATCH, set())
+            chosen = await self.candidates(taste, BATCH)
             if not chosen:
                 return
             async with self._sessions() as db:
@@ -304,9 +318,7 @@ class Radio:
                 station = await db.get(Station, station_id)
                 if station is None:
                     return
-                ids = [pick.track.id for pick in chosen]
-                station.ready = ids
-                station.picked = (station.picked + ids)[-REMEMBERED:]
+                station.ready = [pick.track.id for pick in chosen]
                 await self._keep_notes(db, chosen)
                 await db.commit()
             log.info("%s picked its first songs ahead of its show", taste.name)
@@ -316,38 +328,40 @@ class Radio:
             log.exception("Picking ahead of a show failed")
 
     async def replay(self, station_id: int) -> int:
-        """For when the AI can't pick: songs heard before, so the music carries on. The
-        station's own earlier picks first, then songs it played longer ago, then Best Voted,
-        each the longest since played first. Anything played lately, queued, or explicit while
-        that's turned off is left out, as ever. Returns how many were added."""
+        """For when the AI can't pick: songs heard before, so the music carries on. Songs the
+        station has played, then Best Voted, each the longest unheard first. Anything played
+        lately (in any version), queued, lined up, or explicit while that's turned off is left
+        out, as ever. Returns how many were added."""
         async with self._sessions() as db:
             station = await db.get(Station, station_id)
             source = await current_source(db)
             if station is None or source is None or source.station_id != station_id:
                 return 0
             since = time.time() - await get_pref(db, "recently_played_hours") * 3600
-            avoid = set(await db.scalars(select(Play.track_id).where(Play.played_at >= since)))
-            avoid |= set(await db.scalars(select(QueueEntry.track_id)))
-            avoid |= set(source.order[source.cursor :])
-            if not await get_pref(db, "allow_explicit"):
-                avoid |= set(await db.scalars(select(Track.id).where(Track.explicit)))
-            played_here = await db.scalars(
-                select(Play.track_id).where(Play.station_id == station_id).order_by(Play.id)
+            explicit = await get_pref(db, "allow_explicit")
+            lately = await _heard_since(db, since) + await _coming(db)
+            avoid = {song_key(track) for track in lately}
+            last_heard: dict[str, float] = {}
+            rows = await db.execute(
+                select(Track, func.max(Play.played_at))
+                .join(Play, Play.track_id == Track.id)
+                .group_by(Track.id)
             )
-            favourites = await tracks_of(db, (await best_voted(db)).id)
-            last_played = dict(
-                (
-                    await db.execute(
-                        select(Play.track_id, func.max(Play.played_at)).group_by(Play.track_id)
-                    )
-                ).all()
-            )
+            for track, played_at in rows.all():
+                key = song_key(track)
+                last_heard[key] = max(played_at, last_heard.get(key, 0.0))
+            played_here = select(Play.track_id).where(Play.station_id == station_id)
+            own = list(await db.scalars(select(Track).where(Track.id.in_(played_here))))
+            favourites = [entry.track for entry in await tracks_of(db, (await best_voted(db)).id)]
             chosen: list[str] = []
-            pools = (station.picked, played_here.all(), [entry.track_id for entry in favourites])
-            for pool in pools:
-                fresh = [track_id for track_id in dict.fromkeys(pool) if track_id not in avoid]
-                fresh.sort(key=lambda track_id: last_played.get(track_id, 0.0))
-                chosen += fresh[: BATCH - len(chosen)]
+            for pool in (own, favourites):
+                fresh: dict[str, str] = {}  # one version of each song
+                for track in pool:
+                    key = song_key(track)
+                    if key not in avoid and key not in fresh and (explicit or not track.explicit):
+                        fresh[key] = track.id
+                longest_unheard = sorted(fresh, key=lambda key: last_heard.get(key, 0.0))
+                chosen += [fresh[key] for key in longest_unheard[: BATCH - len(chosen)]]
                 avoid |= set(fresh)
             if not chosen:
                 return 0
@@ -358,83 +372,132 @@ class Radio:
         log.warning("%s is playing songs from before until the AI can pick again", station.name)
         return len(chosen)
 
-    async def candidates(
-        self, taste: Taste, count: int, avoid: set[str] | None = None
-    ) -> list[Pick]:
+    async def candidates(self, taste: Taste, count: int) -> list[Pick]:
         """Up to `count` songs for a station like `taste`, found on Spotify, in the order the
         AI wants them played, each with why it fits and any ident to play before it. Anything
-        played recently, queued, picked by the station lately or in `avoid` is left out.
-        Nothing is saved. While Spotify has GuildFM paused, raises SpotifyBusy without asking
-        the AI, since most of what it picks couldn't be looked up."""
+        heard in the office this past week, lined up or queued, in any version, is left out.
+        The AI is shown all of those, and is asked once more if too many of its picks are left
+        out anyway. Nothing is saved. While Spotify has GuildFM paused, raises SpotifyBusy
+        without asking the AI, since most of what it picks couldn't be looked up."""
         self._spotify.not_paused()
-        avoid = set(avoid or ())
         async with self._sessions() as db:
             explicit = await get_pref(db, "allow_explicit")
             zone = ZoneInfo(await get_pref(db, "timezone"))
             location = await get_pref(db, "weather_location")
-            recently = await get_pref(db, "recently_played_hours")
+            hours = await get_pref(db, "recently_played_hours")
+            heard = await _heard_since(db, _rest_start(time.time(), zone, hours))
+            coming = await _coming(db)
             recent = (
                 await db.scalars(select(Play).order_by(Play.id.desc()).limit(RECENT_PLAYS))
             ).unique()
-            plays = [_song(play.track) for play in recent]
-            since = time.time() - recently * 3600
-            avoid |= set(await db.scalars(select(Play.track_id).where(Play.played_at >= since)))
-            avoid |= set(await db.scalars(select(QueueEntry.track_id)))
-            avoid |= set(taste.picked)
-            shown = taste.picked[-SHOWN_PICKS:]
-            found = {t.id: t for t in await db.scalars(select(Track).where(Track.id.in_(shown)))}
-            picked = [_song(found[track_id]) for track_id in reversed(shown) if track_id in found]
+            plays = [song_line(play.track) for play in recent]
+        avoid = {song_key(track) for track in heard + coming}
 
         context = None
         if taste.aware:
             context = await self._awareness.context(location, self._clock().astimezone(zone))
-        asked = count + SPARE
-        prompt = self._prompt(taste.brief, context, plays, picked, explicit, asked, taste.idents)
+        prompt = self._prompt(taste, explicit, heard, coming, context, plays)
         instructions = INSTRUCTIONS.format(name=taste.name)
-        answer = await self._ai.json(instructions, prompt, "picks", picks_schema(taste.idents))
-        songs = answer.get("songs", [])[:asked]
+        schema = picks_schema(taste.idents)
 
         chosen: list[Pick] = []
-        for song, track in zip(songs, await self._find_all(songs, explicit), strict=True):
-            if track and track.id not in avoid and len(chosen) < count:
-                avoid.add(track.id)
-                ident = song.get("ident")
-                ident = ident if ident in taste.idents else None
-                chosen.append(Pick(track, song.get("note", ""), ident))
+        refused: list[str] = []  # heard this week or lined up, or suggested twice
+        unfound: list[str] = []  # not on Spotify, or explicit while that's turned off
+        suggested, asks, usage = 0, 0, Usage()
+        while asks < 2 and len(chosen) < count and not (asks and self._spotify.paused):
+            asks += 1
+            asked = count - len(chosen) + SPARE
+            ask = self._ask_for(asked, chosen, refused, unfound)
+            answer = await self._ai.json(instructions, f"{prompt}\n\n{ask}", "picks", schema, usage)
+            songs = answer.get("songs", [])[:asked]
+            suggested += len(songs)
+            for song, track in zip(songs, await self._find_all(songs, explicit), strict=True):
+                said = f"{song.get('artist', '')} – {song.get('title', '')}"
+                if track is None:
+                    unfound.append(said)
+                elif (key := song_key(track)) in avoid:
+                    refused.append(said)
+                elif len(chosen) < count:
+                    avoid.add(key)
+                    ident = song.get("ident")
+                    ident = ident if ident in taste.idents else None
+                    chosen.append(Pick(track, song.get("note", ""), ident))
+        log.info(
+            "%s: %d of the AI's %d picks kept, %d heard this week or lined up, %d not on Spotify"
+            "%s. Tokens: %s in (%s cached), %s out",
+            taste.name,
+            len(chosen),
+            suggested,
+            len(refused),
+            len(unfound),
+            ", after asking again" if asks > 1 else "",
+            f"{usage.input:,}",
+            f"{usage.cached:,}",
+            f"{usage.output:,}",
+        )
         return chosen
 
     @staticmethod
     def _prompt(
-        brief: str,
+        taste: Taste,
+        explicit: bool,
+        heard: list[Track],
+        coming: list[Track],
         context: str | None,
         plays: list[str],
-        picked: list[str],
-        explicit: bool,
-        asked: int,
-        idents: Sequence[str] = (),
     ) -> str:
-        parts = [f"Station brief: {brief}"]
+        """Everything but how many to pick. What changes least comes first, so most of the
+        prompt starts the same from one batch to the next and OpenAI bills that part at its
+        cached rate: through the day, the week's songs only grow at the end."""
+        parts = [f"Station brief: {taste.brief}"]
+        if not explicit:
+            parts.append("Don't pick explicit songs.")
+        if taste.idents:
+            parts.append(
+                "Idents are short jingles played in the pause before a song. Mark the odd song to "
+                "have one, about one in four, where it helps the flow: at a change of mood or "
+                "pace, or to start a new run of songs. Never two songs in a row. The kinds: "
+                + "; ".join(IDENTS[kind] for kind in taste.idents)
+                + "."
+            )
+        if heard:
+            parts.append(
+                "Heard in the office this past week, oldest first. Don't pick any of these, in "
+                "any version:\n" + "\n".join(song_line(track) for track in heard)
+            )
+        if coming:
+            parts.append(
+                "Lined up to play. Don't pick these either:\n"
+                + "\n".join(song_line(track) for track in coming)
+            )
         if context:
             parts.append(
                 f"Let this steer the picks where it fits, without overdoing it:\n{context}"
             )
         if plays:
-            parts.append("Played lately, newest first. Don't pick these:\n" + "\n".join(plays))
-        if picked:
+            parts.append("Played lately, newest first, to follow on from:\n" + "\n".join(plays))
+        return "\n\n".join(parts)
+
+    @staticmethod
+    def _ask_for(asked: int, chosen: list[Pick], refused: list[str], unfound: list[str]) -> str:
+        """How many to pick, and the first time round's picks when asking again."""
+        if not (chosen or refused or unfound):
+            return f"Pick {asked} songs, in the order they should play."
+        parts = []
+        if chosen:
             parts.append(
-                "This station's own recent picks. Don't pick these again:\n" + "\n".join(picked)
+                "Your picks so far, which are in:\n"
+                + "\n".join(song_line(pick.track) for pick in chosen)
             )
-        if not explicit:
-            parts.append("Don't pick explicit songs.")
-        if idents:
+        if refused:
             parts.append(
-                "Idents are short jingles played in the pause before a song. Mark the odd song to "
-                "have one, about one in four, where it helps the flow: at a change of mood or "
-                "pace, or to start a new run of songs. Never two songs in a row. The kinds: "
-                + "; ".join(IDENTS[kind] for kind in idents)
-                + "."
+                "These are out, as they've been heard this week or are lined up:\n"
+                + "\n".join(refused)
             )
-        parts.append(f"Pick {asked} songs, in the order they should play.")
+        if unfound:
+            parts.append("These couldn't be found on Spotify:\n" + "\n".join(unfound))
+        then = "to play after your picks so far" if chosen else "in the order they should play"
+        parts.append(f"Pick {asked} more songs, different from all of these, {then}.")
         return "\n\n".join(parts)
 
     async def _find_all(

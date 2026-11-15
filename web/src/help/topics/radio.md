@@ -23,9 +23,10 @@ The tags under each station say what it's like: its DJ, how often they talk, and
 
 ## How stations choose
 
+- A station doesn't pick a song that's been heard in the office in the past week, from any station or as a request. Another version of it counts too, such as a remaster.
 - A station never plays a song that played recently, even one it picked before someone requested it.
 - While a station is on, the Queue shows its next three songs, and enough thumbs down skip one. Votes never change the station's taste, though.
-- If the AI can't pick (the internet's down, say), the station plays songs it's played before, so the music doesn't stop.
+- If the AI can't pick (the internet's down, say), the station plays songs it's played before, the ones not heard for longest first, so the music doesn't stop.
 
 ::: needs create_stations
 To make your own station, see [Making a station](topic:making-a-station).
