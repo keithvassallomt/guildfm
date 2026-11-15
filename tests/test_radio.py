@@ -266,15 +266,32 @@ def test_when_the_ai_cant_pick_the_station_plays_songs_from_before(
         ("chain", "The Chain", 60 * 60, True),  # an hour ago: too recent
         ("fm2", "Song 2", 4 * DAYS, True),
         ("fm2r", "Song 2 - Remastered", 30 * 60, False),  # requested, so too recent too
-        ("fm1", "Song 1", 5 * DAYS, False),  # not this station's
+        ("fm1", "Song 1", 5 * DAYS, False),  # not this station's, so after its own
     ]:
         station_id = station["id"] if here else None
         played(settings, spotify_id(name), title, "Fleetwood Mac", ago, station_id)
 
     openai.down = True
     put_on(client, station)
-    # What it's played before, the longest unheard first.
-    assert upcoming(client) == ["Dreams", "Go Your Own Way"]
+    # What it's played before, the longest unheard first, then anything else the office has heard.
+    assert upcoming(client) == ["Dreams", "Go Your Own Way", "Song 1"]
+
+
+def test_a_new_station_falls_back_on_anything_heard_in_the_office(
+    client: TestClient, openai: FakeOpenAI, settings: Settings
+) -> None:
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=3 * DAYS)
+    played(settings, spotify_id("gyow"), "Go Your Own Way", "Fleetwood Mac", ago=5 * DAYS)
+    played(settings, spotify_id("chain"), "The Chain", "Fleetwood Mac", ago=60 * 60)
+    played(settings, spotify_id("humble"), "HUMBLE.", "Kendrick Lamar", ago=6 * DAYS)
+    with sqlite3.connect(settings.data_dir / "guildfm.db") as db:
+        db.execute("UPDATE tracks SET explicit = 1 WHERE id = ?", (spotify_id("humble"),))
+    sign_in(client, *ADMIN)
+    client.patch("/api/settings", json={"allow_explicit": False}).raise_for_status()
+    openai.down = True
+    put_on(client, make_station(client))
+    # Nothing played lately, and nothing explicit.
+    assert upcoming(client) == ["Go Your Own Way", "Dreams"]
 
 
 def test_songs_found_before_arent_searched_for_again(

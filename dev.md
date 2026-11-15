@@ -310,6 +310,7 @@ Goal: a station stops coming back to the same songs every day or two. Asked for 
 - [x] Saying what happened: each batch notes in the journal how many songs it got, how many of the AI's picks were refused as heard this week, how many Spotify couldn't find, and the tokens it used (in, of those cached, and out), so the real cost shows after a day at the office
 - [x] The hour preview picks the same way (`rehearsal.py`)
 - [x] Tests, the changelog, and the AI radio help topic (what a station avoids, and what it plays when the AI can't pick)
+- [x] Songs from before fall back on anything heard in the office, after the station's own songs and Best Voted, so a new station has something to play while the AI can't pick. Best Voted was empty at the office as Keith added three stations (added after building the stage)
 - [ ] Deploy to office box
 
 Done when: after a week at the office, no song comes back within 24 hours in another version, a day without a Spotify pause has no songs from before, and songs back within 48 hours are under a tenth of the station's plays (from a third).

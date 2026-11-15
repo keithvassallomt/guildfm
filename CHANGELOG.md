@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-15
+
 ### Added
 
 - An After-hours play setting, under Playback hours: 4 hours to start with. Pressing Play
@@ -20,7 +22,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   too many of its picks have been heard anyway, it's asked once more before the station falls
   back on songs from before.
 - When a station plays songs from before, it starts with the ones not heard for longest,
-  instead of the ones it picked most recently.
+  instead of the ones it picked most recently. After its own songs and Best Voted, it falls
+  back on anything else heard in the office, so a new station doesn't go quiet while the AI
+  can't pick.
 
 ### Fixed
 

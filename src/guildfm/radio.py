@@ -329,9 +329,10 @@ class Radio:
 
     async def replay(self, station_id: int) -> int:
         """For when the AI can't pick: songs heard before, so the music carries on. Songs the
-        station has played, then Best Voted, each the longest unheard first. Anything played
-        lately (in any version), queued, lined up, or explicit while that's turned off is left
-        out, as ever. Returns how many were added."""
+        station has played, then Best Voted, then anything else heard in the office, so even a
+        new station has something; each the longest unheard first. Anything played lately (in
+        any version), queued, lined up, or explicit while that's turned off is left out, as
+        ever. Returns how many were added."""
         async with self._sessions() as db:
             station = await db.get(Station, station_id)
             source = await current_source(db)
@@ -342,6 +343,7 @@ class Radio:
             lately = await _heard_since(db, since) + await _coming(db)
             avoid = {song_key(track) for track in lately}
             last_heard: dict[str, float] = {}
+            heard: list[Track] = []  # everything the office has heard
             rows = await db.execute(
                 select(Track, func.max(Play.played_at))
                 .join(Play, Play.track_id == Track.id)
@@ -350,11 +352,12 @@ class Radio:
             for track, played_at in rows.all():
                 key = song_key(track)
                 last_heard[key] = max(played_at, last_heard.get(key, 0.0))
+                heard.append(track)
             played_here = select(Play.track_id).where(Play.station_id == station_id)
             own = list(await db.scalars(select(Track).where(Track.id.in_(played_here))))
             favourites = [entry.track for entry in await tracks_of(db, (await best_voted(db)).id)]
             chosen: list[str] = []
-            for pool in (own, favourites):
+            for pool in (own, favourites, heard):
                 fresh: dict[str, str] = {}  # one version of each song
                 for track in pool:
                     key = song_key(track)
