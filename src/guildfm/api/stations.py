@@ -143,7 +143,7 @@ async def _out(db: AsyncSession, station: Station) -> StationOut:
         description=station.description,
         global_awareness=station.global_awareness,
         dj=station.dj,
-        dj_id=station.dj_id,
+        dj_id=station.host.id if station.host else None,
         dj_name=station.dj_name,
         personality=station.personality,
         voice=station.voice,
@@ -186,7 +186,7 @@ STATION_FIELDS = (
 async def _apply(db: AsyncSession, station: Station, body: StationIn) -> None:
     for field in STATION_FIELDS:
         setattr(station, field, getattr(body, field))
-    station.host = await _host(db, body) if body.dj else None
+    station.set_hosts([await _host(db, body)] if body.dj else [])
 
 
 async def _host(db: AsyncSession, body: StationIn) -> DJProfile:
