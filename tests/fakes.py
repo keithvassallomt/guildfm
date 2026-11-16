@@ -228,6 +228,8 @@ class FakeOpenAI:
         self.picks_in_turn: list[list[dict]] = []  # for the next few asks, before `picks`
         self.line = {"script": "That was lovely. Here's another."}
         self.news = "Nothing notable in music news this week."
+        # What its other web searches find, by a word in what it's asked to look for.
+        self.found: dict[str, str] = {}
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
@@ -263,7 +265,8 @@ class FakeOpenAI:
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})
         else:
-            text = self.news
+            asked = body.get("input", "")
+            text = next((found for word, found in self.found.items() if word in asked), self.news)
         output = [
             {"type": "reasoning", "summary": []},
             {"type": "message", "content": [{"type": "output_text", "text": text}]},
