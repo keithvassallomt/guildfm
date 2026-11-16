@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-16
+
 ### Fixed
 
 - Search keeps its Artists and Albums when more songs load. They used to vanish as soon as the
