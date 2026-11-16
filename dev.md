@@ -29,6 +29,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 17: Renaming people
 - [x] Stage 18: Fewer repeats
 - [x] Stage 19: After hours
+- [ ] Stage 20: Talk stations
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -324,3 +325,23 @@ Goal: the music stays off outside playback hours unless someone wants it, and th
 - [x] Deploy to office box
 
 Done when: at the office, Play after closing stops by itself after the set hours, and the speakers restarting overnight while GuildFM is paused don't start the music.
+
+## Stage 20: Talk stations
+Goal: a station can have two or more DJs with a dynamic between them, and as a talk station it's mostly talk: banter with running bits, real news, weather and football, and the DJs interrupting and talking over each other. Asked for by Keith on 2026-11-16. The plan is [talk.md](talk.md). All of this stage's work, spikes included, is on the `talk-stations` branch.
+- [x] Spike, `tools/dialogue_spike.py`: two DJs writing and voicing one link, through ElevenLabs Text to Dialogue in one request and stitched a turn at a time. Both sound fine, and cost the same (763 and 762 credits for 1,735 characters, 1 min 42 s of audio). Writing took 10.5 s and voicing 26.8 s
+- [ ] Spike: real overlap. Turns marked `cut_after` (the word the next DJ cuts in after) and `together`, every turn voiced at once, cut turns with timestamps, mixed with ffmpeg. For Keith to listen to, and to time parallel voicing
+- [ ] Prototype for Keith to review: the station editor with several DJs and their dynamic, the DJ hooks, and the Talk Station switch with its ratio slider and script prompt, on phone and desktop
+- [ ] Model: a station's DJs (one or more) and their dynamic; DJ hooks on each DJ (pet peeves and soft spots up to 300 characters, a running obsession up to 200, all optional); a station's Talk Station switch, talk ratio (20% to 100%) and script prompt
+- [ ] Named fields' data, gathered only for the fields a station's prompt uses: `[weather]` from Global Awareness; `[news]` a new gatherer for light, odd stories (no politics, tragedy or deaths); `[sports]` British football news, scores and results, nothing else; `[celebrities]` news, birthdays and anniversaries, with care over ages and deaths; `[lineup]` and `[djs]` from the database
+- [ ] The show plan: written when a show starts, the whole show in a line-up and an hour at a time outside one. Its running bits with their setups and payoffs, and a happening when the code's dice roll says so (4 in 10). Kept in the source's `dj_memory` with the show's state: the score, the stakes, who owes whom
+- [ ] Banter moves: the bet, the challenge, the score, the correction, the wind-up, the verdict, the confession, the aside, the producer and the guest. The code deals them: one or two running bits a show, one move a link, never one of the last few, and a move that needs a hook only for a DJ who has one. A log of recent bits across shows, so a daily show doesn't repeat itself and can call back
+- [ ] Writing links: the built-in rules, the station's script prompt, the plan, what's been said so far, the songs either side, and the material today's DJ gets (play history, repeat requests, votes, opt-outs). Turns as JSON with their `cut_after` and `together` marks, checked by the code: the word is in the turn, and at most one or two interruptions a link
+- [ ] Voicing with real overlap: ElevenLabs voices only, every turn at once, cut turns through the with-timestamps endpoint. Mixed with short, varied gaps; an interrupted turn cut just after its word with a quick fade and the next starting a fraction of a second before; `together` turns at the same moment. Levelled like the DJ's clips today
+- [ ] The talk ratio: links sized to it, and the "how often the DJ talks" controls off while it's on. A link longer than fits the 90 s lead is made in chunks of about 2 minutes, the first queued as soon as it's ready and the next made while it plays. At 100% the chunks follow each other
+- [ ] Skips: listeners can't skip a link, curators can with Skip, and the next link is told what wasn't heard, with the plan adjusted to match
+- [ ] The station editor, as in the prototype: several DJs and the dynamic, the hooks under Personality (with their hint, and saying which other stations a change applies to), the Talk Station switch, the ratio slider (red above 70%, "about N credits an hour" beside it) and the script prompt with its named fields
+- [ ] Saying what it cost: the journal notes each link's credits, characters, and time to write and voice, so the real cost shows after a day at the office
+- [ ] Tests, the changelog, the help (The DJ topic for the hooks, a new topic for talk stations) and their screenshots
+- [ ] Deploy to office box
+
+Done when: a lunchtime talk show with two DJs runs from a line-up at the office, with a running bit set up early and paid off later, the DJs interrupting and talking over each other, the real weather and football in it, a skipped link not paid off, and the journal's credits close to the slider's estimate.
