@@ -27,8 +27,8 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 15: Cloudflare migration
 - [x] Stage 16: Spotify rate limits
 - [x] Stage 17: Renaming people
-- [ ] Stage 18: Fewer repeats
-- [ ] Stage 19: After hours
+- [x] Stage 18: Fewer repeats
+- [x] Stage 19: After hours
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -311,7 +311,7 @@ Goal: a station stops coming back to the same songs every day or two. Asked for 
 - [x] The hour preview picks the same way (`rehearsal.py`)
 - [x] Tests, the changelog, and the AI radio help topic (what a station avoids, and what it plays when the AI can't pick)
 - [x] Songs from before fall back on anything heard in the office, after the station's own songs and Best Voted, so a new station has something to play while the AI can't pick. Best Voted was empty at the office as Keith added three stations (added after building the stage)
-- [ ] Deploy to office box
+- [x] Deploy to office box
 
 Done when: after a week at the office, no song comes back within 24 hours in another version, a day without a Spotify pause has no songs from before, and songs back within 48 hours are under a tenth of the station's plays (from a third).
 
@@ -321,6 +321,6 @@ Goal: the music stays off outside playback hours unless someone wants it, and th
 - [x] After-hours play: a new setting, "After-hours play", 4 hours by default (1 to 12). Play pressed outside playback hours plays for that long, then GuildFM stops again, as at closing time. Pressing Play again starts the time over; Stop or opening time ends it. If GuildFM finds itself driving the speakers after hours without Play (picked back up after a restart, say), the time starts then
 - [x] Saying so: the setting in Settings under Playback hours, the line at the top saying until when it's playing after hours, and the Now Playing banner outside the hours saying Play plays for the set time instead of "until Stop or the next closing time"
 - [x] Tests, the changelog, the Playback hours help topic and its screenshot
-- [ ] Deploy to office box
+- [x] Deploy to office box
 
 Done when: at the office, Play after closing stops by itself after the set hours, and the speakers restarting overnight while GuildFM is paused don't start the music.
