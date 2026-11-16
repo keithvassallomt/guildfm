@@ -64,6 +64,44 @@ def test_search_by_artist(client: TestClient, people) -> None:
     assert result["artists"] == []
 
 
+def test_search_by_artist_goes_past_spotifys_five(client: TestClient, people, spotify) -> None:
+    # Spotify's artist filter stops at 5 songs; a plain search for the name finds the rest,
+    # keeping only the artist's own, so not a tribute band's.
+    spotify.tracks.append(spotify.track("tribute", "Fleetwood Mac Medley", "Rumourz", "Live"))
+    sign_in(client, *people["user"])
+    pages, offset = [], 0
+    while offset is not None:
+        page = client.get(
+            "/api/search", params={"artist": "Fleetwood Mac", "offset": offset}
+        ).json()
+        pages.append(page)
+        offset = page["next_offset"]
+    found = [t for page in pages for t in page["tracks"]]
+    assert len({t["id"] for t in found}) == 22  # all 23 but the one that can't play here
+    assert {t["artists"] for t in found} == {"Fleetwood Mac"}
+    assert all(page["artists"] == [] for page in pages)
+    assert spotify.searches == [
+        "Fleetwood Mac",
+        'artist:"Fleetwood Mac"',
+        "Fleetwood Mac",
+        "Fleetwood Mac",
+    ]
+
+
+def test_search_by_artist_stops_when_the_plain_search_wanders(
+    client: TestClient, people, spotify
+) -> None:
+    # A name like "Yes" finds other people's songs; paging stops there.
+    sign_in(client, *people["user"])
+    spotify.tracks.append(spotify.track("yes", "Roundabout", "Yes", "Fragile"))
+    spotify.tracks[:0] = [
+        spotify.track(f"y{n}", f"Yes Song {n}", "Someone Else", "Other") for n in range(12)
+    ]
+    result = client.get("/api/search", params={"artist": "Yes"}).json()
+    assert [t["title"] for t in result["tracks"]] == ["Roundabout"]
+    assert result["next_offset"] is None
+
+
 def test_found_tracks_are_kept_locally(client: TestClient, people, settings: Settings) -> None:
     sign_in(client, *people["user"])
     client.get("/api/search", params={"q": "humble"}).raise_for_status()

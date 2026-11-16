@@ -7,6 +7,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Search keeps its Artists and Albums when more songs load. They used to vanish as soon as the
+  next 10 songs loaded, which happens straight away when the first 10 fit on the screen.
+- Picking an artist in search shows far more of their songs. Spotify only gives 5 songs when
+  asked for an artist's, so GuildFM also searches for the artist's name and keeps the songs
+  that are theirs.
+
 ## [0.1.5] - 2026-11-15
 
 ### Added

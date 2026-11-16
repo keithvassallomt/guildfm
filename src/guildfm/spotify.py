@@ -291,24 +291,44 @@ class SpotifyClient:
 
     # The catalogue
 
-    async def search(self, query: str, offset: int = 0, albums: bool = False) -> SearchResults:
+    async def search(
+        self, query: str, offset: int = 0, albums: bool = False, artist: str | None = None
+    ) -> SearchResults:
         """A page of tracks matching `query` from `offset`: 10, Spotify's most for a
         development-mode app. Artists come with the first page, and albums too when `albums`
-        is set. The same search within a few minutes is answered from memory."""
-        types = ("track,artist,album" if albums else "track,artist") if offset == 0 else "track"
-        result = await self._search_page(query, types, offset)
+        is set. The same search within a few minutes is answered from memory.
+
+        With `artist`, only that artist's tracks, and no artists. Spotify's artist:"..." filter
+        is exact but stops at 5 songs, so the first page starts with those and every page adds
+        the songs credited to the artist from a plain search for their name."""
+        if artist is None:
+            types = ("track,artist,album" if albums else "track,artist") if offset == 0 else "track"
+            result = await self._search_page(query, types, offset)
+            items, more = result["tracks"]["items"], result["tracks"].get("next") is not None
+        else:
+            loose = await self._search_page(f"{artist} {query}".strip(), "track", offset)
+            name = artist.casefold()
+            items = [
+                item
+                for item in loose["tracks"]["items"]
+                if item and any(a["name"].casefold() == name for a in item["artists"])
+            ]
+            # Spotify ranks the best matches first, so a page with none of the artist's songs
+            # means the rest won't have any either.
+            more = loose["tracks"].get("next") is not None and bool(items)
+            result = {}
+            if offset == 0:
+                exact = f'artist:"{artist}" {query}'.strip()
+                result = await self._search_page(exact, "track,album" if albums else "track", 0)
+                items = result["tracks"]["items"] + items
         # A page can repeat a track; each one appears once. Songs that can't play here are left
         # out, as for albums and playlists.
-        found = {
-            item["id"]: item
-            for item in result["tracks"]["items"]
-            if item and item.get("is_playable", True)
-        }
+        found = {item["id"]: item for item in items if item and item.get("is_playable", True)}
         return SearchResults(
             tracks=[_track(item) for item in found.values()],
             artists=[_artist(item) for item in result.get("artists", {}).get("items", []) if item],
             albums=[_album(item) for item in result.get("albums", {}).get("items", []) if item],
-            more=result["tracks"].get("next") is not None,
+            more=more,
         )
 
     async def _search_page(self, query: str, types: str, offset: int) -> dict[str, Any]:

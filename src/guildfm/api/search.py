@@ -69,14 +69,12 @@ async def search(
 ) -> SearchOut:
     """Tracks for `q`, optionally only by `artist`. Artists are suggested on the first page,
     and albums too with `albums`, for adding to a playlist."""
-    query = q.strip()
-    if artist:
-        query = f'artist:"{artist}" {query}'.strip()
-    if not query:
+    query, artist = q.strip(), (artist or "").strip() or None
+    if not query and not artist:
         raise HTTPException(422, "Type something to search for.")
 
     try:
-        found = await request.app.state.spotify.search(query, offset, albums=albums)
+        found = await request.app.state.spotify.search(query, offset, albums=albums, artist=artist)
     except SpotifyBusy as error:
         raise HTTPException(503, str(error)) from None
     except SpotifyError as error:
@@ -103,10 +101,7 @@ async def search(
             )
             for track in tracks
         ],
-        artists=[
-            ArtistOut(id=a.id, name=a.name, art_url=a.art_url)
-            for a in (found.artists[:4] if offset == 0 and not artist else [])
-        ],
+        artists=[ArtistOut(id=a.id, name=a.name, art_url=a.art_url) for a in found.artists[:4]],
         albums=[AlbumOut.of(album) for album in found.albums[:ALBUMS]],
         next_offset=offset + PAGE if found.more else None,
     )

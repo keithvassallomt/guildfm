@@ -513,6 +513,8 @@ class FakeSpotify:
             and (title is None or t["name"].lower() == title)
             and all(w in f"{t['name']} {t['artists'][0]['name']}".lower() for w in words)
         ]
+        if artist is not None:
+            matches = matches[:5]  # Spotify's artist filter stops at 5 songs
         offset, limit = int(params["offset"]), int(params["limit"])
         assert limit <= 10, "development-mode apps can't ask for more than 10"
         page = [

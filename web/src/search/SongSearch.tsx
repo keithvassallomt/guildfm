@@ -81,11 +81,13 @@ export function SongSearch({ query, artist, onChange, addTo, autoFocus }: Props)
       if (request !== latest.current) return; // a newer search has started
       setResult((current) => {
         if (!append || !current) return found;
+        // Later pages are songs only, so the artists and albums from the first page stay.
         // Spotify's pages can overlap; songs already showing aren't shown twice.
         const shown = new Set(current.tracks.map((track) => track.id));
         return {
-          ...found,
+          ...current,
           tracks: [...current.tracks, ...found.tracks.filter((track) => !shown.has(track.id))],
+          next_offset: found.next_offset,
         };
       });
     } catch (caught) {
