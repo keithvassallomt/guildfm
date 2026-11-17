@@ -371,7 +371,9 @@ class TalkShow:
             return []
         found = await self._material(air)
         segments = lengths(air.show.ratio)
-        move = self._deal(air)
+        # The song before a show's opening isn't talked about, so it gets no verdict.
+        opening = air.memory["segment"] == 0 and not air.memory.get("continuing")
+        move = self._deal(air, song=not opening)
         handed: list[Spoken] = []
         for index, seconds in enumerate(segments):
             if not self._announcer.still_to_come(key):
@@ -385,6 +387,7 @@ class TalkShow:
                 seconds,
                 key=key,
                 before=air.before if index == 0 else None,
+                straight_on=index > 0,
                 up_next=up_next if ends_link else None,
                 move=move if index == 0 else None,
                 remarks=remarks if ends_link else (),
@@ -413,18 +416,31 @@ class TalkShow:
             return None
         found = await self._material(air)
         number = air.memory["segment"] + 1
-        move = self._deal(air) if number % MOVE_EVERY == 1 else None
+        # A request that played since the last segment, if one did; otherwise the talk runs on.
+        heard = air.before if air.before != air.memory.get("heard") else None
+        air.memory["heard"] = air.before
+        opening = number == 1 and not air.memory.get("continuing")
+        song = heard is not None and not opening
+        move = self._deal(air, song) if number % MOVE_EVERY == 1 else None
         spoken = await self._segment(
-            air, found, SEGMENT_SECONDS, key=None, before=air.before, up_next=None, move=move
+            air,
+            found,
+            SEGMENT_SECONDS,
+            key=None,
+            before=heard,
+            straight_on=heard is None,
+            up_next=None,
+            move=move,
         )
         if spoken and not await self._announcer.keep_on(spoken, start):
             return None
         return spoken
 
-    def _deal(self, air: OnAir) -> str:
-        """A move for a link, or a stretch of talk at 100%, remembered so it rests."""
+    def _deal(self, air: OnAir, song: bool) -> str:
+        """A move for a link, or a stretch of talk at 100%, remembered so it rests. `song` is
+        whether a song just played, for the talk to be about."""
         moves = list(air.memory.get("moves", []))
-        move = deal_move(self.rng, air.show.hosts, bool(air.guests), moves)
+        move = deal_move(self.rng, air.show.hosts, bool(air.guests), moves, song)
         air.memory["moves"] = [*moves, move][-MOVES_REMEMBERED:]
         return move
 
@@ -438,6 +454,7 @@ class TalkShow:
         before: str | None,
         up_next: str | None,
         move: str | None,
+        straight_on: bool = False,
         remarks: tuple[str, ...] = (),
     ) -> Spoken | None:
         """The show's next segment, written and voiced, and remembered as said. None if it
@@ -460,6 +477,7 @@ class TalkShow:
             first=number == 1 and not memory.get("continuing"),
             last=last,
             ends_link=up_next is not None,
+            straight_on=straight_on,
             before=before,
             up_next=up_next,
             move=move,
@@ -594,6 +612,7 @@ class TalkShow:
             "notes": kept.get("notes", ""),
             "said": kept.get("said", []),
             "moves": kept.get("moves", []),
+            "heard": kept.get("heard"),
         }
 
     async def _remember(self, station_id: int, memory: dict[str, Any]) -> None:

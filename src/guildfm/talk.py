@@ -34,6 +34,7 @@ class Move:
     running: bool = False  # set up early in a show and paid off later
     needs: tuple[str, ...] = ()  # hooks one of the DJs needs at least one of
     guest: bool = False  # another DJ drops in
+    after_song: bool = False  # only for talk that follows a song
 
 
 MOVES = (
@@ -50,8 +51,8 @@ MOVES = (
     ),
     Move(
         "the score",
-        "A running quiz between them, such as guessing the year of the next song before it's "
-        "announced. The score carries through the show.",
+        "A running quiz between them, such as guessing a number from the day's news before "
+        "it's revealed. The score carries through the show.",
         running=True,
     ),
     Move(
@@ -62,7 +63,7 @@ MOVES = (
     Move(
         "the wind-up", "One DJ deliberately pokes at the other's pet peeve.", needs=("pet_peeves",)
     ),
-    Move("the verdict", "Both rate the last song, and disagree."),
+    Move("the verdict", "Both rate the last song, and disagree.", after_song=True),
     Move(
         "the confession",
         "One DJ admits something embarrassing about themselves, made up and harmless, from "
@@ -139,13 +140,19 @@ def deal_bits(rng: random.Random, log: list[dict[str, str]]) -> list[str]:
     return rng.sample(fresh, min(len(fresh), rng.choice((1, 2))))
 
 
-def deal_move(rng: random.Random, hosts: list[Host], guests: bool, last: list[str]) -> str:
+def deal_move(
+    rng: random.Random, hosts: list[Host], guests: bool, last: list[str], song: bool = True
+) -> str:
     """A move for one link: not a running bit, one the DJs have the hooks for, a guest only if
-    there's another DJ to drop in, and none of the last few."""
+    there's another DJ to drop in, one about the last song only if one just played (`song`),
+    and none of the last few."""
     allowed = [
         move.name
         for move in MOVES
-        if not move.running and _hooked(move, hosts) and (guests or not move.guest)
+        if not move.running
+        and _hooked(move, hosts)
+        and (guests or not move.guest)
+        and (song or not move.after_song)
     ]
     fresh = [name for name in allowed if name not in last[-MOVES_KEPT:]] or allowed
     return rng.choice(fresh)
@@ -189,11 +196,17 @@ PLAN = object_schema(
         "items": object_schema(
             move={"type": "string"},
             idea={"type": "string"},
+            ending={"type": "string"},
             setup={"type": "integer"},
             payoff={"type": "integer"},
         ),
     },
-    happening=object_schema(idea={"type": "string"}, starts={"type": "integer"}),
+    happening=object_schema(
+        idea={"type": "string"},
+        ending={"type": "string"},
+        starts={"type": "integer"},
+        ends={"type": "integer"},
+    ),
 )
 
 
@@ -228,6 +241,12 @@ async def plan_show(
         f"Each segment is about two minutes of talk, numbered 1 to {count}. "
         + ("There are no songs: the talk runs on." if ratio >= 100 else "Songs play between them.")
     )
+    parts.append(
+        "Plan it so that someone listening can follow it. Give each segment one topic, two at "
+        "most, with room to tell it and argue about it. Spread what's going on across the show; "
+        "it doesn't all have to be used. Listeners know only what's said on air, so the first "
+        "segment to bring up one of a DJ's hooks, such as a hobby or a rival, explains it."
+    )
     if material:
         parts.append(
             "What's going on, for the segments to draw on:\n"
@@ -235,14 +254,18 @@ async def plan_show(
         )
     dealt = "\n".join(f"- {name}: {BY_NAME[name].does}" for name in bits)
     parts.append(
-        f"This show's running bits, one each:\n{dealt}\nMake each one specific to these DJs. Set "
-        "it up early, let it come back in between, and pay it off at least two segments later, "
-        "before the last segment."
+        f"This show's running bits, one each:\n{dealt}\nMake each one specific to these DJs, "
+        "and simple enough to explain in a line. Set it up early, bring it back once in between "
+        "at most, and pay it off at least two segments later, before the last segment. Its idea "
+        "is what it is and what's at stake; its ending is how it pays off, which the DJs only "
+        "learn when it's due. A quiz or a bet with an answer takes the answer from what's going "
+        "on, given here: never from facts about songs or anything else you haven't been given."
     )
     if happening:
         parts.append(
             f"This show has a happening, {happening}: {HAPPENINGS[happening]} It isn't in the "
-            "producer's words. Say what it is and the segment it starts in."
+            "producer's words. Say what it is, the segment it starts in and the one it comes to "
+            "a head in, and how it ends."
         )
     else:
         parts.append("This show has no happening: leave the happening's idea empty.")
@@ -253,7 +276,8 @@ async def plan_show(
         )
     parts.append(
         "No politics, religion or tragedy, and no made-up facts about real people or songs. "
-        "The segments' numbers are for planning: the DJs never say them on air."
+        "The DJs never mention segments on air, so in what you write, never refer to one by "
+        'its number: say "later" or "next time". The numbers go in setup, payoff and starts.'
     )
     instructions = PLAN_INSTRUCTIONS.format(
         station=station,
@@ -277,12 +301,27 @@ async def plan_show(
         answered.remove(bit)
         setup = min(max(1, bit["setup"]), max(1, last - 2))
         payoff = max(setup, min(max(bit["payoff"], setup + 2), last))
-        placed.append({"move": name, "idea": bit["idea"].strip(), "setup": setup, "payoff": payoff})
-    idea = answer["happening"]["idea"].strip()
+        placed.append(
+            {
+                "move": name,
+                "idea": bit["idea"].strip(),
+                "ending": bit["ending"].strip(),
+                "setup": setup,
+                "payoff": payoff,
+            }
+        )
+    answered_happening = answer["happening"]
+    idea = answered_happening["idea"].strip()
     surprise = None
     if happening and idea:
-        start = min(max(1, answer["happening"]["starts"]), count)
-        surprise = {"kind": happening, "idea": idea, "starts": start}
+        start = min(max(1, answered_happening["starts"]), count)
+        surprise = {
+            "kind": happening,
+            "idea": idea,
+            "ending": answered_happening["ending"].strip(),
+            "starts": start,
+            "ends": min(max(start, answered_happening["ends"]), count),
+        }
     return {"segments": segments, "bits": placed, "happening": surprise}
 
 
@@ -298,5 +337,8 @@ def _dealt(said: str, names: list[str]) -> bool:
 
 def logged(log: list[dict[str, str]], plan: dict[str, Any], day: str) -> list[dict[str, str]]:
     """The station's log with a show's running bits added, keeping the last few."""
-    added = [{"on": day, "move": bit["move"], "idea": bit["idea"]} for bit in plan["bits"]]
+    added = [
+        {"on": day, "move": bit["move"], "idea": f"{bit['idea']} {bit.get('ending', '')}".strip()}
+        for bit in plan["bits"]
+    ]
     return [*log, *added][-LOG_KEPT:]

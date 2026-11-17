@@ -6,6 +6,7 @@ in) and where two say something at the same moment (`together`). The code checks
 rather than trusting them, so a mark that can't work comes off. The turns are voiced one at a
 time and mixed so the DJs really talk over each other (mixing.py)."""
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,6 +16,11 @@ from guildfm.talk import BY_NAME, Host
 PER_SECOND = 17  # characters of speech a second, as ElevenLabs' eleven_v4 speaks
 MAX_CUTS = 2  # interruptions in a segment, so they stay a character trait
 SAID_KEPT = 2  # segments before this one the writer reads in full
+_SEGMENT = re.compile(r"\bsegments?\b", re.IGNORECASE)
+AGAIN = (
+    'An earlier draft of this had a DJ say "segment" on air. Listeners never hear of '
+    "segments: write it without the word."
+)
 
 INSTRUCTIONS = """You write the talk on {station}, a radio station playing over the speakers in \
 an office in the UK. This show is mostly talk, and it has these DJs:
@@ -37,6 +43,24 @@ each other's sentences.
 - Never make up facts about a real person, a song, an artist or a listener. Trivia, news and \
 corrections come only from what you're given; leave out anything you aren't sure of.
 - No politics, religion or tragedy.
+
+Listeners know only what they hear, so make it easy to follow, as if someone has just walked \
+into the room:
+- Each turn follows from the one before it: it answers it, reacts to it, argues with it or \
+builds on it. Nobody carries on with a thought of their own as if the other hadn't spoken.
+- Whoever brings up a story tells it first, plainly, in a sentence or two: what happened, \
+where, and to whom. Only then do they react to it and argue about it.
+- Everything else you're told (the DJs' hooks, the plan, the show's notes) is news to \
+listeners the first time it comes up on air, so explain it then. If a DJ keeps bees, say so \
+before joking about the bees.
+- The DJs' hooks are seasoning: one comes up now and then, not in every segment. The last \
+segments show what's had an airing lately.
+- Stay on a topic long enough for it to land, then move on the way people do: from \
+something just said, or openly, such as "Right, the weather." Never jump to a new topic in \
+the middle of a turn.
+- Keep to what this segment is about. Leave the rest of what's going on for other segments.
+- A running bit that isn't due now comes up in a line at most, and only if it fits. Don't \
+restate its stakes.
 - Segments are how the show is planned, and listeners never hear of them: on air, never \
 say "segment" or a number for one. Say "after this song", "later" or "before the end of \
 the show" instead.
@@ -56,7 +80,8 @@ the words it's for steers the delivery, such as [laughs], [sighs], [sarcastic], 
 stage directions, sound effects or emoji.
 
 Also keep the show's notes: in a line or two, the state of its running bits after this \
-segment, such as the score, the stakes, and who owes whom."""
+segment, such as the score, the stakes, who owes whom, and what listeners have been told. \
+No segment numbers."""
 
 
 @dataclass(frozen=True)
@@ -77,6 +102,7 @@ class Moment:
     first: bool = False  # opens the show: welcome everyone
     last: bool = False  # the show's last segment: pay everything off and sign off
     ends_link: bool = False  # songs resume after it
+    straight_on: bool = False  # follows the segment before it with no song between
     before: str | None = None  # the song that just played, such as '"Dreams" by Fleetwood Mac'
     up_next: str | None = None  # the song it brings in, with any shout-out, at the link's end
     move: str | None = None  # the move dealt for this link, on its first segment
@@ -99,23 +125,74 @@ def _schema(names: list[str]) -> dict[str, Any]:
 
 
 def _due(plan: dict[str, Any], number: int) -> list[str]:
-    """What the plan has for segment `number`: its subject, and the bits and happening due."""
+    """What the plan has for segment `number`: its subject, and the bits and happening due. A
+    bit's ending is told only when it's due, so it isn't played out early."""
     lines = []
     if 0 < number <= len(plan["segments"]):
         lines.append(f"This segment is about: {plan['segments'][number - 1]}")
     for bit in plan["bits"]:
+        move, idea, ending = bit["move"], bit["idea"], bit.get("ending", "")
         if bit["setup"] == number:
-            lines.append(f"Set up {bit['move']} now: {bit['idea']}")
+            lines.append(
+                f"Set up {move} now, so listeners get what it is and what's at stake: {idea} It "
+                "pays off later in the show: don't settle it now."
+            )
         elif bit["payoff"] == number:
-            lines.append(f"Pay off {bit['move']} now: {bit['idea']}")
+            lines.append(
+                f"Pay off {move} now, reminding listeners in a line what it was: {idea} How it "
+                f"ends: {ending}"
+            )
         elif bit["setup"] < number < bit["payoff"]:
-            lines.append(f"{bit['move']} is running ({bit['idea']}): bring it up if it fits.")
+            lines.append(
+                f"{move} is under way, and pays off later: don't settle it or bring it to a head "
+                f"now. {idea}"
+            )
+        elif number > bit["payoff"]:
+            lines.append(f"{move} is settled: {ending} Don't start it again.")
     happening = plan.get("happening")
-    if happening and happening["starts"] == number:
-        lines.append(f"The happening, {happening['kind']}, starts now: {happening['idea']}")
-    elif happening and happening["starts"] < number:
-        lines.append(f"The happening, {happening['kind']}, is under way: {happening['idea']}")
+    if happening:
+        kind, idea, ending = happening["kind"], happening["idea"], happening.get("ending", "")
+        starts = happening["starts"]
+        ends = happening.get("ends", starts)
+        if starts == number == ends:
+            lines.append(f"The happening, {kind}, starts now: {idea} How it ends: {ending}")
+        elif starts == number:
+            lines.append(
+                f"The happening, {kind}, starts now: {idea} It comes to a head later: don't "
+                "settle it now."
+            )
+        elif starts < number < ends:
+            lines.append(
+                f"The happening, {kind}, is under way, and comes to a head later: don't settle it "
+                f"now. {idea}"
+            )
+        elif number == ends:
+            lines.append(
+                f"The happening, {kind}, comes to a head now: {idea} How it ends: {ending}"
+            )
+        elif number > ends:
+            lines.append(f"The happening, {kind}, is over: {ending} Don't start it again.")
     return lines
+
+
+def _where(moment: Moment) -> str | None:
+    """Roughly how far through the show a segment falls, when the show's end is known."""
+    if moment.until is None or moment.first or moment.last:
+        return None
+    through = (moment.number - 1) / moment.count
+    if through < 1 / 3:
+        return "It's early in the show."
+    if through < 2 / 3:
+        return "It's about halfway through the show."
+    return "The show is into its last part."
+
+
+def _ago(skipped: int, number: int) -> str:
+    if skipped == number - 1:
+        return "the last segment"
+    if skipped == number - 2:
+        return "the segment before last"
+    return "an earlier segment"
 
 
 def brief(
@@ -126,33 +203,49 @@ def brief(
     said: list[list[Turn]],
     seconds: int,
 ) -> str:
-    """What the writer is told for one segment."""
+    """What the writer is told for one segment. Segment numbers stay out of it, so they can't
+    end up on air."""
     parts = [moment.clock]
     if moment.until:
         parts.append(f"The show runs until {moment.until}.")
-    parts.append(f"This is segment {moment.number} of {moment.count}.")
+    if where := _where(moment):
+        parts.append(where)
     if moment.first:
-        parts.append("It opens the show: welcome everyone, and say who's on and what's coming.")
-    if moment.before:
-        parts.append(f"Just played: {moment.before}.")
+        parts.append(
+            "It opens the show: welcome everyone, say who's on, and in a line what's coming."
+        )
+    elif moment.straight_on:
+        parts.append(
+            "It carries straight on from the last segment, with no song between: the first turn "
+            "picks up from its last line, mid-conversation. No greeting, and no song to talk about."
+        )
+    elif moment.before:
+        parts.append(
+            f"A song has just finished: {moment.before}. They needn't mention it every time; "
+            "if they do, it's in the first turn, by whoever speaks first."
+        )
     parts.extend(_due(plan, moment.number))
     if moment.move:
-        parts.append(f"Somewhere in this link, {moment.move}: {BY_NAME[moment.move].does}")
+        parts.append(
+            f"Somewhere in this link, within what it's about, {moment.move}: "
+            f"{BY_NAME[moment.move].does}"
+        )
     if moment.guest:
         parts.append(
             f"A guest drops in for this segment, in their own voice, and leaves at the end of "
-            f"it: {moment.guest}"
+            f"it. Introduce them: {moment.guest}"
         )
     if moment.skipped:
         parts.append(
-            f"Listeners didn't hear segment {moment.skipped}: someone skipped it. Don't pay off "
-            "anything it set up as if they had; set it up again if it's needed."
+            f"Listeners didn't hear {_ago(moment.skipped, moment.number)}: someone skipped it. "
+            "Don't pay off anything it set up as if they had; set it up again if it's needed."
         )
     if notes:
         parts.append(f"The show's notes so far: {notes}")
     if material:
         parts.append(
-            "What's going on, to draw on:\n"
+            "What's going on today, for reference. Use what this segment is about, and leave the "
+            "rest for other segments:\n"
             + "\n\n".join(f"[{name}]\n{text}" for name, text in material.items())
         )
     if said:
@@ -199,14 +292,26 @@ async def write_segment(
     )
     told = brief(plan, moment, material, notes, said[-SAID_KEPT:], seconds)
     names = [host.name for host in hosts]
+    turns, notes = await _written(ai, instructions, told, names)
+    if any(_SEGMENT.search(turn.text) for turn in turns):
+        # Once more: the plan talks in segments, and a model sometimes copies it.
+        turns, notes = await _written(ai, instructions, f"{told}\n\n{AGAIN}", names)
+    kept, problems = checked(turns)
+    if any(_SEGMENT.search(turn.text) for turn in kept):
+        problems.append('It still says "segment" on air.')
+    return kept, notes, problems
+
+
+async def _written(
+    ai: AIClient, instructions: str, told: str, names: list[str]
+) -> tuple[list[Turn], str]:
     answer = await ai.json(instructions, told, "talk_segment", _schema(names))
     turns = [
         Turn(t["speaker"], t["text"].strip(), t["cut_after"].strip(), t["together"])
         for t in answer["turns"]
         if t["text"].strip() and t["speaker"] in names
     ]
-    kept, problems = checked(turns)
-    return kept, answer["notes"].strip(), problems
+    return turns, answer["notes"].strip()
 
 
 def _cut_problem(turn: Turn, after: Turn | None, cuts: int) -> str | None:

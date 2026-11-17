@@ -4,11 +4,14 @@ writes and voices its first few segments, for listening to.
 
     uv run python -m tools.talk_rehearsal
     uv run python -m tools.talk_rehearsal --segments 4 --ratio 60 --seed 7 --play
+    uv run python -m tools.talk_rehearsal --script-only
 
 Host A is the first DJ in the local database, host B is Debbie (the account's voice of that
-name), with the hooks and the dynamic from the prototype. Each run goes in its own folder in
-data/talk_rehearsal: the plan, each segment's MP3 and script, and all of them together. A
-segment costs about 1,000 ElevenLabs credits.
+name), with the hooks and the dynamic from the prototype. Segments come in links as the station
+makes them, with a song between links. Each run goes in its own folder in data/talk_rehearsal:
+the plan, each segment's MP3 and script, and all of them together in show.mp3, where a short
+tone stands in for each song. A segment costs about 1,000 ElevenLabs credits; --script-only
+writes the scripts without voicing them, for a few cents of OpenAI.
 """
 
 import argparse
@@ -20,6 +23,7 @@ import sqlite3
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx2
@@ -99,6 +103,38 @@ async def debbie_voice(key: str) -> str:
     return ELEVEN + found["voice_id"]
 
 
+TONE_SECONDS = 1.5
+
+
+async def song_tone(folder: Path) -> Path | None:
+    """A short, quiet tone standing in for a song in show.mp3, so it's clear where one plays."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return None
+    tone = folder / "speech" / "song.mp3"
+    tone.parent.mkdir(exist_ok=True)
+    filters = f"volume=0.2,afade=t=in:d=0.1,afade=t=out:st={TONE_SECONDS - 0.4}:d=0.4"
+    process = await asyncio.create_subprocess_exec(
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        f"sine=frequency=660:duration={TONE_SECONDS}",
+        "-af",
+        filters,
+        "-ac",
+        "2",
+        "-ar",
+        "44100",
+        str(tone),
+    )
+    await process.wait()
+    return tone if process.returncode == 0 else None
+
+
 async def main(args: argparse.Namespace) -> None:
     settings = get_settings()
     key = settings.elevenlabs_api_key.get_secret_value()
@@ -159,62 +195,80 @@ async def main(args: argparse.Namespace) -> None:
         (folder / "plan.json").write_text(json.dumps(plan, indent=2) + "\n")
 
         count = segment_count(args.minutes, args.ratio)
-        seconds = lengths(args.ratio)[0]
+        link = lengths(args.ratio)
+        wanted = min(args.segments, count)
         said: list[list[Turn]] = []
-        notes, moves, clips = "", [], []
-        for number in range(1, min(args.segments, count) + 1):
-            move = deal_move(rng, hosts, False, moves)
+        notes, moves, clips, songs = "", [], [], []
+        number = 0
+        while number < wanted:
+            move = deal_move(rng, hosts, False, moves, song=bool(songs))
             moves.append(move)
-            moment = Moment(
-                number=number,
-                count=count,
-                clock=clock_line(now),
-                first=number == 1,
-                ends_link=True,
-                before=SONGS[(number - 1) % len(SONGS)],
-                up_next=SONGS[number % len(SONGS)],
-                move=move,
-            )
-            started = time.monotonic()
-            turns, notes, problems = await write_segment(
-                ai,
-                station="The Lunch Break",
-                hosts=hosts,
-                dynamic=DYNAMIC,
-                prompt=PROMPT,
-                plan=plan,
-                moment=moment,
-                material=material,
-                notes=notes,
-                said=said,
-                seconds=seconds,
-            )
-            written = time.monotonic() - started
-            started = time.monotonic()
-            clip = await voice_segment(speech, turns, voices, rng)
-            voiced = time.monotonic() - started
-            said.append(turns)
-            clips.append(clip)
-            script = "\n".join(
-                f"{t.speaker}{' (together)' if t.together else ''}: {t.text}"
-                + (f'   <- cut after "{t.cut_after}"' if t.cut_after else "")
-                for t in turns
-            )
-            shutil.copy(clip.path, folder / f"segment{number}.mp3")
-            (folder / f"segment{number}.txt").write_text(script + f"\n\nNotes: {notes}\n")
-            print(
-                f"\n=== Segment {number} ({move}): written in {written:.0f} s, voiced in "
-                f"{voiced:.0f} s, {clip.seconds:.0f} s long"
-            )
-            print(script)
-            print(f"Notes: {notes}")
-            for problem in problems:
-                print(f"  {problem}")
+            before = SONGS[(len(songs) - 1) % len(SONGS)] if songs else None
+            up_next = SONGS[len(songs) % len(SONGS)]
+            for index, seconds in enumerate(link):
+                if number >= wanted:
+                    break
+                number += 1
+                ends_link = index == len(link) - 1 or number == wanted
+                moment = Moment(
+                    number=number,
+                    count=count,
+                    clock=clock_line(now),
+                    first=number == 1,
+                    ends_link=ends_link,
+                    straight_on=index > 0,
+                    before=before if index == 0 else None,
+                    up_next=up_next if ends_link else None,
+                    move=move if index == 0 else None,
+                )
+                started = time.monotonic()
+                turns, notes, problems = await write_segment(
+                    ai,
+                    station="The Lunch Break",
+                    hosts=hosts,
+                    dynamic=DYNAMIC,
+                    prompt=PROMPT,
+                    plan=plan,
+                    moment=moment,
+                    material=material,
+                    notes=notes,
+                    said=said,
+                    seconds=seconds,
+                )
+                written = time.monotonic() - started
+                said.append(turns)
+                script = "\n".join(
+                    f"{t.speaker}{' (together)' if t.together else ''}: {t.text}"
+                    + (f'   <- cut after "{t.cut_after}"' if t.cut_after else "")
+                    for t in turns
+                )
+                (folder / f"segment{number}.txt").write_text(script + f"\n\nNotes: {notes}\n")
+                heading = f"\n=== Segment {number} ({move}): written in {written:.0f} s"
+                if not args.script_only:
+                    started = time.monotonic()
+                    clip = await voice_segment(speech, turns, voices, rng)
+                    voiced = time.monotonic() - started
+                    clips.append((clip, ends_link))
+                    shutil.copy(clip.path, folder / f"segment{number}.mp3")
+                    heading += f", voiced in {voiced:.0f} s, {clip.seconds:.0f} s long"
+                print(heading)
+                print(script)
+                print(f"Notes: {notes}")
+                for problem in problems:
+                    print(f"  {problem}")
+            songs.append(up_next)
 
+        if args.script_only:
+            print(f"\nSaved in {folder.relative_to(ROOT)}/")
+            return
+        tone = await song_tone(folder)
         at, parts = 0.0, []
-        for clip in clips:
+        for clip, ends_link in clips:
             parts.append(Part(clip.path, at, 0.0, clip.seconds))
-            at += clip.seconds + 1.0
+            at += clip.seconds + 0.5
+            if ends_link and tone:
+                parts.append(Part(tone, at, 0.0, TONE_SECONDS))
+                at += TONE_SECONDS + 0.5
         together = folder / "show.mp3"
         together.write_bytes(await mix(parts))
         credits_after = await speech.eleven_credits()
@@ -227,7 +281,7 @@ async def main(args: argparse.Namespace) -> None:
         await speech.close()
         await ai.close()
 
-    if args.play and shutil.which("mpv"):
+    if args.play and not args.script_only and shutil.which("mpv"):
         subprocess.run(["mpv", "--no-video", "--really-quiet", str(together)], check=False)
 
 
@@ -238,6 +292,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--minutes", type=int, default=30, help="how long the show runs")
     parser.add_argument("--seed", type=int, help="for the same moves and dice every time")
     parser.add_argument("--play", action="store_true", help="play the show")
+    parser.add_argument("--script-only", action="store_true", help="write, but don't voice")
     return parser.parse_args()
 
 

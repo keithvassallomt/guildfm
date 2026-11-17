@@ -1,6 +1,7 @@
 """Talk stations on air: planning the show, and the talk before each song."""
 
 import random
+import re
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -120,9 +121,9 @@ def test_a_talk_station_talks_before_each_song(
     assert "Debbie can't let Guildbert finish a story." in plan["instructions"]
     # At 40%, a link is one segment, about as long as two-fifths of a song and a song.
     (told,) = segments(openai)
-    assert "This is segment 1 of 12." in told
     assert "It opens the show: welcome everyone" in told
-    assert 'Just played: "Song 1" by Fleetwood Mac.' in told
+    assert "A song has just finished" not in told  # it played before the show
+    assert not re.search(r"segment \d", told, re.IGNORECASE)  # never said, so never told
     assert 'End by bringing in the next one: "Song 2" by Fleetwood Mac' in told
     assert "Write about 2380 characters of speech, about 140 seconds." in told
     assert "[weather]\nRight now in Carlisle, Cumbria, UK: light rain" in told
@@ -147,8 +148,8 @@ def test_a_talk_station_talks_before_each_song(
     line_up_next(client, speakers)
     assert len(openai.asked_for("show_plan")) == 1
     told = segments(openai)[1]
-    assert "This is segment 2 of 12." in told
     assert "It opens the show" not in told
+    assert 'A song has just finished: "Song 2" by Fleetwood Mac.' in told
     assert "The show's notes so far: Debbie has won the biscuit." in told
     assert "Guildbert: Right, before you start, I have a theory." in told
     # What today's DJ knows about the songs, the talk show knows too.
@@ -163,7 +164,9 @@ def test_more_talk_is_more_segments_before_the_song(
     line_up_next(client, speakers)
     told = segments(openai)
     assert len(told) == 7  # 14 minutes between songs, in 2-minute segments
-    assert [n for n, t in enumerate(told) if "Just played" in t] == [0]
+    assert [n for n, t in enumerate(told) if "It opens the show" in t] == [0]
+    # The rest carry straight on, mid-conversation: no song plays between them.
+    assert [n for n, t in enumerate(told) if "carries straight on" in t] == [1, 2, 3, 4, 5, 6]
     assert [n for n, t in enumerate(told) if "End by bringing in" in t] == [6]
     client.portal.call(client.app.state.announcer.tick)
     assert len(speakers.queue) == 9
@@ -237,7 +240,7 @@ def test_the_talk_after_a_skipped_segment_knows_it_wasnt_heard(
     assert "/media/" not in speakers.queue[speakers.position - 1].uri  # Song 2
     line_up_next(client, speakers)
     told = segments(openai)[1]
-    assert "Listeners didn't hear segment 1: someone skipped it." in told
+    assert "Listeners didn't hear the last segment: someone skipped it." in told
 
     # Told once.
     next_song(client, speakers)
@@ -269,7 +272,6 @@ def test_all_talk_talks_on_and_still_plays_requests(
     assert "/media/speech/" in talk.uri
     assert client.get("/api/playback").json()["dj_talking"] is True
     told = segments(openai)[0]
-    assert "This is segment 1 of 30." in told  # an hour, all talk
     assert "It opens the show" in told
     assert "End by bringing in" not in told
 
@@ -278,7 +280,9 @@ def test_all_talk_talks_on_and_still_plays_requests(
     read_all(client)
     client.portal.call(client.app.state.talk.settle)
     assert len(speakers.queue) == 2
-    assert "This is segment 2 of 30." in segments(openai)[1]
+    assert "carries straight on from the last segment" in segments(openai)[1]
+    memory = client.portal.call(_memory, client.app.state.sessionmaker)
+    assert (memory["segment"], memory["count"]) == (2, 30)  # an hour, all talk
 
     # A request still plays, brought in by a segment of its own...
     speakers.song_ends()
@@ -302,5 +306,14 @@ def test_all_talk_talks_on_and_still_plays_requests(
     read_all(client)
     client.portal.call(client.app.state.talk.settle)
     told = segments(openai)[3]
-    assert 'Just played: "Dreams" by Fleetwood Mac.' in told
+    assert 'A song has just finished: "Dreams" by Fleetwood Mac.' in told
     assert "/media/speech/" in speakers.queue[-1].uri
+
+    # Only once: the talk after that carries straight on.
+    speakers.song_ends()
+    read_all(client)
+    speakers.track_position = 190
+    read_all(client)
+    client.portal.call(client.app.state.talk.settle)
+    told = segments(openai)[4]
+    assert "carries straight on" in told and "Dreams" not in told

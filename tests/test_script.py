@@ -2,6 +2,7 @@
 
 import json
 import random
+import re
 from pathlib import Path
 
 import pytest
@@ -17,9 +18,10 @@ from tests.fakes import FakeElevenLabs, FakeOpenAI, mp3
 
 PLAN = {
     "segments": ["Hello", "Biscuits", "Football", "Goodbye"],
-    "bits": [{"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.", "setup": 1,
-              "payoff": 3}],
-    "happening": {"kind": "a prank", "idea": "Debbie hides his headphones.", "starts": 2},
+    "bits": [{"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.",
+              "ending": "Priya asks for ABBA.", "setup": 1, "payoff": 3}],
+    "happening": {"kind": "a prank", "idea": "Debbie hides his headphones.",
+                  "ending": "They're on his head.", "starts": 2, "ends": 3},
 }  # fmt: skip
 CLOCK = "It's Monday 16 November, 12:40, lunchtime."
 
@@ -83,30 +85,53 @@ def test_the_writer_is_told_what_this_segment_is_for() -> None:
     for expected in (
         CLOCK,
         "The show runs until 13:00.",
-        "This is segment 2 of 4.",
-        'Just played: "Dreams" by Fleetwood Mac.',
+        "It's early in the show.",
+        'A song has just finished: "Dreams" by Fleetwood Mac. They needn\'t mention it every '
+        "time; if they do, it's in the first turn",
         "This segment is about: Biscuits",
-        "the bet is running (A biscuit says nobody asks for ABBA.)",
-        "The happening, a prank, starts now: Debbie hides his headphones.",
-        "Somewhere in this link, the verdict: Both rate the last song, and disagree.",
-        "Listeners didn't hear segment 1",
+        "the bet is under way, and pays off later: don't settle it or bring it to a head now. A "
+        "biscuit says nobody asks for ABBA.",
+        "The happening, a prank, starts now: Debbie hides his headphones. It comes to a head "
+        "later: don't settle it now.",
+        "Somewhere in this link, within what it's about, the verdict: Both rate the last song",
+        "Listeners didn't hear the last segment",
         "The show's notes so far: Debbie leads.",
         "[news]\n- A goat was elected mayor.",
         "Guildbert: Afternoon, all.\nDebbie: Hiya!",
         "Write about 2040 characters of speech, about 120 seconds.",
     ):
         assert expected in told
+    # Segments have no numbers here, so none can be copied onto the air.
+    assert not re.search(r"segment \d", told, re.IGNORECASE)
 
-    first = brief(PLAN, Moment(number=1, count=4, clock=CLOCK, first=True), {}, "", [], 60)
+    # The opening welcomes everyone, rather than talking about whatever played before the show.
+    opening = Moment(number=1, count=4, clock=CLOCK, first=True, before='"Dreams"')
+    first = brief(PLAN, opening, {}, "", [], 60)
     assert "It opens the show: welcome everyone" in first
-    assert "Set up the bet now: A biscuit says nobody asks for ABBA." in first
+    assert "Dreams" not in first
+    assert "Set up the bet now, so listeners get what it is and what's at stake" in first
+    # Endings are told only when they're due, so they aren't played out early.
+    assert "Priya asks for ABBA" not in first and "Priya asks for ABBA" not in told
+    assert "on his head" not in told
     paying = brief(PLAN, Moment(number=3, count=4, clock=CLOCK), {}, "", [], 60)
-    assert "Pay off the bet now" in paying
-    assert "The happening, a prank, is under way" in paying
+    assert "Pay off the bet now, reminding listeners in a line what it was" in paying
+    assert "How it ends: Priya asks for ABBA." in paying
+    assert "The happening, a prank, comes to a head now" in paying
+    assert "How it ends: They're on his head." in paying
     ending = Moment(number=4, count=4, clock=CLOCK, last=True, ends_link=True, up_next="ABBA")
     told = brief(PLAN, ending, {}, "", [], 60)
+    assert "the bet is settled: Priya asks for ABBA. Don't start it again." in told
+    assert "The happening, a prank, is over: They're on his head." in told
     assert "pay off anything still running, and sign off" in told
     assert "End by bringing in the next one: ABBA" in told
+
+
+def test_a_segment_with_no_song_before_it_carries_straight_on() -> None:
+    said = [[Turn("Guildbert", "So the thing about marrows is"), Turn("Debbie", "Go on.")]]
+    moment = Moment(number=3, count=4, clock=CLOCK, straight_on=True)
+    told = brief(PLAN, moment, {}, "", said, 120)
+    assert "It carries straight on from the last segment, with no song between" in told
+    assert "A song has just finished" not in told
 
 
 @pytest.mark.asyncio
@@ -142,6 +167,36 @@ async def test_a_segment_is_written_and_checked() -> None:
     assert speaker["speaker"]["enum"] == ["Guildbert", "Debbie"]
     assert "Debbie can't let Guildbert finish a story." in asked["instructions"]
     assert 'never say "segment"' in asked["instructions"]
+    assert "Whoever brings up a story tells it first" in asked["instructions"]
+
+
+@pytest.mark.asyncio
+async def test_a_segment_that_says_segment_on_air_is_written_again() -> None:
+    openai = FakeOpenAI()
+    leaky = json.loads(json.dumps(openai.segment))
+    leaky["turns"][1]["text"] = "Save it for segment four, Guildbert."
+    openai.segments_in_turn = [leaky]
+    ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
+    try:
+        turns, _, problems = await write_segment(
+            ai,
+            station="The Lunch Break",
+            hosts=[Host("Guildbert", "Cheeky."), Host("Debbie", "Bubbly.")],
+            dynamic="",
+            prompt="",
+            plan=PLAN,
+            moment=Moment(number=1, count=4, clock=CLOCK, first=True),
+            material={},
+            notes="",
+            said=[],
+            seconds=120,
+        )
+    finally:
+        await ai.close()
+    first, again = openai.asked_for("talk_segment")
+    assert "Listeners never hear of segments" in again["input"]
+    assert "segment" not in turns[1].text
+    assert problems == []
 
 
 def timed(path: Path, text: str, seconds: float = 2.0) -> Timed:

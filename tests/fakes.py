@@ -232,13 +232,14 @@ class FakeOpenAI:
         self.found: dict[str, str] = {}
         # A talk show's plan, as it answers.
         self.plan = {
-            "segments": [{"about": f"Segment {n}"} for n in range(1, 13)],
+            "segments": [{"about": f"Topic {n}"} for n in range(1, 13)],
             "bits": [
-                {"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.", "setup": 1,
-                 "payoff": 9},
-                {"move": "the score", "idea": "Guess the year.", "setup": 2, "payoff": 10},
+                {"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.",
+                 "ending": "Priya asks for ABBA.", "setup": 1, "payoff": 9},
+                {"move": "the score", "idea": "Guess the year.", "ending": "A draw.", "setup": 2,
+                 "payoff": 10},
             ],
-            "happening": {"idea": "", "starts": 0},
+            "happening": {"idea": "", "ending": "", "starts": 0, "ends": 0},
         }  # fmt: skip
         # A talk show's segment, as it writes it.
         self.segment = {
@@ -250,6 +251,7 @@ class FakeOpenAI:
             ],
             "notes": "Debbie has won the biscuit.",
         }  # fmt: skip
+        self.segments_in_turn: list[dict] = []  # for the next few asks, before `segment`
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
@@ -284,7 +286,8 @@ class FakeOpenAI:
         elif name == "show_plan":
             text = json.dumps(self.plan)
         elif name == "talk_segment":
-            text = json.dumps(self.segment)
+            turn = self.segments_in_turn.pop(0) if self.segments_in_turn else self.segment
+            text = json.dumps(turn)
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})

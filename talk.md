@@ -85,7 +85,7 @@ Topics to draw on include, but are not limited to:
 
 1. **Built in, always on.** How to write natural two-host talk, interruptions, audio tags, and the rules on facts and teasing. Every talk station gets these, so creators don't have to rediscover them.
 2. **The station's script prompt.** What the show is about, its topics and segments, its tone.
-3. **The show plan.** Written by the AI when a show starts. A show in a line-up knows how long it runs, and is planned whole. A talk station playing outside a line-up has no known length, so it's planned an hour at a time. The plan picks the running bits and places their setups and payoffs across the links. Each link is then written with the plan, what's been said so far, and the songs either side. The plan and the show's state are kept in the source's `dj_memory`.
+3. **The show plan.** Written by the AI when a show starts. A show in a line-up knows how long it runs, and is planned whole. A talk station playing outside a line-up has no known length, so it's planned an hour at a time. The plan picks the running bits and places their setups and payoffs across the links. Each bit has an idea (what it is and what's at stake) and an ending (how it pays off), and the writer is only told the ending when it's due: told it earlier, the writer plays it out early. Each link is then written with the plan, what's been said so far, and the songs either side. The plan and the show's state are kept in the source's `dj_memory`.
 
 ### Built-in rules
 
@@ -98,6 +98,18 @@ Topics to draw on include, but are not limited to:
 - Audio tags sparingly: four at most in a link.
 - No politics, religion or tragedy, in the news or anywhere else.
 
+Listeners know only what they hear, so the talk has to be easy to follow, as if someone has just walked in. The first rehearsal was hard to follow, and these rules came out of it:
+
+- Each turn follows from the one before it: an answer, a reaction, an argument. Nobody carries on with their own thought as if the other hadn't spoken.
+- Whoever brings up a story tells it first, plainly, in a sentence or two (what happened, where, to whom), and only then do they riff on it.
+- Anything the writer knows that listeners don't (a DJ's hooks, the plan, the show's notes) is explained the first time it comes up on air: no marrows before we know about the allotment.
+- One topic a segment, two at most, with room to tell it and argue about it. Not all of the day's material has to be used, and a segment leaves the rest for others.
+- Topics change the way people change them: from something just said, or openly ("Right, the weather").
+- Hooks are seasoning: now and then, not every segment.
+- A running bit comes back in a line at most between its setup and its payoff. Its payoff recaps it in a line, for anyone who's just tuned in.
+- The writer is never told a segment's number, and the plan never refers to one by number, so neither ends up on air. If a draft still says "segment", it's written again.
+- The opening segment welcomes everyone and doesn't talk about whatever played before the show. After a song, the song is mentioned in the first turn if at all, not every time. A segment with no song before it carries straight on, mid-conversation.
+
 ### Banter moves
 
 GuildFM has a list of moves, and the code deals them out: one or two running bits per show, and one move per link, never the same as the last few. The writer gets a job to do rather than "be funny". The code picks, not the AI: left to itself, a model picks the same favourites every time.
@@ -106,10 +118,10 @@ GuildFM has a list of moves, and the code deals them out: one or two running bit
 |---|---|
 | The bet | Stakes are set early and settled later. The loser pays up on air, or refuses to. |
 | The challenge | One sets the other a task: talk about the weather without saying "rain", sneak a word into the next link. Pays off later. |
-| The score | A running quiz, such as guessing the year of the next song before it's announced. The score carries through the show. |
+| The score | A running quiz, such as guessing a number from the day's news before it's revealed. The score carries through the show. Answers come only from what the DJs are given: a quiz on how the next song ends had them making it up. |
 | The correction | One states something, the other corrects them. Only from real data (the news, the play history), never invented trivia. |
 | The wind-up | One deliberately pokes the other's pet peeve. |
-| The verdict | Both rate the last song, and disagree. |
+| The verdict | Both rate the last song, and disagree. Never dealt when no song has just played, as at a show's opening. |
 | The confession | One admits something embarrassing about themselves. Character fiction, harmless. |
 | The aside | One whispers to the listeners behind the other's back. |
 | The producer | Both complain about an unseen producer. A classic radio device; no extra voice needed. |
