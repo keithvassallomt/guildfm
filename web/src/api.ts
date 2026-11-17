@@ -65,6 +65,8 @@ export type PlaybackState = {
   } | null;
   /** What Previous does now, or null when it's unavailable (greyed out). */
   previous: "back" | "restart" | null;
+  /** The speakers won't start any songs just now, so GuildFM is waiting and trying again. */
+  cant_start: boolean;
   /** An announcement is playing. */
   announcing: boolean;
   /** The station's DJ is talking. */

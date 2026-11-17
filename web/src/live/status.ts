@@ -61,6 +61,7 @@ export function chipLabel(state: PlaybackState): string {
   if (state.announcing) return "Announcing";
   if (state.dj_talking) return "DJ talking";
   if (state.jingle) return "Jingle";
+  if (state.cant_start) return "Won't start";
   if (state.status === "stopped" && state.hours?.open === false) return "Closed";
   return statusLabels[state.status];
 }

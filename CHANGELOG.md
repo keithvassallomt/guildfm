@@ -7,6 +7,19 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- When the speakers stop every song a few seconds in, as they do when they can't get songs from
+  Spotify, GuildFM no longer races through the queue. A song that stops like that gets one more
+  try and doesn't count as played. After three different songs in a row, GuildFM holds on to
+  the same song and tries it every 30 seconds until the speakers play it, and the badge says
+  **Won't start**, with a note on Now Playing and the Queue. On 2026-11-17 it went through 29
+  songs in five minutes this way, which looked like non-stop skipping.
+- GuildFM checks the speakers' own queue before taking songs off it. When its copy had songs
+  the speakers had lost, it asked them to remove those again and again, about 50 times near the
+  end of every song, and logged that it had taken them off when it hadn't. It could also have
+  taken the wrong song off.
+
 ## [0.1.6] - 2026-11-16
 
 ### Fixed

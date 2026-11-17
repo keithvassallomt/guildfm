@@ -62,6 +62,10 @@ class FakeSpeakers:
         self.wont_start: str | None = None  # a song's key that never starts, however often tried
         self.wont_seek: str | None = None  # a song's key the speakers refuse to jump to
         self.played: list[QueueItem] = []  # what played to the end from the queue, in order
+        # Every song shows as starting for one reading, then the speakers stop and go back to
+        # the start of their queue: what they do when they can't get songs from Spotify.
+        self.starts_fail = False
+        self._starting: int | None = None  # where a song was last seen starting
 
     # Things that happen in the office
 
@@ -85,6 +89,12 @@ class FakeSpeakers:
     def snapshot(self, full: bool) -> Snapshot:
         self._check()
         ours = self.media_uri == QUEUE_URI.format(uid=COORDINATOR)
+        if self.starts_fail and ours and self.transport in ("PLAYING", "TRANSITIONING"):
+            if self._starting == self.position:
+                self.next_song_fails()
+                self._starting = None
+            else:
+                self._starting, self.transport, self.track_position = self.position, "PLAYING", 0
         track = self.outside_track
         if ours:
             item = self.queue[self.position - 1] if self.position else None

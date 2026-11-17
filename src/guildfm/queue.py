@@ -55,6 +55,8 @@ LEAD_SECONDS = 90
 # Readings of stopped speakers with a song lined up before GuildFM tries it again, and after a
 # second try, gives up on it: it couldn't play.
 STALLED_READINGS = 3
+# Readings between tries of the same song while the speakers won't start any, about 30 seconds.
+WAITING_READINGS = 30
 PREPARE_MINUTES = 10  # how soon before a line-up's show its station picks its first songs
 ACTIVITY_KEPT = 30
 
@@ -156,6 +158,7 @@ class QueueEngine:
         self.on_lined_up: list[LinedUp] = []
 
         controller.on_track_change.append(self._track_changed)
+        controller.on_failed_start.append(self._failed_start)
         controller.on_poll.append(self.keep_fed)
         controller.source = self._first_up
 
@@ -319,14 +322,17 @@ class QueueEngine:
                 # hiccup. After a few readings GuildFM has them try it again, and if they stop
                 # again, or won't try, it lets the song go and carries on. The first try is
                 # straight away when they stopped at the end of a clip, as they often do after
-                # the DJ.
+                # the DJ. While the speakers won't start any song, though, GuildFM keeps the
+                # same one and tries it every half a minute, rather than going through the queue.
                 self._stalls += 1
                 first_try = self._retried != lined_up.id
-                at_once = first_try and controller.stopped_after_clip
-                if self._stalls < STALLED_READINGS and not at_once:
+                waiting = controller.cant_start
+                at_once = first_try and controller.stopped_after_clip and not waiting
+                needed = WAITING_READINGS if waiting else STALLED_READINGS
+                if self._stalls < needed and not at_once:
                     return
                 self._stalls = 0
-                if first_try:
+                if first_try or waiting:
                     self._retried = lined_up.id
                     title = lined_up.track.title
                     log.info(
@@ -492,6 +498,35 @@ class QueueEngine:
             self._controller.where(),
         )
         self.note(f"{title} wouldn't play, so it was skipped")
+
+    async def _failed_start(self, key: str, began_waiting: bool) -> None:
+        """The speakers stopped the song on now as soon as it started, so it didn't play: it
+        comes back out of the play history and is lined up again, to be tried once more. If
+        another song is lined up already, this one is let go instead."""
+        if began_waiting:
+            self.note("The speakers won't start any songs, so GuildFM is waiting for them")
+        started = track_id_in(key)
+        # Not under the queue's lock: like a change of song, this comes from reading the
+        # speakers, which keep_fed can do while it holds the lock.
+        async with self._sessions() as db:
+            entry = await in_state(db, EntryState.PLAYING)
+            if entry is None or entry.track_id != started:
+                return
+            play = await db.scalar(select(Play).order_by(Play.id.desc()).limit(1))
+            if play and play.track_id == started:
+                await db.delete(play)
+            title = entry.track.title
+            if await in_state(db, EntryState.NEXT):
+                try:
+                    await self._controller.unqueue(self.item(entry))
+                except SpeakersUnavailable, SpeakersRefused:
+                    log.warning("Couldn't take a song that didn't start off the speakers")
+                await db.delete(entry)
+                self.note(f"{title} wouldn't play, so it was skipped")
+            else:
+                entry.state = EntryState.NEXT
+            await db.commit()
+        await self.changed()
 
     async def _prepare_shows(self, db: AsyncSession, ahead: float) -> None:
         """A line-up's show starting soon has its station pick its first songs now, so it starts

@@ -36,6 +36,14 @@ export function PlaybackBanner({ playback, canPlay = false }: Props) {
         : `${opensAgain(playback.hours)} Requests still queue up until then.`,
     ];
   }
+  if (playback?.cant_start) {
+    messages[playback.status] = [
+      "The speakers won't start any songs",
+      canPlay
+        ? "The last few stopped as soon as they started. GuildFM tries again every 30 seconds. If it goes on, the Sonos app may say why."
+        : "GuildFM keeps trying, and the music carries on once they play again. Requests still queue up.",
+    ];
+  }
   const message = playback && messages[playback.status];
   if (!message) return null;
   return (

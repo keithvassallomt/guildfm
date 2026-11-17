@@ -1,10 +1,11 @@
-"""GuildFM keeps its own place on the speakers: a song that won't play is skipped, stopped
-speakers going back to the start of their queue don't take GuildFM with them, and the speakers'
-queue stays short."""
+"""GuildFM keeps its own place on the speakers: a song that won't play is skipped, speakers that
+won't start any songs are waited for, stopped speakers going back to the start of their queue
+don't take GuildFM with them, and the speakers' queue stays short."""
 
 from fastapi.testclient import TestClient
 
-from guildfm.playback import KEEP_PLAYED
+from guildfm.playback import FAILED_START_SECONDS, KEEP_PLAYED
+from guildfm.queue import WAITING_READINGS
 from tests.fakes import FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
@@ -143,3 +144,90 @@ def test_songs_the_speakers_went_back_to_come_off(client: TestClient, speakers) 
     line_up_next(client, speakers)
     # Song 2 had played: off it comes, so Song 3 is next again.
     assert keys(speakers) == [key("fm1"), key("fm3")]
+
+
+def history(client: TestClient) -> list[str]:
+    return [play["track"]["title"] for play in client.get("/api/history").json()["plays"]]
+
+
+def activity(client: TestClient) -> list[str]:
+    return [line["text"] for line in queue(client)["activity"]]
+
+
+def test_while_the_speakers_wont_start_songs_guildfm_waits_on_one(client, speakers) -> None:
+    started(client, speakers, "fm1", "fm2", "fm3", "fm4", "fm5")
+    line_up_next(client, speakers)  # Song 2 lined up
+    # Spotify can't be reached from the speakers: each song stops a few seconds in.
+    speakers.starts_fail = True
+    speakers.song_ends()
+    for _ in range(40):
+        read_speakers(client)
+    # Songs 2 and 3 each had a second try and were let go. With Song 4 the third different
+    # song in a row, it's the speakers, so GuildFM holds on to Song 4 instead of going on.
+    assert queue(client)["next"]["track"]["title"] == "Song 4"
+    assert [entry["track"]["title"] for entry in queue(client)["waiting"]] == ["Song 5"]
+    assert client.get("/api/playback").json()["cant_start"] is True
+    assert "The speakers won't start any songs, so GuildFM is waiting for them" in activity(client)
+    # None of them played, so none is in the history.
+    assert history(client) == ["Song 1"]
+
+    tries = len(speakers.played)
+    for _ in range(3 * WAITING_READINGS):
+        read_speakers(client)
+    assert queue(client)["next"]["track"]["title"] == "Song 4"
+    # Said once, not again on every try.
+    waiting = "The speakers won't start any songs, so GuildFM is waiting for them"
+    assert activity(client).count(waiting) == 1
+    assert history(client) == ["Song 1"]
+
+    speakers.starts_fail = False
+    for _ in range(WAITING_READINGS + 1):
+        read_speakers(client)
+    assert playing(client) == "Song 4"
+    assert speakers.transport == "PLAYING"
+    speakers.track_position = FAILED_START_SECONDS
+    read_speakers(client)
+    assert client.get("/api/playback").json()["cant_start"] is False
+    assert history(client) == ["Song 4", "Song 1"]
+    assert tries == len(speakers.played)  # nothing played to the end meanwhile
+
+
+def test_one_song_that_wont_start_isnt_the_speakers(client, speakers) -> None:
+    started(client, speakers, "fm1", "fm2", "fm3")
+    line_up_next(client, speakers)  # Song 2 lined up
+    speakers.starts_fail = True
+    speakers.song_ends()
+    for _ in range(9):
+        read_speakers(client)
+    speakers.starts_fail = False  # Song 3 plays
+    read_speakers(client)
+    read_speakers(client)
+    assert playing(client) == "Song 3"
+    assert "Song 2 wouldn't play, so it was skipped" in activity(client)
+    assert client.get("/api/playback").json()["cant_start"] is False
+    assert history(client) == ["Song 3", "Song 1"]
+
+
+def test_skipping_the_last_song_isnt_a_song_that_wont_start(client, speakers) -> None:
+    started(client, speakers, "fm1")
+    client.post("/api/playback/skip").raise_for_status()
+    for _ in range(10):
+        read_speakers(client)
+    assert speakers.transport == "STOPPED"
+    assert history(client) == ["Song 1"]
+
+
+def test_songs_the_speakers_lost_come_out_of_guildfms_copy(client, speakers, caplog) -> None:
+    started(client, speakers, "fm1", "fm2", "fm3")
+    song_change(client, speakers)  # Song 2 on
+    line_up_next(client, speakers)  # Song 3 lined up
+    speakers.play_position(1)  # someone picks Song 1 again in the Sonos app
+    read_speakers(client)
+    # Song 2, now after the current song, goes from the speakers behind GuildFM's back.
+    speakers.remove(2)
+    line_up_next(client, speakers)
+    # GuildFM goes by the speakers' own queue: Song 3 stays, nothing is refused.
+    assert keys(speakers) == [key("fm1"), key("fm3")]
+    assert "out of step" in caplog.text
+    assert "Couldn't take a stray song" not in caplog.text
+    assert "Took" not in caplog.text

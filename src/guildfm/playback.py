@@ -47,6 +47,12 @@ RESTART_SECONDS = 5  # further into a song than this, Previous starts it again
 KEEP_PLAYED = 3  # songs that have played kept on the speakers, so Previous can go back
 CLIP_STOP_SECONDS = 10  # speakers stopping this soon after a clip was on stopped at its end
 TAKE_BACK_READINGS = 3  # readings of the speakers back on GuildFM's queue before it drives them
+# A song the speakers stop this few seconds in never really played. Sonos does that when it
+# can't get songs from Spotify.
+FAILED_START_SECONDS = 10
+# Different songs in a row that won't start before GuildFM stops going on to new ones: it isn't
+# the songs, the speakers can't start any. It waits, trying the same one again now and then.
+FAILED_STARTS_TO_WAIT = 3
 ACTIVE = ("PLAYING", "TRANSITIONING")
 
 
@@ -135,10 +141,17 @@ class PlaybackController:
         self._mismatches = 0
         self._back_readings = 0  # in a row, of the speakers back on GuildFM's queue
         self._clip_heard_at = float("-inf")  # when the speakers were last read playing a clip
+        # Songs in a row the speakers stopped as soon as they started, each once, in order.
+        self._failed: list[str] = []
+        self._skipped: str | None = None  # the song Skip was last pressed on
 
         self._last_compared: dict[str, Any] | None = None
         self._last_sent_at = float("-inf")
         self.on_track_change: list[TrackChange] = []
+        # Told the song's key when the speakers stop it as soon as it started, and whether GuildFM
+        # has just started waiting for them. Run before the change of song that comes with it, as
+        # the speakers go back to the start of their queue.
+        self.on_failed_start: list[Callable[[str, bool], Awaitable[None]]] = []
         # Run after every reading of the speakers, so the queue can keep them fed.
         self.on_poll: list[Callable[[], Awaitable[None]]] = []
         # What to play when GuildFM takes the speakers over with nothing of its own left.
@@ -268,9 +281,14 @@ class PlaybackController:
             )
         if snapshot.transport in ACTIVE and self.current_key in self._clips:
             self._clip_heard_at = self._clock()
+        self._played_through(snapshot)
+        failed = self._failed_start(previous, snapshot)
         await self._trim()
         await self._fit_crossfade()
 
+        if failed:
+            for callback in self.on_failed_start:
+                await callback(*failed)
         before = previous.track.uri if previous and previous.track else None
         after = snapshot.track.uri if snapshot.track else None
         if before != after:
@@ -330,6 +348,54 @@ class PlaybackController:
         self._remember()
         log.info("The speakers are back on GuildFM's queue, so it's driving them again")
 
+    def _failed_start(
+        self, previous: Snapshot | None, snapshot: Snapshot
+    ) -> tuple[str, bool] | None:
+        """The song GuildFM was at, if the speakers just stopped it a few seconds after it
+        started, and whether that makes GuildFM start waiting for them. The song never really
+        played, so GuildFM's place goes back to before it, where it's lined up again rather than
+        over. Not when Skip stopped it."""
+        if not self._in_control or snapshot.transport != "STOPPED" or not previous:
+            return None
+        track = previous.track
+        if previous.transport not in ACTIVE or track is None:
+            return None
+        if not 0 < self._position <= len(self._items):
+            return None
+        key = self._items[self._position - 1].key
+        if key in self._clips or key == self._skipped or track_key(track.uri) != key:
+            return None
+        if track.position >= FAILED_START_SECONDS:
+            return None
+        new = key not in self._failed
+        if new:
+            self._failed.append(key)
+        self._position -= 1
+        self._remember()
+        log.warning(
+            "%s stopped %ss after it started, so it didn't play (%s different songs in a row): %s",
+            track.title,
+            track.position,
+            len(self._failed),
+            self.where(),
+        )
+        # Once, as GuildFM starts waiting: the same song failing on each try doesn't count again.
+        began_waiting = new and len(self._failed) == FAILED_STARTS_TO_WAIT
+        if began_waiting:
+            log.warning("The speakers won't start any songs, so GuildFM is waiting for them")
+        return key, began_waiting
+
+    def _played_through(self, snapshot: Snapshot) -> None:
+        """A song of GuildFM's playing well past its start means the speakers can play again."""
+        track = snapshot.track
+        if not self._failed or snapshot.transport != "PLAYING" or track is None:
+            return
+        if self.current_key in self._clips or track.position < FAILED_START_SECONDS:
+            return
+        if len(self._failed) >= FAILED_STARTS_TO_WAIT:
+            log.info("The speakers are playing songs again")
+        self._failed = []
+
     async def _trim(self) -> None:
         """Take what has played off the speakers: clips straight away, so Previous goes back a
         song rather than to the DJ, and songs once a few more have. The speakers can't wander
@@ -351,32 +417,49 @@ class PlaybackController:
         if played:
             self._remember()
 
+    def _stray(self, keep: set[str]) -> list[int]:
+        """Where songs come after the current one in GuildFM's copy of the speakers' queue,
+        other than `keep` and the clips."""
+        return [
+            index
+            for index in range(self._position, len(self._items))
+            if self._items[index].key not in keep and self._items[index].key not in self._clips
+        ]
+
     async def clear_ahead(self, keep: set[str]) -> None:
         """Take songs off the speakers that come after the current one but that GuildFM hasn't
         lined up, leaving `keep` and the clips. They're songs that had played, which the speakers
-        went back to."""
-        if not self._in_control:
+        went back to. Their queue is read first: songs only in GuildFM's copy of it, which the
+        speakers lost along the way, just come out of the copy."""
+        if not self._in_control or not self._stray(keep):
             return
-        ahead = range(self._position, len(self._items))
-        stray = [
-            index
-            for index in ahead
-            if self._items[index].key not in keep and self._items[index].key not in self._clips
-        ]
-        for index in reversed(stray):
+        try:
+            await self._match_queue()
+        except SpeakersUnavailable, SpeakersRefused:
+            log.warning("Couldn't read the speakers' queue", exc_info=True)
+            return
+        removed = 0
+        for index in reversed(self._stray(keep)):
             try:
                 await self._call(self._speakers.remove, index + 1)
             except SpeakersUnavailable, SpeakersRefused:
                 log.warning("Couldn't take a stray song off the speakers", exc_info=True)
                 break
             del self._items[index]
-        if stray:
-            log.info("Took %s songs that had played back off the speakers", len(stray))
+            removed += 1
+        if removed:
+            log.info("Took %s songs that had played back off the speakers", removed)
             self._remember()
 
     @property
     def in_control(self) -> bool:
         return self._in_control and not self._error
+
+    @property
+    def cant_start(self) -> bool:
+        """Whether the speakers won't start any songs just now: several different ones in a row
+        stopped as soon as they started. GuildFM then waits instead of going on to new ones."""
+        return len(self._failed) >= FAILED_STARTS_TO_WAIT
 
     @property
     def previous_action(self) -> str | None:
@@ -470,6 +553,8 @@ class PlaybackController:
                 "playing": snapshot.transport in ACTIVE,
             },
             "previous": self.previous_action,
+            # Shown while GuildFM waits for the speakers, including during each try.
+            "cant_start": self.cant_start and self.status in (Status.IDLE, Status.PLAYING),
             "announcing": self.announcing or (clip is not None and clip[0] == "announcement"),
             "dj_talking": self.dj_talking or (clip is not None and clip[0] == "dj"),
             "jingle": self.jingle or (clip is not None and clip[0] == "jingle"),
@@ -543,6 +628,8 @@ class PlaybackController:
 
     async def skip(self) -> None:
         self._require_control()
+        # Skipping the last song stops the speakers, which isn't a song failing to start.
+        self._skipped = self.current_key
         await self._call(self._speakers.skip)
         self._settle()
         await self.poll()
@@ -574,6 +661,7 @@ class PlaybackController:
         if self._snapshot and self._snapshot.transport in ACTIVE:
             await self._call(self._speakers.pause)
         self._in_control, self._overridden, self._held = False, False, False
+        self._failed = []
         self._remember()
         await self.poll()
 
@@ -591,6 +679,7 @@ class PlaybackController:
         self.monitoring = monitoring
         self._in_control = self._overridden = self._held = False
         self._crossfading = None
+        self._failed = []
         self._switched = True
         self._snapshot, self._rooms, self._error, self._mismatches = None, [], None, 0
         self._remember()

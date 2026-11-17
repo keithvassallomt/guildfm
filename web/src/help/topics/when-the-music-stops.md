@@ -14,6 +14,7 @@ The badge at the top right of **Now Playing** and the **Queue** says what the mu
 - **Announcing**, **DJ talking** or **Jingle**: one of those is on.
 - **Overridden**: someone is playing something else from the Sonos app.
 - **Speakers offline**: GuildFM can't reach the speakers.
+- **Won't start**: the speakers stop every song as soon as it starts.
 - **Nothing playing**: GuildFM is on, with nothing to play.
 
 ## Outside playback hours
@@ -42,3 +43,13 @@ To take the speakers back, press **Play** on Now Playing. GuildFM carries on wit
 If the speakers are switched off, or the network is down, the badge says **Speakers offline**. GuildFM keeps trying every few seconds, and requests still queue up in the meantime.
 
 A room whose speaker is switched over to the TV just drops out. The other rooms carry on.
+
+## The speakers won't start songs
+
+Sometimes the speakers stop each song a few seconds after it starts. That happens when they can't get songs from Spotify, and it usually sorts itself out within a few minutes.
+
+A song that stops like that gets one more try, then GuildFM moves on to the next. If three different songs in a row won't start, the badge says **Won't start**. GuildFM then stops going through the queue and tries the same song every 30 seconds until the speakers play it, so it doesn't use up the queue while it waits.
+
+::: needs transport
+If it goes on, open the Sonos app: it may say why the speakers can't play.
+:::
