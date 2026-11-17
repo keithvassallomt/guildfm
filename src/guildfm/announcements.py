@@ -8,6 +8,9 @@ current song, so the rooms play it in step. One for chosen rooms can't, since a 
 plays in every room in the group: GuildFM pauses the music just before the current song ends,
 plays an overlay clip in those rooms, then starts the next song.
 
+GuildFM also says one thing by itself: when the speakers won't start any songs, it says it's
+having trouble, once, over every room (see playback.py on songs that won't start).
+
 Announcements only play while GuildFM is driving the speakers: not after Stop, an outside
 takeover or closing time. Scheduled ones also keep to playback hours. One that comes due while
 GuildFM can't play it is let go, and shows in the log as missed.
@@ -54,6 +57,19 @@ INSTRUCTIONS = (
     "Read this out as an announcement over an office's speakers: clear, warm and unhurried, "
     "easy to follow from across the room."
 )
+# Said once when the speakers won't start any songs and GuildFM starts waiting for them, so the
+# office knows it noticed. The tag steers an ElevenLabs voice; OpenAI's voices leave it out and
+# go by the instructions instead.
+STUCK_LINE = (
+    "[embarrassed] Oops, it seems I'm having trouble playing songs right now. Well... um... "
+    "this is awkward. I'll keep trying my best to get the music on again. In the meantime... "
+    "um... enjoy the silence?"
+)
+STUCK_INSTRUCTIONS = (
+    "Read this out over an office's speakers, sounding a little embarrassed and awkward, with "
+    "the hesitations as written, and a wry, hopeful last line."
+)
+STUCK_GAP = 60 * 60  # seconds: at most once an hour, in case the speakers keep coming and going
 WEEKDAYS = DAYS[:5]
 STAND_IN = DEFAULTS["announcement_voice"]  # OpenAI's, for when an ElevenLabs voice fails
 HOURLY_LOOKAHEAD = 24 * 8  # hours searched for the next one inside playback hours
@@ -159,6 +175,9 @@ class Announcer:
         self._pending: list[Spoken] = []
         self._next_check = 0.0  # when to read the schedule again, in seconds since the epoch
         self._wake = asyncio.Event()
+        self._stuck = False  # the speakers just stopped starting songs: say so on the next tick
+        self._stuck_said_at = float("-inf")  # in seconds since the epoch
+        controller.on_failed_start.append(self._failed_start)
 
     def now(self) -> datetime:
         return self._clock()
@@ -175,16 +194,16 @@ class Announcer:
                 voice = await get_pref(db, "announcement_voice")
         return await self._speech.say(text, voice, INSTRUCTIONS)
 
-    async def _read_out(self, text: str, voice: str) -> Clip:
+    async def _read_out(self, text: str, voice: str, instructions: str = INSTRUCTIONS) -> Clip:
         """Like `speak`, for an announcement that's going on the speakers: if ElevenLabs fails,
         OpenAI's stand-in voice reads it out instead."""
         try:
-            return await self._speech.say(text, voice, INSTRUCTIONS)
+            return await self._speech.say(text, voice, instructions)
         except SpeechError as error:
             if not is_eleven(voice):
                 raise
             log.warning("ElevenLabs couldn't read an announcement out, so OpenAI did: %s", error)
-            return await self._speech.say(text, STAND_IN, INSTRUCTIONS)
+            return await self._speech.say(text, STAND_IN, instructions)
 
     def check_can_play(self) -> None:
         if not self._controller.in_control:
@@ -219,8 +238,35 @@ class Announcer:
             self._wake.clear()
 
     async def tick(self) -> None:
+        await self._say_stuck()
         await self._check_schedule()
         await self._deliver()
+
+    async def _failed_start(self, key: str, began_waiting: bool) -> None:
+        """Told by the speakers' reader. The words are made on the next tick, so reading the
+        speakers doesn't wait for them."""
+        if began_waiting:
+            self._stuck = True
+            self._wake.set()
+
+    async def _say_stuck(self) -> None:
+        """The speakers won't start any songs: say so once, over every room, in the announcement
+        voice. Not if they've started playing again meanwhile, nor twice in an hour."""
+        if not self._stuck:
+            return
+        self._stuck = False
+        now = self._clock().timestamp()
+        if now - self._stuck_said_at < STUCK_GAP or not self._controller.cant_start:
+            return
+        async with self._sessions() as db:
+            voice = await get_pref(db, "announcement_voice")
+        try:
+            clip = await self._read_out(STUCK_LINE, voice, STUCK_INSTRUCTIONS)
+        except SpeechError as error:
+            log.warning("Couldn't say that the speakers won't start songs: %s", error)
+            return
+        self._stuck_said_at = now
+        self.say(Spoken(STUCK_LINE, clip, None, AnnounceMode.OVER))
 
     async def _check_schedule(self) -> None:
         """Queue up scheduled announcements that have come due."""

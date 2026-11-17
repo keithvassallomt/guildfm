@@ -4,8 +4,10 @@ don't take GuildFM with them, and the speakers' queue stays short."""
 
 from fastapi.testclient import TestClient
 
+from guildfm.announcements import STUCK_LINE
 from guildfm.playback import FAILED_START_SECONDS, KEEP_PLAYED
 from guildfm.queue import WAITING_READINGS
+from guildfm.speech import without_tags
 from tests.fakes import FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
@@ -231,3 +233,46 @@ def test_songs_the_speakers_lost_come_out_of_guildfms_copy(client, speakers, cap
     assert "out of step" in caplog.text
     assert "Couldn't take a stray song" not in caplog.text
     assert "Took" not in caplog.text
+
+
+def test_guildfm_says_once_that_the_speakers_wont_start_songs(client, speakers, openai) -> None:
+    async def nap(seconds: float) -> None:
+        pass
+
+    client.app.state.announcer.sleep = nap
+
+    def a_while(readings: int) -> None:
+        for _ in range(readings):
+            read_speakers(client)
+            client.portal.call(client.app.state.announcer.tick)
+
+    started(client, speakers, *(f"fm{n}" for n in range(1, 9)))
+    line_up_next(client, speakers)  # Song 2 lined up
+    speakers.starts_fail = True
+    speakers.song_ends()
+    a_while(40 + 2 * WAITING_READINGS)
+    assert client.get("/api/playback").json()["cant_start"] is True
+    # Once, in every room, while the speakers are stopped, in the announcement voice. The audio
+    # tag is for ElevenLabs voices; an OpenAI voice goes by the instructions.
+    assert [(body["input"], body["voice"]) for body in openai.requests] == [
+        (without_tags(STUCK_LINE), "cedar")
+    ]
+    assert "embarrassed" in openai.requests[0]["instructions"]
+    assert len(speakers.clips) == len(speakers.rooms)
+    assert {clip.music for clip in speakers.clips} == {"STOPPED"}
+    recent = client.get("/api/announcements").json()["recent"]
+    assert [line["text"] for line in recent] == [STUCK_LINE]
+
+    # Playing again, then stuck again soon after: not said a second time within the hour.
+    speakers.starts_fail = False
+    a_while(WAITING_READINGS + 1)
+    speakers.track_position = FAILED_START_SECONDS
+    a_while(1)
+    assert client.get("/api/playback").json()["cant_start"] is False
+    line_up_next(client, speakers)
+    speakers.starts_fail = True
+    speakers.song_ends()
+    a_while(40)
+    assert client.get("/api/playback").json()["cant_start"] is True
+    assert len(openai.requests) == 1
+    assert len(speakers.clips) == len(speakers.rooms)

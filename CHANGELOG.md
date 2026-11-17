@@ -7,6 +7,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- When the speakers won't start any songs and GuildFM starts waiting for them, it says so over
+  every room, in the announcement voice, sounding a little embarrassed: "Oops, it seems I'm
+  having trouble playing songs right now..." It says it at most once an hour, and it shows in the
+  announcements log.
+
 ### Fixed
 
 - When the speakers stop every song a few seconds in, as they do when they can't get songs from

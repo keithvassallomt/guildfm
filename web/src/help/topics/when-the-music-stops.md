@@ -48,7 +48,7 @@ A room whose speaker is switched over to the TV just drops out. The other rooms 
 
 Sometimes the speakers stop each song a few seconds after it starts. That happens when they can't get songs from Spotify, and it usually sorts itself out within a few minutes.
 
-A song that stops like that gets one more try, then GuildFM moves on to the next. If three different songs in a row won't start, the badge says **Won't start**. GuildFM then stops going through the queue and tries the same song every 30 seconds until the speakers play it, so it doesn't use up the queue while it waits.
+A song that stops like that gets one more try, then GuildFM moves on to the next. If three different songs in a row won't start, the badge says **Won't start**. GuildFM then stops going through the queue and tries the same song every 30 seconds until the speakers play it, so it doesn't use up the queue while it waits. As it starts waiting, it says so over the speakers, in the announcement voice. It says that at most once an hour.
 
 ::: needs transport
 If it goes on, open the Sonos app: it may say why the speakers can't play.
