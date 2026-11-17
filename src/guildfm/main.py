@@ -35,6 +35,7 @@ from guildfm.schedule import Scheduler
 from guildfm.speakers import SocoSystem, SpeakerSystem
 from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
+from guildfm.talkshow import TalkShow
 from guildfm.web import mount_web, send_browsers_to
 
 SESSION_DAYS = 180
@@ -133,8 +134,21 @@ def create_app(
             app.state.announcer,
             settings.data_dir / "media",
         )
-        # The jingle first, so it plays before anything the DJ says in the same pause.
-        app.state.queue.on_lined_up += [app.state.jingles.lined_up, app.state.dj.lined_up]
+        app.state.talk = TalkShow(
+            app.state.sessionmaker,
+            app.state.announcer,
+            app.state.ai,
+            app.state.speech,
+            app.state.awareness,
+            **clock,
+        )
+        # The jingle first, so it plays before anything the DJ says in the same pause. A talk
+        # station's DJs talk through the talk show instead of the DJ.
+        app.state.queue.on_lined_up += [
+            app.state.jingles.lined_up,
+            app.state.dj.lined_up,
+            app.state.talk.lined_up,
+        ]
 
         loops = (
             (
@@ -156,6 +170,7 @@ def create_app(
                 await task
         await app.state.radio.close()
         await app.state.dj.close()
+        await app.state.talk.close()
         await app.state.covers.close()
         await app.state.composer.close()
         await app.state.spotify.close()

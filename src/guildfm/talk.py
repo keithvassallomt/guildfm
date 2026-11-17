@@ -110,6 +110,17 @@ class Host:
         return " ".join(parts)
 
 
+def talks(station) -> bool:
+    """Whether `station` is a talk station that can talk: two or more DJs, each with an
+    ElevenLabs voice. Otherwise its first DJ, if any, talks between songs as usual."""
+    hosts = station.hosts
+    return bool(
+        station.talk_station
+        and len(hosts) >= 2
+        and all(dj.voice.startswith("elevenlabs:") for dj in hosts)
+    )
+
+
 def _hooked(move: Move, hosts: list[Host]) -> bool:
     return not move.needs or any(getattr(host, hook) for host in hosts for hook in move.needs)
 
@@ -236,7 +247,8 @@ async def plan_show(
             "call back to one:\n" + "\n".join(f"- {b['on']}: {b['move']}, {b['idea']}" for b in log)
         )
     parts.append(
-        "No politics, religion or tragedy, and no made-up facts about real people or songs."
+        "No politics, religion or tragedy, and no made-up facts about real people or songs. "
+        "The segments' numbers are for planning: the DJs never say them on air."
     )
     instructions = PLAN_INSTRUCTIONS.format(
         station=station,

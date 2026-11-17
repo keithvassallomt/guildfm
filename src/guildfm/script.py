@@ -37,6 +37,9 @@ each other's sentences.
 - Never make up facts about a real person, a song, an artist or a listener. Trivia, news and \
 corrections come only from what you're given; leave out anything you aren't sure of.
 - No politics, religion or tragedy.
+- Segments are how the show is planned, and listeners never hear of them: on air, never \
+say "segment" or a number for one. Say "after this song", "later" or "before the end of \
+the show" instead.
 
 They cut each other off, once or twice in a segment at most, when it suits who they are. For a \
 turn that gets cut off, write the whole sentence as the speaker meant to say it, and set \
@@ -79,6 +82,9 @@ class Moment:
     move: str | None = None  # the move dealt for this link, on its first segment
     skipped: int | None = None  # a segment listeners didn't hear, skipped by a curator
     until: str | None = None  # when the show ends, in a line-up
+    guest: str | None = None  # another DJ dropping in for this segment, as Host.described has them
+    # About the song it brings in: its play history, repeat requests and the votes (dj.py).
+    remarks: tuple[str, ...] = ()
 
 
 def _schema(names: list[str]) -> dict[str, Any]:
@@ -132,6 +138,11 @@ def brief(
     parts.extend(_due(plan, moment.number))
     if moment.move:
         parts.append(f"Somewhere in this link, {moment.move}: {BY_NAME[moment.move].does}")
+    if moment.guest:
+        parts.append(
+            f"A guest drops in for this segment, in their own voice, and leaves at the end of "
+            f"it: {moment.guest}"
+        )
     if moment.skipped:
         parts.append(
             f"Listeners didn't hear segment {moment.skipped}: someone skipped it. Don't pay off "
@@ -153,6 +164,11 @@ def brief(
         parts.append("It's the show's last segment: pay off anything still running, and sign off.")
     if moment.ends_link and moment.up_next:
         parts.append(f"Songs come back after it. End by bringing in the next one: {moment.up_next}")
+        if moment.remarks:
+            parts.append(
+                "About the songs, to bring up now and then, not every time, and the votes only "
+                "as numbers, since nobody knows who voted: " + " ".join(moment.remarks)
+            )
     parts.append(
         f"Write about {seconds * PER_SECOND} characters of speech, about {seconds} seconds."
     )

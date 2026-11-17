@@ -41,6 +41,7 @@ from guildfm.playlists import current_source
 from guildfm.prefs import get_pref
 from guildfm.queue import in_state, tallies
 from guildfm.speech import SpeechClient, SpeechError, is_eleven
+from guildfm.talk import talks
 
 log = logging.getLogger(__name__)
 
@@ -353,7 +354,8 @@ class DJ:
             source = await current_source(db)
             station = source.station if source and source.station_id else None
             entry = await db.get(QueueEntry, entry_id)
-            if station is None or not station.dj or entry is None:
+            # A talk station's DJs talk through talkshow.py instead.
+            if station is None or not station.dj or entry is None or talks(station):
                 return None
             playing = await in_state(db, EntryState.PLAYING)
             before = playing and Song(playing.track.title, playing.track.artists)

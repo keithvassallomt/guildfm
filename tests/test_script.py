@@ -141,6 +141,7 @@ async def test_a_segment_is_written_and_checked() -> None:
     speaker = asked["text"]["format"]["schema"]["properties"]["turns"]["items"]["properties"]
     assert speaker["speaker"]["enum"] == ["Guildbert", "Debbie"]
     assert "Debbie can't let Guildbert finish a story." in asked["instructions"]
+    assert 'never say "segment"' in asked["instructions"]
 
 
 def timed(path: Path, text: str, seconds: float = 2.0) -> Timed:

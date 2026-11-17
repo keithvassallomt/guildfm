@@ -186,6 +186,11 @@ class Announcer:
             log.warning("ElevenLabs couldn't read an announcement out, so OpenAI did: %s", error)
             return await self._speech.say(text, STAND_IN, INSTRUCTIONS)
 
+    def still_to_come(self, key: str) -> bool:
+        """Whether the song `key` is lined up and hasn't started, so there's still time to say
+        something before it."""
+        return key in self._controller.upcoming_keys
+
     def check_can_play(self) -> None:
         if not self._controller.in_control:
             raise CantAnnounce(BLOCKED.get(self._controller.status, BLOCKED[Status.STOPPED]))
