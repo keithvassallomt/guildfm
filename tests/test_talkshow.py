@@ -193,6 +193,33 @@ def test_a_talk_station_is_planned_as_it_comes_on(
     assert "It opens the show" in segments(openai)[-1]
 
 
+def test_a_talk_station_already_on_is_planned_while_it_plays(
+    client: TestClient, openai: FakeOpenAI, speakers: FakeSpeakers
+) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    talk = client.app.state.talk
+    client.portal.call(talk.settle)
+    # A restart loses the plan made as it came on, and nothing comes on again.
+    talk._ahead.clear()
+
+    # A reading while its song plays plans it, before any song is lined up...
+    read_all(client)
+    client.portal.call(talk.settle)
+    assert len(openai.asked_for("show_plan")) == 2
+    assert segments(openai) == []
+    # ...once: the next reading finds it planned.
+    talk._looked = None
+    read_all(client)
+    client.portal.call(talk.settle)
+    assert len(openai.asked_for("show_plan")) == 2
+
+    # The first talk uses it.
+    line_up_next(client, speakers)
+    assert len(openai.asked_for("show_plan")) == 2
+    assert "It opens the show" in segments(openai)[0]
+
+
 async def _at_segment(sessionmaker, number: int) -> None:
     async with sessionmaker() as db:
         source = await db.get(SourceState, 1)

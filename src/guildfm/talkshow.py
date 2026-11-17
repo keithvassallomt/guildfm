@@ -74,6 +74,7 @@ MATERIAL_WAIT = 20  # seconds a show's plan waits for its web fields to come in
 MATERIAL_WAIT_AHEAD = 90  # the same for a line-up's show, planned ten minutes before it opens
 AHEAD_KEPT = timedelta(minutes=30)  # how long a plan made ahead is good for
 NEXT_HOUR_AHEAD = 2  # segments left in an hour's plan when the next hour's is made
+LOOK_EVERY = 30.0  # seconds between checks that a talk station playing has today's plan
 LONGEST = 30 * 60  # seconds of talk between two songs at most
 MOVES_REMEMBERED = 5
 MOVE_EVERY = 3  # segments, at 100% talk, where there are no links to deal moves to
@@ -261,6 +262,7 @@ class TalkShow:
         # for a restart, but a link being made could save over that.
         self._skips: dict[int, int] = {}
         self._ahead: dict[int, Ahead] = {}  # shows planned ahead, by station
+        self._looked: float | None = None  # when _look_ahead last looked, on time.monotonic
 
     async def close(self) -> None:
         """Stop talking, before the database closes."""
@@ -341,9 +343,12 @@ class TalkShow:
         self._start(self.link(entry_id, key, opens))
 
     async def keep_talking(self) -> None:
-        """After each reading of the speakers: at 100% talk, keep a segment queued after
-        whatever's on, as a song would be, or start one if nothing's playing."""
+        """After each reading of the speakers: a talk station playing gets its show planned if
+        it has none, and at 100% talk, a segment is kept queued after whatever's on, as a song
+        would be, or one is started if nothing's playing."""
         controller = self._controller
+        if controller.in_control:
+            await self._look_ahead()
         if self._feeding and not self._feeding.done():
             return
         if not controller.in_control or controller.anything_ahead:
@@ -354,6 +359,27 @@ class TalkShow:
         if status not in (Status.PLAYING, Status.IDLE):
             return
         self._feeding = self._start(self.carry_on(start=status == Status.IDLE))
+
+    async def _look_ahead(self) -> None:
+        """Every so often while a song plays: a talk station on by hand with no plan for today
+        gets one now, so its first talk only has to be written and voiced. Coming on plans it
+        too, but Play on a station that was already on, the morning's first song and a restart
+        don't come on. Line-ups plan their shows before they open."""
+        if self._controller.status != Status.PLAYING or self._tasks:
+            return  # not playing, or talk is being made, which plans the show if it needs it
+        now = time.monotonic()
+        if self._looked is not None and now - self._looked < LOOK_EVERY:
+            return
+        self._looked = now
+        async with self._sessions() as db:
+            source = await current_source(db)
+            station = source.station if source and source.station_id else None
+            if station is None or source.lineup_id is not None or not talks(station):
+                return
+            memory = source.dj_memory or {}
+            today = _day(self._clock().astimezone(ZoneInfo(await get_pref(db, "timezone"))))
+        if "plan" not in memory or memory.get("day") != today:
+            self.prepare(station.id)
 
     async def warm_up(self) -> bool:
         """Play was pressed with nothing to play, on a 100% talk station with no song heard
