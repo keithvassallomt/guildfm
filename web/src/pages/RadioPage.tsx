@@ -9,6 +9,7 @@ import { StationCover } from "../components/StationCover";
 import { FormError } from "../components/TextField";
 import { useToast } from "../components/Toast";
 import { useLiveEvent } from "../live/LiveProvider";
+import { listed } from "./announcementText";
 import lib from "./Library.module.css";
 import styles from "./Page.module.css";
 import { usePlaylistPlayer } from "./PlaylistsPage";
@@ -17,7 +18,11 @@ import { usePlaylistPlayer } from "./PlaylistsPage";
 export function stationTags(station: Station): string[] {
   if (station.kind === "ai_picks") return ["Built in", "Follows what's been playing"];
   const tags: string[] = [];
-  if (station.dj) {
+  if (station.dj && station.talk_station) {
+    tags.push(`DJs ${listed(station.djs.map((dj) => dj.name))}`);
+    tags.push(station.talk_ratio >= 100 ? "All talk" : `${station.talk_ratio}% talk`);
+    if (station.announce_requests) tags.push("Announces requests");
+  } else if (station.dj) {
     const unit = station.talk_unit === "tracks" ? "track" : "minute";
     const every = station.talk_every === 1 ? unit : `${station.talk_every} ${unit}s`;
     tags.push(`DJ ${station.dj_name}`, `Talks every ${every}`);

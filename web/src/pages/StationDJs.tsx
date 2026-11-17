@@ -117,8 +117,11 @@ export function DJs({ form, stationId, talk, onChange, onError }: Props) {
     };
   };
   const useDJs = (on: boolean) => {
-    onChange(on && djs.length === 0 ? { dj: on, djs: [fresh()] } : { dj: on });
-    if (on && djs.length === 0) setOpen(0);
+    // With DJs to choose from, Choose a DJ offers them. With none yet, a new one is the only
+    // choice, so it opens straight away.
+    const start = on && djs.length === 0 && known.length === 0;
+    onChange(start ? { dj: on, djs: [fresh()] } : { dj: on });
+    if (start) setOpen(0);
   };
 
   const onIt = new Set(djs.map((dj) => dj.id));
@@ -200,32 +203,8 @@ export function DJs({ form, stationId, talk, onChange, onError }: Props) {
             />
           )}
 
-          {talk ? (
-            <>
-              <fieldset className={e.group} disabled>
-                <legend className={e.label}>How often the DJs talk</legend>
-                <div className={e.every}>
-                  <label htmlFor={everyId} className={e.rowHint}>
-                    Every
-                  </label>
-                  <input id={everyId} type="number" value={form.talk_every} readOnly className={e.number} />
-                  <SegmentedControl
-                    label="Unit"
-                    options={[
-                      { value: "tracks", label: "tracks" },
-                      { value: "minutes", label: "minutes" },
-                    ]}
-                    value={form.talk_unit}
-                    onChange={() => {}}
-                  />
-                </div>
-              </fieldset>
-              <p className={styles.muted}>
-                Set by the talk and music slider on a talk station, and what they say by the
-                script prompt.
-              </p>
-            </>
-          ) : (
+          {/* A talk station's slider and script prompt say how often and what about. */}
+          {!talk && (
             <>
               <fieldset className={e.group}>
                 <legend className={e.label}>
