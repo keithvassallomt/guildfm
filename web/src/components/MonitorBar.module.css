@@ -27,6 +27,14 @@
   color: var(--text);
 }
 
+.skip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
 @media (min-width: 768px) {
   .bar {
     max-width: calc(1120px - 80px);

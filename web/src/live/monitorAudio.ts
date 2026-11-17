@@ -8,6 +8,8 @@ export type MonitorState = {
   volume: number;
   /** Clips over the music, such as announcements, and how many seconds ago each started. */
   overlays: { id: number; path: string; volume: number; age: number }[];
+  /** Songs only play until what's said after them is ready. */
+  skip_music: boolean;
 };
 
 // A different note for each song, so a change of song is easy to hear.

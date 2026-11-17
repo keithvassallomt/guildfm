@@ -130,3 +130,13 @@ async def monitor(body: MonitorIn, _: Admin, request: Request, db: Db) -> dict[s
         await playback.use(app.monitor if body.on else app.sonos, monitoring=body.on)
     await set_pref(db, "monitor", body.on)
     return playback.state()
+
+
+@router.put("/monitor/skip-music")
+async def skip_music(body: MonitorIn, _: Controls, request: Request, db: Db) -> dict[str, Any]:
+    """In monitor mode, songs only play until what's said after them is ready, or as they are.
+    Returns what the monitor is playing."""
+    monitor = request.app.state.monitor
+    monitor.skip_music = body.on
+    await set_pref(db, "monitor_skip_music", body.on)
+    return monitor.state()
