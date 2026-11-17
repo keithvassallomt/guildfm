@@ -9,6 +9,19 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Talk stations: a station with two or more DJs, each with an ElevenLabs voice, can be mostly
+  talk. The DJs chat, bicker and banter, cut each other off and talk over each other, and keep
+  running bits going through the show, such as a bet or a score, set up early and paid off
+  later. When the station asks for them, they use the day's real odd news, weather, football and
+  celebrity birthdays. In the station editor, turn on Mostly talk, set how much of it is talk
+  (20% to 100%, with about what an hour costs in ElevenLabs credits), and write a script prompt
+  saying what the show is about. The talk stops for each song: the DJs wrap up before it and
+  pick up again after it. Requests still play, and a curator can skip a stretch of talk.
+- A station can have several DJs, up to six, each on a card that opens and closes. Say how they
+  get on, and press Hear them together for half a minute of them talking, played on your device.
+- DJ hooks: pet peeves, soft spots and a running obsession, which give the DJs on a talk station
+  something to bring out in each other.
+- A Talk stations help topic, and the DJs topic covers several DJs and their hooks.
 - Skip music when ready, in the monitor mode bar. Each song starts near its end and stops as
   soon as the DJ's next words are ready, so trying out a DJ isn't minutes of beeps.
 

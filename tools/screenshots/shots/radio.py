@@ -1,5 +1,5 @@
-"""Radio: the stations, the station editor, its DJ and jingles, the jingle generator and the
-hour preview."""
+"""Radio: the stations, the station editor, its DJs, talk stations and jingles, the jingle
+generator and the hour preview."""
 
 import re
 
@@ -42,8 +42,18 @@ async def station_switches(s: Scene) -> Frame:
 async def station_dj(s: Scene) -> Frame:
     page = s.page
     await open_station(s, "Xennials' Delight")
-    await s.ring(page.locator("fieldset").filter(has_text="Which DJ"))
-    return [page.get_by_role("heading", name="DJ", exact=True), page.get_by_label("Personality")]
+    # One DJ, so their card is open.
+    await s.ring(page.get_by_role("button", name=re.compile(r"^Guildbert Voice")))
+    return [page.get_by_role("heading", name="DJs", exact=True), page.get_by_label("Personality")]
+
+
+@shot("station-hooks", ("curator",))
+async def station_hooks(s: Scene) -> Frame:
+    page = s.page
+    await open_station(s, "Xennials' Delight")
+    hooks = page.get_by_text("For talk stations: what the other DJs").locator("..")
+    await s.ring(hooks)
+    return hooks
 
 
 @shot("station-voice", ("curator",))
@@ -61,7 +71,54 @@ async def station_talk(s: Scene) -> Frame:
     await open_station(s, "Xennials' Delight")
     return [
         page.locator("fieldset").filter(has_text="How often the DJ talks"),
-        page.get_by_text("The DJ talks between songs, so every room hears it in step."),
+        page.get_by_text("The DJs talk between songs, so every room hears it in step."),
+    ]
+
+
+@shot("talk-not-yet", ("curator",))
+async def talk_not_yet(s: Scene) -> Frame:
+    page = s.page
+    await open_station(s, "Xennials' Delight")  # one DJ
+    await s.ring(page.get_by_role("switch", name="Mostly talk"))
+    return page.get_by_role("region", name="Talk station")
+
+
+@shot("talk-station", ("curator",))
+async def talk_station(s: Scene) -> Frame:
+    page = s.page
+    await open_station(s, "The Lunch Break")
+    talk = page.get_by_role("region", name="Talk station")
+    await s.ring(talk.get_by_role("slider", name="Talk and music"))
+    return [
+        talk.get_by_role("heading", name="Talk station"),
+        talk.locator("p").filter(has_text="ElevenLabs credits"),
+    ]
+
+
+@shot("talk-prompt", ("curator",))
+async def talk_prompt(s: Scene) -> Frame:
+    page = s.page
+    await open_station(s, "The Lunch Break")
+    talk = page.get_by_role("region", name="Talk station")
+    await s.ring(talk.get_by_role("button", name="Add [celebrities] to the prompt"))
+    return [
+        talk.get_by_label("Script prompt"),
+        talk.get_by_text("Add puts the field where the cursor is"),
+    ]
+
+
+@shot("talk-djs", ("curator",))
+async def talk_djs(s: Scene) -> Frame:
+    page = s.page
+    await open_station(s, "The Lunch Break")
+    djs = page.get_by_role("region", name="DJs")
+    together = djs.get_by_role("button", name="Hear them together")
+    await s.ring(together)
+    # The box is the section's full width, so the cards above it are too.
+    return [
+        djs.get_by_role("heading", name="DJs", exact=True),
+        djs.get_by_label("How they get on"),
+        together,
     ]
 
 

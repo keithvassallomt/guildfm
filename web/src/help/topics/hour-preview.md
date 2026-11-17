@@ -2,7 +2,7 @@
 title: Previewing an hour
 summary: See what a station would play for an hour, and hear its DJ, before you save.
 area: radio
-order: 6
+order: 7
 needs: create_stations
 pages: /radio/new, /radio/:id
 ---
@@ -19,3 +19,5 @@ You see an hour of the station as the editor has it, saved or not: each song wit
 - **Try another hour** asks again.
 
 Nothing here is kept, and real requests would change the real hour.
+
+For a talk station, the preview shows only its songs, since its talk is written as the show goes. At 100% talk it plays no songs of its own, so there's nothing to preview.

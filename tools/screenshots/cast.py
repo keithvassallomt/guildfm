@@ -123,6 +123,10 @@ class DJ:
     name: str
     personality: str
     voice: str
+    # For talk stations: what the other DJs wind them up about, go soft on, and come back to.
+    pet_peeves: str = ""
+    soft_spots: str = ""
+    obsession: str = ""
 
 
 DJS = {
@@ -132,6 +136,23 @@ DJS = {
         "good fun. Quite cheeky and distinctly northern. Likes a bit of trivia about the track "
         "that's just played or the one coming up.",
         "elevenlabs:guildbert01",
+        pet_peeves="People who request the same artist three times before lunch. Anyone who "
+        "calls a barm cake a bread roll. Radio edits that cut the best bit.",
+        soft_spots="A proper key change. Chips and gravy. Any song that namechecks a northern "
+        "town.",
+        obsession="His pub quiz team, the Quizteama Aguileras, who have come second six years "
+        "running.",
+    ),
+    "Debbie": DJ(
+        "Debbie",
+        "Bubbly and cheeky, from the north, with a wicked sense of humour. The office's "
+        "unofficial gossip queen. Talks fast, laughs easily, and has an opinion on everything.",
+        "elevenlabs:aurora02",
+        pet_peeves="Whoever takes the last biscuit and leaves the empty packet. Fish in the "
+        "office microwave.",
+        soft_spots="A proper chip butty. Power ballads at a work do.",
+        obsession="Finding out who keeps nicking her yoghurts from the office fridge. She has a "
+        "list of suspects.",
     ),
     "Della": DJ(
         "Della",
@@ -147,7 +168,7 @@ class Station:
     name: str
     description: str
     curator: str  # who made it
-    dj: str | None = None
+    djs: tuple[str, ...] = ()  # in order: on a music station, only the first talks
     talk_every: int = 3
     talk_unit: str = "tracks"
     style: str = "commentary"
@@ -156,6 +177,11 @@ class Station:
     crossfade: bool = False
     # Station idents from assets/jingles/Station Idents, by folder.
     idents: str | None = None
+    # A talk station: its DJs mostly talking, how they get on, and what about.
+    talk_station: bool = False
+    talk_ratio: int = 40
+    dynamic: str = ""
+    script_prompt: str = ""
 
 
 STATIONS = [
@@ -165,7 +191,7 @@ STATIONS = [
         "Millennials) from a British background would enjoy, but popular music from across the "
         "western world, not just British music.",
         curator="tom",
-        dj="Guildbert",
+        djs=("Guildbert",),
         global_awareness=True,
         crossfade=True,
         idents="Xennials Delight",
@@ -175,7 +201,7 @@ STATIONS = [
         "Gentle acoustic, folk and soul to ease into the day. Warm and unhurried, nothing too "
         "loud before ten.",
         curator="grace",
-        dj="Della",
+        djs=("Della",),
         talk_every=4,
         style="announce",
         global_awareness=True,
@@ -184,10 +210,25 @@ STATIONS = [
         "Friday Feeling",
         "Disco, funk and feel-good pop to see the week out. Big choruses, nothing slow.",
         curator="hannah",
-        dj="Guildbert",
+        djs=("Guildbert",),
         talk_every=15,
         talk_unit="minutes",
         crossfade=True,
+    ),
+    Station(
+        "The Lunch Break",
+        "Feel-good pop and soul between the chat. Singalong choruses, nothing too slow.",
+        curator="hannah",
+        djs=("Guildbert", "Debbie"),
+        talk_station=True,
+        talk_ratio=60,
+        dynamic="Guildbert is dry and deadpan; Debbie is fast and loud, and can't let him "
+        "finish a bit of trivia. She has him on her list of yoghurt suspects and won't say why. "
+        "They bicker like an old married couple, but gang up on anyone who requests the same "
+        "song twice.",
+        script_prompt="Light chat between the two of them, to get the office through lunch. "
+        "Draw on the day's odd and funny news [news], the weather [weather] and what it's doing "
+        "to everyone's plans, and last night's football [sports].",
     ),
     Station(
         "Deep Focus",

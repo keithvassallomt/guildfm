@@ -7,7 +7,7 @@ needs: switch_source
 pages: /radio
 ---
 
-An AI radio station picks its own songs from a description, such as "80s and 90s hits" or "gentle acoustic for the morning", finds them on Spotify, and plays them between requests. It can have a DJ, who talks between songs, and play jingles.
+An AI radio station picks its own songs from a description, such as "80s and 90s hits" or "gentle acoustic for the morning", finds them on Spotify, and plays them between requests. It can have DJs, who talk between songs, and play jingles. A talk station is mostly its DJs talking, with songs in between.
 
 ![The Radio page](shot:radio)
 

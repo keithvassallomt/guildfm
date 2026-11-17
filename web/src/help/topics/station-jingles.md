@@ -2,7 +2,7 @@
 title: A station's jingles
 summary: Upload or make the short idents a station plays between songs.
 area: radio
-order: 4
+order: 5
 needs: create_stations
 pages: /radio/:id
 ---

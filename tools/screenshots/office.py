@@ -631,7 +631,7 @@ async def playlists(office: Office) -> None:
 
 async def stations(office: Office) -> None:
     """The stations, made by their curators, sharing Guildbert."""
-    djs: dict[str, int] = {}
+    djs: dict[str, int] = {}  # DJs made so far, by name
     for station in STATIONS:
         maker = office.people[station.curator]
         fields: dict[str, Any] = {
@@ -640,23 +640,30 @@ async def stations(office: Office) -> None:
             "global_awareness": station.global_awareness,
             "jingles": station.jingles,
             "crossfade": station.crossfade,
-            "dj": station.dj is not None,
+            "dj": bool(station.djs),
+            "djs": [
+                {
+                    "id": djs.get(name),
+                    "name": name,
+                    "personality": DJS[name].personality,
+                    "voice": DJS[name].voice,
+                    "pet_peeves": DJS[name].pet_peeves,
+                    "soft_spots": DJS[name].soft_spots,
+                    "obsession": DJS[name].obsession,
+                }
+                for name in station.djs
+            ],
+            "talk_every": station.talk_every,
+            "talk_unit": station.talk_unit,
+            "style": station.style,
+            "talk_station": station.talk_station,
+            "talk_ratio": station.talk_ratio,
+            "dynamic": station.dynamic,
+            "script_prompt": station.script_prompt,
         }
-        if station.dj:
-            dj = DJS[station.dj]
-            fields |= {
-                "dj_id": djs.get(dj.name),
-                "dj_name": dj.name,
-                "personality": dj.personality,
-                "voice": dj.voice,
-                "talk_every": station.talk_every,
-                "talk_unit": station.talk_unit,
-                "style": station.style,
-            }
         made = await maker.call("POST", "/stations", fields)
         office.stations[station.name] = made["id"]
-        if station.dj:
-            djs[station.dj] = made["dj_id"]
+        djs |= {dj["name"]: dj["id"] for dj in made["djs"]}
     for station in await office.people["hannah"].call("GET", "/stations"):
         office.stations.setdefault(station["name"], station["id"])
 

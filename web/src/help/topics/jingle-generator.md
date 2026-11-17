@@ -2,7 +2,7 @@
 title: Making jingles with AI
 summary: Describe the jingles you want, or let the AI write them, then keep the best.
 area: radio
-order: 5
+order: 6
 needs: create_stations
 ---
 

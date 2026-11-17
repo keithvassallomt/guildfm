@@ -10,7 +10,7 @@ pages: /radio/new, /radio/:id
 1. Go to **Radio** and tap **New AI station**.
 2. Give it a **Name**.
 3. Under **What should it play?**, describe the music: the styles, the era, the mood, and anything to avoid. The AI reads this every time it picks.
-4. Set the switches (below), and a DJ if you'd like one. See [The DJ](topic:djs).
+4. Set the switches (below), and DJs if you'd like them. See [DJs](topic:djs), and [Talk stations](topic:talk-stations) for a station that's mostly talk.
 5. Tap **Create station**.
 
 ![Editing a station](shot:station-editor)
