@@ -34,12 +34,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.ai import AIClient, AIError, Usage, object_schema
 from guildfm.awareness import Awareness
+from guildfm.fields import prime
 from guildfm.jingles import kinds, playable
 from guildfm.models import PickNote, Play, QueueEntry, Station, StationKind, Track
 from guildfm.playlists import best_voted, current_source, tracks_of
 from guildfm.prefs import get_pref
 from guildfm.songs import plain, song_key, song_line
 from guildfm.spotify import SpotifyBusy, SpotifyClient, SpotifyError, SpotifyTrack, remember
+from guildfm.talk import all_talk, talks
 
 log = logging.getLogger(__name__)
 
@@ -228,6 +230,8 @@ class Radio:
             source = await current_source(db)
             if source is None or source.station_id is None:
                 return
+            if all_talk(source.station):
+                return  # all talk: no songs but requests
             station_id, left = source.station_id, len(source.order) - source.cursor
         if left >= LOW:
             return
@@ -306,7 +310,12 @@ class Radio:
         try:
             async with self._sessions() as db:
                 station = await db.get(Station, station_id)
-                if station is None or station.ready:
+                if station is None:
+                    return
+                if talks(station):
+                    # Its news, football and birthdays can take a minute to look up.
+                    prime(self._awareness, station.script_prompt, datetime.now())
+                if station.ready or all_talk(station):
                     return
                 idents = kinds(await playable(db, station_id)) if station.jingles else ()
                 taste = Taste.of(station, idents)

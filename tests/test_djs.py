@@ -8,6 +8,7 @@ from sqlalchemy import select
 from guildfm.config import Settings
 from guildfm.db import MIGRATIONS, upgrade_to_head
 from guildfm.models import DJProfile, Station, StationDJ
+from tests.fakes import FakeElevenLabs, FakeOpenAI
 from tests.helpers import ADMIN, sign_in
 
 GUILDBERT = {"dj": True, "dj_name": "Guildbert", "personality": "Cheeky.", "voice": "cedar"}
@@ -251,3 +252,97 @@ def test_a_station_keeps_its_djs_in_order(client: TestClient) -> None:
         ("Debbie", []),
         ("Guildbert", []),
     ]
+
+
+GUILDBERT_TALKS = {
+    "name": "Guildbert",
+    "personality": "Cheeky.",
+    "voice": "elevenlabs:guildbert01",
+    "pet_peeves": "Songs that fade out.",
+    "soft_spots": "Brass bands.",
+    "obsession": "His marrows.",
+}
+DEBBIE_TALKS = {"name": "Debbie", "personality": "Bubbly.", "voice": "elevenlabs:aurora02"}
+TALK = {
+    "talk_station": True,
+    "talk_ratio": 60,
+    "dynamic": "Debbie can't let Guildbert finish a story.",
+    "script_prompt": "Light chat about the [news].",
+}
+
+
+def test_a_talk_station_has_its_djs_in_order_with_their_hooks(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
+    lunch = make_station(client, "Lunch Break", djs=[GUILDBERT_TALKS, DEBBIE_TALKS], **TALK)
+    assert [dj["name"] for dj in lunch["djs"]] == ["Guildbert", "Debbie"]
+    assert lunch["djs"][0]["obsession"] == "His marrows."
+    assert (lunch["dj_name"], lunch["talk_ratio"]) == ("Guildbert", 60)
+    assert lunch["dynamic"] == "Debbie can't let Guildbert finish a story."
+    assert lunch["script_prompt"] == "Light chat about the [news]."
+    hooks = {dj["name"]: dj["pet_peeves"] for dj in djs(client)}
+    assert hooks == {"Debbie": "", "Guildbert": "Songs that fade out."}
+
+    # Debbie first now, both by id.
+    guildbert, debbie = (dict(dj) for dj in lunch["djs"])
+    swapped = edit(client, lunch, djs=[debbie, guildbert], **TALK).json()
+    assert [dj["name"] for dj in swapped["djs"]] == ["Debbie", "Guildbert"]
+    assert len(djs(client)) == 2
+
+    # Guildbert edited with the one-DJ form on another station keeps his hooks.
+    tea = make_station(client, "Teatime", **GUILDBERT, dj_id=guildbert["id"])
+    edit(client, tea, **GUILDBERT, dj_id=guildbert["id"]).raise_for_status()
+    assert {dj["name"]: dj["obsession"] for dj in djs(client)}["Guildbert"] == "His marrows."
+
+
+def test_a_talk_station_needs_djs_who_can_talk_over_each_other(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
+    body = {"name": "Lunch Break", "description": "Soul.", **TALK}
+
+    def refused(**fields) -> str:
+        response = client.post("/api/stations", json=body | fields)
+        assert response.status_code == 422, response.text
+        return response.json()["detail"][0]["msg"]
+
+    assert refused(djs=[GUILDBERT_TALKS]) == "A talk station needs two or more DJs."
+    della = {"name": "Della", "voice": "marin"}
+    assert refused(djs=[GUILDBERT_TALKS, della]) == (
+        "A talk station's DJs need ElevenLabs voices, so they can talk over each other: Della "
+        "has an OpenAI one."
+    )
+    twin = GUILDBERT_TALKS | {"name": "guildbert"}
+    assert refused(djs=[GUILDBERT_TALKS, twin]) == "Each DJ on a station needs a name of their own."
+    for ratio in (10, 101):
+        assert (
+            client.post(
+                "/api/stations",
+                json=body | {"djs": [GUILDBERT_TALKS, DEBBIE_TALKS], "talk_ratio": ratio},
+            ).status_code
+            == 422
+        )
+    # Without the switch, one DJ with any voice is fine, as ever.
+    make_station(client, "Quiet", djs=[della])
+
+
+def test_hearing_djs_together_before_saving(
+    client: TestClient, openai: FakeOpenAI, elevenlabs: FakeElevenLabs
+) -> None:
+    sign_in(client, *ADMIN)
+    body = {
+        "name": "Lunch Break",
+        "djs": [GUILDBERT_TALKS, DEBBIE_TALKS],
+        "dynamic": "Debbie can't let Guildbert finish a story.",
+    }
+    heard = client.post("/api/stations/together", json=body)
+    assert heard.status_code == 200, heard.text
+    assert heard.headers["content-type"] == "audio/mpeg"
+    (asked,) = openai.asked_for("talk_segment")
+    assert "Debbie can't let Guildbert finish a story." in asked["instructions"]
+    assert "about 30 seconds" in asked["input"]
+    assert [r["voice"] for r in elevenlabs.requests] == ["guildbert01", "aurora02"]
+    # Nothing saved: no DJs made.
+    assert djs(client) == []
+
+    della = {"name": "Della", "voice": "marin"}
+    refused = client.post("/api/stations/together", json=body | {"djs": [GUILDBERT_TALKS, della]})
+    assert refused.status_code == 422
+    assert "Della has an OpenAI one" in refused.json()["detail"][0]["msg"]

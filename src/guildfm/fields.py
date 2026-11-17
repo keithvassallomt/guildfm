@@ -13,7 +13,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from guildfm.awareness import Awareness
-from guildfm.lineups import clock, minute_of
 from guildfm.models import DJProfile, LineupSlot, Station, StationDJ
 from guildfm.playlists import current_source
 
@@ -91,6 +90,9 @@ def _slot(slot: LineupSlot) -> str:
 
 async def _lineup(db: AsyncSession, now: datetime) -> str:
     """The rest of today's line-up, from what's on now."""
+    # Here, not at the top: line-ups need the radio, which primes these fields for a show.
+    from guildfm.lineups import clock, minute_of
+
     source = await current_source(db)
     lineup = source.lineup if source else None
     if lineup is None:

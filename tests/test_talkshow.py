@@ -10,7 +10,7 @@ from guildfm.lineups import minute_of
 from guildfm.models import DJProfile, EntryState, SourceState, Station
 from guildfm.prefs import DEFAULTS
 from guildfm.queue import in_state
-from tests.fakes import FakeElevenLabs, FakeOpenAI, FakeSpeakers
+from tests.fakes import FakeElevenLabs, FakeOpenAI, FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
 
 FLEETWOOD = [
@@ -100,11 +100,19 @@ async def _log(sessionmaker, station_id: int) -> list[dict]:
 
 
 def test_a_talk_station_talks_before_each_song(
-    client: TestClient, openai: FakeOpenAI, elevenlabs: FakeElevenLabs, speakers: FakeSpeakers
+    client: TestClient,
+    openai: FakeOpenAI,
+    elevenlabs: FakeElevenLabs,
+    speakers: FakeSpeakers,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     sign_in(client, *ADMIN)
     station = on_air(client, openai)
+    caplog.set_level("INFO", logger="guildfm.talkshow")
     line_up_next(client, speakers)
+    # The journal notes what each segment cost, to compare with the slider's estimate.
+    assert "The Lunch Break: segment 1 of 12, " in caplog.text
+    assert "2 turns, 90 characters, 40 credits; written in" in caplog.text
 
     # Planned once, outside a line-up an hour at a time: 12 segments of talk at 40%.
     (plan,) = openai.asked_for("show_plan")
@@ -235,3 +243,64 @@ def test_the_talk_after_a_skipped_segment_knows_it_wasnt_heard(
     next_song(client, speakers)
     line_up_next(client, speakers)
     assert "Listeners didn't hear" not in segments(openai)[2]
+
+
+def read_all(client: TestClient) -> None:
+    """A reading of the speakers, as the app does every second: the queue has its go, then the
+    talk show, which keeps all talk going."""
+    read_speakers(client)
+    client.portal.call(client.app.state.talk.keep_talking)
+
+
+def test_all_talk_talks_on_and_still_plays_requests(
+    client: TestClient, openai: FakeOpenAI, speakers: FakeSpeakers
+) -> None:
+    sign_in(client, *ADMIN)
+    station = client.portal.call(_station, client.app.state.sessionmaker, 100)
+    client.post(f"/api/stations/{station}/play").raise_for_status()
+    client.portal.call(client.app.state.radio.settle)
+    assert openai.asked_for("picks") == []  # no songs of its own
+
+    # Play with nothing lined up: the talk starts once its first segment is made.
+    client.post("/api/playback/play").raise_for_status()
+    client.portal.call(client.app.state.talk.settle)
+    read_all(client)
+    (talk,) = speakers.queue
+    assert "/media/speech/" in talk.uri
+    assert client.get("/api/playback").json()["dj_talking"] is True
+    told = segments(openai)[0]
+    assert "This is segment 1 of 30." in told  # an hour, all talk
+    assert "It opens the show" in told
+    assert "End by bringing in" not in told
+
+    # Towards its end, the next segment goes on after it, as a song would.
+    speakers.track_position = 190
+    read_all(client)
+    client.portal.call(client.app.state.talk.settle)
+    assert len(speakers.queue) == 2
+    assert "This is segment 2 of 30." in segments(openai)[1]
+
+    # A request still plays, brought in by a segment of its own...
+    speakers.song_ends()
+    read_all(client)
+    client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
+    speakers.track_position = 190
+    read_all(client)
+    client.portal.call(client.app.state.talk.settle)
+    client.portal.call(client.app.state.announcer.tick)
+    told = segments(openai)[2]
+    assert 'End by bringing in the next one: "Dreams" by Fleetwood Mac, requested by' in told
+    assert "/media/speech/" in speakers.queue[-2].uri
+    assert "/media/" not in speakers.queue[-1].uri  # Dreams
+
+    # ...and the talk carries on after it.
+    speakers.song_ends()
+    read_all(client)
+    speakers.song_ends()
+    read_all(client)
+    speakers.track_position = 190
+    read_all(client)
+    client.portal.call(client.app.state.talk.settle)
+    told = segments(openai)[3]
+    assert 'Just played: "Dreams" by Fleetwood Mac.' in told
+    assert "/media/speech/" in speakers.queue[-1].uri

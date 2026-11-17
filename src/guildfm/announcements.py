@@ -186,6 +186,22 @@ class Announcer:
             log.warning("ElevenLabs couldn't read an announcement out, so OpenAI did: %s", error)
             return await self._speech.say(text, STAND_IN, INSTRUCTIONS)
 
+    async def keep_on(self, spoken: Spoken, start: bool) -> bool:
+        """Put a 100% talk station's talk on the speakers, after everything lined up, or
+        straight away with `start`, when nothing's playing. There's no song for it to wait for,
+        so it doesn't wait for announcements either. False if it couldn't go on."""
+        controller = self._controller
+        try:
+            address = await controller.own_address()
+            url, seconds = self._url(address, spoken), spoken.clip.seconds
+            await controller.queue_talk(
+                clip_item(url, spoken.title or "GuildFM", seconds=seconds), start
+            )
+        except (NotInControl, SpeakersUnavailable, SpeakersRefused) as error:
+            log.warning("The talk couldn't go on the speakers: %s", error)
+            return False
+        return True
+
     def still_to_come(self, key: str) -> bool:
         """Whether the song `key` is lined up and hasn't started, so there's still time to say
         something before it."""

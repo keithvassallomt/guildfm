@@ -27,6 +27,9 @@ class DJOut(BaseModel):
     name: str
     personality: str
     voice: str
+    pet_peeves: str
+    soft_spots: str
+    obsession: str
     stations: list[HostedOut]  # the stations they host, by name
 
 
@@ -48,6 +51,9 @@ async def djs(_: Maker, db: Db) -> list[DJOut]:
             name=host.name,
             personality=host.personality,
             voice=host.voice,
+            pet_peeves=host.pet_peeves,
+            soft_spots=host.soft_spots,
+            obsession=host.obsession,
             stations=stations.get(host.id, []),
         )
         for host in hosts

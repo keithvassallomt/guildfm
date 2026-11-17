@@ -121,6 +121,11 @@ def talks(station) -> bool:
     )
 
 
+def all_talk(station) -> bool:
+    """Whether `station` is a talk station at 100% talk: it picks no songs of its own."""
+    return talks(station) and station.talk_ratio >= 100
+
+
 def _hooked(move: Move, hosts: list[Host]) -> bool:
     return not move.needs or any(getattr(host, hook) for host in hosts for hook in move.needs)
 

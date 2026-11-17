@@ -140,6 +140,7 @@ def create_app(
             app.state.ai,
             app.state.speech,
             app.state.awareness,
+            app.state.playback,
             **clock,
         )
         # The jingle first, so it plays before anything the DJ says in the same pause. A talk
@@ -150,6 +151,9 @@ def create_app(
             app.state.talk.lined_up,
         ]
         app.state.queue.on_skipped.append(app.state.talk.skipped)
+        # After the queue has had its go, so a request lined up comes first.
+        app.state.playback.on_poll.append(app.state.talk.keep_talking)
+        app.state.playback.warm_up = app.state.talk.warm_up
 
         loops = (
             (

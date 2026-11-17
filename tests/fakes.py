@@ -391,7 +391,11 @@ class FakeElevenLabs:
                 "character_end_times_seconds": [round(s + step, 3) for s in starts],
             }
             audio = base64.b64encode(mp3(seconds)).decode()
-            return httpx2.Response(200, json={"audio_base64": audio, "alignment": timing})
+            # Billed at about 0.44 credits a character, as eleven_v4 is on Keith's plan.
+            cost = {"character-cost": str(round(len(text) * 0.44))}
+            return httpx2.Response(
+                200, json={"audio_base64": audio, "alignment": timing}, headers=cost
+            )
         return httpx2.Response(
             200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
         )

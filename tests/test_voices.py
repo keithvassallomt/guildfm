@@ -21,6 +21,8 @@ def test_openai_and_elevenlabs_voices_are_offered(client: TestClient) -> None:
         {"id": GUILDBERT, "name": "Guildbert"},
     ]
     assert voices["elevenlabs_ready"] is True
+    # The account's credits a month, for a talk station's estimate.
+    assert voices["credits_limit"] == 131000
 
 
 def test_an_elevenlabs_announcement_keeps_its_tags(client, openai, elevenlabs) -> None:

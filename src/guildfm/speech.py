@@ -166,6 +166,9 @@ class SpeechClient:
         self._credits_at = float("-inf")
         self.openai_health = Health()
         self.eleven_health = Health()
+        # ElevenLabs credits spent on talk stations' turns since GuildFM started, as ElevenLabs
+        # reports them, so the talk show can note what each segment cost.
+        self.talk_credits = 0
         self.sleep = asyncio.sleep  # tests wait for nothing
 
     @property
@@ -261,6 +264,8 @@ class SpeechClient:
             ) from error
         if response.status_code >= 400:
             raise SpeechError(_eleven_problem(response))
+        cost = response.headers.get("character-cost", "")
+        self.talk_credits += int(cost) if cost.isdigit() else 0
         try:
             answer = response.json()
             timing = answer.get("alignment") or answer.get("normalized_alignment") or {}
