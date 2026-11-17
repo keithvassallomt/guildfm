@@ -30,7 +30,7 @@ from guildfm.office import Office, OfficeOnly
 from guildfm.playback import PlaybackController
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine
-from guildfm.radio import Radio
+from guildfm.radio import Radio, open_with_song
 from guildfm.schedule import Scheduler
 from guildfm.speakers import SocoSystem, SpeakerSystem
 from guildfm.speech import SpeechClient
@@ -153,7 +153,17 @@ def create_app(
         app.state.queue.on_skipped.append(app.state.talk.skipped)
         # After the queue has had its go, so a request lined up comes first.
         app.state.playback.on_poll.append(app.state.talk.keep_talking)
-        app.state.playback.warm_up = app.state.talk.warm_up
+        app.state.queue.on_coming_on.append(app.state.talk.prepare)
+
+        async def warm_up() -> bool:
+            """Play with nothing to play: an all-talk station opens with a song heard before,
+            or else its first talk is made and starts when it's ready."""
+            async with app.state.sessionmaker() as db:
+                if await open_with_song(db):
+                    return True
+            return await app.state.talk.warm_up()
+
+        app.state.playback.warm_up = warm_up
 
         loops = (
             (

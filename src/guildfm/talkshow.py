@@ -12,10 +12,12 @@ after each reading of the speakers, the talk show keeps a segment queued after w
 or starts one if nothing is. Requests still play: a request's link is one segment bringing it
 in, and the talk carries on after it.
 
-A show is planned (talk.py) when the station comes on, or when its show opens in a line-up: the
-whole show then, an hour at a time outside a line-up. The plan, the show's notes and what was
-said lately are kept in the source's dj_memory, so a restart doesn't lose them. A show in a
-line-up that has used up its plan plays songs until it ends."""
+A show is planned (talk.py) ahead of its first talk, in the background, so that talk only has
+to be written and voiced: when the station is put on, ten minutes before its show in a line-up,
+and while the last few segments of an hour's plan play outside one. In a line-up the whole show
+is planned, outside one an hour at a time. The plan, the show's notes and what was said lately
+are kept in the source's dj_memory, so a restart doesn't lose them, and a plan from another day
+is planned afresh. A show in a line-up that has used up its plan plays songs until it ends."""
 
 import asyncio
 import logging
@@ -23,7 +25,7 @@ import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -69,6 +71,9 @@ log = logging.getLogger(__name__)
 HOUR = 60  # minutes planned at a time outside a line-up
 SHORTEST_SHOW = 10  # minutes planned at least, for a show that's nearly over
 MATERIAL_WAIT = 20  # seconds a show's plan waits for its web fields to come in
+MATERIAL_WAIT_AHEAD = 90  # the same for a line-up's show, planned ten minutes before it opens
+AHEAD_KEPT = timedelta(minutes=30)  # how long a plan made ahead is good for
+NEXT_HOUR_AHEAD = 2  # segments left in an hour's plan when the next hour's is made
 LONGEST = 30 * 60  # seconds of talk between two songs at most
 MOVES_REMEMBERED = 5
 MOVE_EVERY = 3  # segments, at 100% talk, where there are no links to deal moves to
@@ -83,6 +88,10 @@ def lengths(ratio: int) -> list[int]:
     total = min(link_seconds(ratio) or LONGEST, LONGEST)
     count = max(1, round(total / SEGMENT_SECONDS))
     return [round(total / count)] * count
+
+
+def _day(now: datetime) -> str:
+    return now.date().isoformat()
 
 
 def _listed(names: list[str]) -> str:
@@ -172,6 +181,15 @@ class OnAir:
     before: str | None  # the song that just played
 
 
+@dataclass
+class Ahead:
+    """A show being planned, or planned, before its first talk."""
+
+    until: int | None  # the minute its show ends, in a line-up
+    made: datetime
+    task: asyncio.Task[dict[str, Any] | None]  # the plan, or None if it couldn't be made
+
+
 TOGETHER_SECONDS = 30  # "Hear them together" in the station editor
 
 
@@ -194,7 +212,7 @@ async def together(
         "happening": None,
     }
     moment = Moment(number=1, count=1, clock=clock_line(now))
-    turns, _, _ = await write_segment(
+    written = await write_segment(
         ai,
         station=station,
         hosts=hosts,
@@ -206,7 +224,9 @@ async def together(
         notes="",
         said=[],
         seconds=TOGETHER_SECONDS,
+        edit=False,  # a quick taste, played while someone waits in the editor
     )
+    turns = written.turns
     if not turns:
         raise AIError("The AI didn't write anything for them this time. Try again.")
     return await voice_segment(speech, turns, voices)
@@ -240,6 +260,7 @@ class TalkShow:
         # Segments skipped and not yet told to the writer, by station. Also kept in dj_memory
         # for a restart, but a link being made could save over that.
         self._skips: dict[int, int] = {}
+        self._ahead: dict[int, Ahead] = {}  # shows planned ahead, by station
 
     async def close(self) -> None:
         """Stop talking, before the database closes."""
@@ -248,14 +269,63 @@ class TalkShow:
         await asyncio.gather(*self._tasks, return_exceptions=True)
 
     async def settle(self) -> None:
-        """Wait for talk being made. For tests."""
-        await asyncio.gather(*self._tasks)
+        """Wait for talk being made, and shows being planned. For tests."""
+        await asyncio.gather(*self._tasks, return_exceptions=True)
 
     def _start(self, work) -> asyncio.Task:
-        task = asyncio.create_task(self._safely(work))
+        return self._track(asyncio.create_task(self._safely(work)))
+
+    def _track(self, task: asyncio.Task) -> asyncio.Task:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return task
+
+    def prepare(self, station_id: int, until: int | None = None, starts: int | None = None) -> None:
+        """A station is coming on, or its show in a line-up opens soon (at the minute `starts`,
+        until the minute `until`): if it's a talk station, plan its show now, in the background,
+        so its first talk only has to be written and voiced."""
+        ahead = self._ahead.get(station_id)
+        if ahead and ahead.until == until and self._clock() - ahead.made < AHEAD_KEPT:
+            return  # planned, or being planned
+        if ahead:
+            ahead.task.cancel()
+        task = self._track(asyncio.create_task(self._plan_ahead(station_id, until, starts)))
+        self._ahead[station_id] = Ahead(until, self._clock(), task)
+
+    async def _plan_ahead(
+        self, station_id: int, until: int | None, starts: int | None
+    ) -> dict[str, Any] | None:
+        try:
+            async with self._sessions() as db:
+                station = await db.get(Station, station_id)
+                if station is None or not talks(station):
+                    return None
+                now = self._clock().astimezone(ZoneInfo(await get_pref(db, "timezone")))
+                if starts is not None:  # planned as it'll be when the show opens
+                    hour, minute = divmod(starts, 60)
+                    now = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                location = await get_pref(db, "weather_location")
+                air = OnAir(
+                    Show.of(station), await _guests(db, station), {}, until, location, now, None
+                )
+            wait = MATERIAL_WAIT if starts is None else MATERIAL_WAIT_AHEAD
+            return await self._plan(air, wait)
+        except (AIError, SpeechError) as error:
+            log.warning("A talk show couldn't be planned ahead: %s", error)
+        except Exception:
+            log.exception("Planning a talk show ahead failed")
+        return None
+
+    async def _made_ahead(self, air: OnAir) -> dict[str, Any] | None:
+        """The plan made ahead for this show, if there's one that's still good, waiting for it
+        if it's nearly done."""
+        ahead = self._ahead.pop(air.show.station_id, None)
+        if ahead is None:
+            return None
+        if ahead.until != air.until or self._clock() - ahead.made >= AHEAD_KEPT:
+            ahead.task.cancel()
+            return None
+        return await ahead.task
 
     async def _safely(self, work) -> None:
         try:
@@ -286,8 +356,9 @@ class TalkShow:
         self._feeding = self._start(self.carry_on(start=status == Status.IDLE))
 
     async def warm_up(self) -> bool:
-        """Play was pressed with nothing to play: on a 100% talk station, make the first talk
-        and start it once it's ready, in about half a minute."""
+        """Play was pressed with nothing to play, on a 100% talk station with no song heard
+        before to open with: make the first talk and start it once it's ready, in under a
+        minute with its show planned ahead, or a minute and a half without."""
         async with self._sessions() as db:
             source = await current_source(db)
             station = source.station if source and source.station_id else None
@@ -324,15 +395,39 @@ class TalkShow:
 
     async def _planned(self, air: OnAir, opens: int | None) -> bool:
         """Plans the show if it needs it: when it opens, comes on, or an hour's plan outside a
-        line-up runs out. False once a line-up's show has used up its plan."""
-        memory = air.memory
-        if opens is not None or "plan" not in memory:
-            air.memory = await self._plan(air, False)
+        line-up runs out, using the plan made ahead if there is one. False once a line-up's
+        show has used up its plan."""
+        memory, station_id = air.memory, air.show.station_id
+        if opens is not None or "plan" not in memory or memory.get("day") != _day(air.now):
+            continuing = False
         elif memory["segment"] >= memory["count"]:
             if air.until is not None:
                 return False  # songs until the show ends
-            air.memory = await self._plan(air, True)
-        await self._remember(air.show.station_id, air.memory)
+            continuing = True
+        else:
+            if air.until is None and memory["count"] - memory["segment"] <= NEXT_HOUR_AHEAD:
+                self.prepare(station_id)  # the next hour, while this one finishes
+            return True
+        plan = await self._made_ahead(air) or await self._plan(air, MATERIAL_WAIT)
+        kept = memory if continuing else {}
+        air.memory = {
+            "plan": plan,
+            "count": len(plan["segments"]),
+            "segment": 0,
+            "continuing": continuing,
+            "until": air.until,
+            "day": _day(air.now),
+            "notes": kept.get("notes", ""),
+            "said": kept.get("said", []),
+            "moves": kept.get("moves", []),
+            "heard": kept.get("heard"),
+        }
+        async with self._sessions() as db:
+            station = await db.get(Station, station_id)
+            if station:
+                station.talk_log = logged(station.talk_log, plan, _day(air.now))
+                await db.commit()
+        await self._remember(station_id, air.memory)
         return True
 
     async def _material(self, air: OnAir) -> dict[str, str]:
@@ -492,7 +587,7 @@ class TalkShow:
         said = [[Turn(*turn) for turn in segment] for segment in memory.get("said", [])]
         started, spent = time.monotonic(), self._speech.talk_credits
         try:
-            turns, notes, problems = await write_segment(
+            segment = await write_segment(
                 self._ai,
                 station=show.name,
                 hosts=hosts,
@@ -505,8 +600,11 @@ class TalkShow:
                 said=said,
                 seconds=seconds,
             )
-            if problems:
-                log.info("Segment %d's marks taken off: %s", number, " ".join(problems))
+            turns, notes = segment.turns, segment.notes
+            if segment.fixed:
+                log.info("Segment %d, edited: %s", number, " ".join(segment.fixed))
+            if segment.marks:
+                log.info("Segment %d's marks taken off: %s", number, " ".join(segment.marks))
             if not turns:
                 return None
             written = time.monotonic()
@@ -561,20 +659,19 @@ class TalkShow:
                 await db.commit()
         log.info("Segment %d was skipped", number)
 
-    async def _plan(self, air: OnAir, continuing: bool) -> dict[str, Any]:
-        """A new plan for the show, or for its next hour outside a line-up (`continuing`), and
-        the station's log with its running bits."""
+    async def _plan(self, air: OnAir, wait: float) -> dict[str, Any]:
+        """A new plan for the show, or for its next hour outside a line-up, waiting up to `wait`
+        seconds for its web fields."""
         show, location, now, until = air.show, air.location, air.now, air.until
-        memory, guests = air.memory, air.guests
         minutes = max(SHORTEST_SHOW, until - minute_of(now)) if until is not None else HOUR
         web = [name for name in used(show.prompt) if name in FROM_THE_WEB]
         if web:
-            await self._awareness.ready(web, now.date(), MATERIAL_WAIT)
+            await self._awareness.ready(web, now.date(), wait)
         async with self._sessions() as db:
             station = await db.get(Station, show.station_id)
             found = await material(db, self._awareness, station, location, now) if station else {}
         bits = deal_bits(self.rng, show.log)
-        happening = roll_happening(self.rng, bool(guests))
+        happening = roll_happening(self.rng, bool(air.guests))
         plan = await plan_show(
             self._ai,
             station=show.name,
@@ -597,23 +694,7 @@ class TalkShow:
             " and ".join(bits),
             happening or "no happening",
         )
-        async with self._sessions() as db:
-            station = await db.get(Station, show.station_id)
-            if station:
-                station.talk_log = logged(station.talk_log, plan, now.date().isoformat())
-                await db.commit()
-        kept = memory if continuing else {}
-        return {
-            "plan": plan,
-            "count": len(plan["segments"]),
-            "segment": 0,
-            "continuing": continuing,
-            "until": until,
-            "notes": kept.get("notes", ""),
-            "said": kept.get("said", []),
-            "moves": kept.get("moves", []),
-            "heard": kept.get("heard"),
-        }
+        return plan
 
     async def _remember(self, station_id: int, memory: dict[str, Any]) -> None:
         """Keep the show's memory on the source, so a restart doesn't lose it. Let go if the

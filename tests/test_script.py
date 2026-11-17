@@ -10,7 +10,7 @@ import pytest
 from guildfm.ai import AIClient
 from guildfm.audio import FFMPEG
 from guildfm.mixing import OVERLAP, TOGETHER, placed, voice_segment
-from guildfm.script import Moment, Turn, brief, checked, write_segment
+from guildfm.script import Moment, Segment, Turn, brief, checked, write_segment
 from guildfm.speech import Clip, SpeechClient, Timed, mp3_seconds
 from guildfm.talk import Host
 from tests.conftest import fake
@@ -142,7 +142,7 @@ async def test_a_segment_is_written_and_checked() -> None:
     )
     ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
     try:
-        turns, notes, problems = await write_segment(
+        segment = await write_segment(
             ai,
             station="The Lunch Break",
             hosts=[Host("Guildbert", "Cheeky."), Host("Debbie", "Bubbly.")],
@@ -157,11 +157,12 @@ async def test_a_segment_is_written_and_checked() -> None:
         )
     finally:
         await ai.close()
+    turns = segment.turns
     assert [t.speaker for t in turns] == ["Guildbert", "Debbie"]  # nobody else
     assert turns[0].cut_after == "before you start"
     assert turns[1].text.startswith("[interrupting]")
-    assert notes == "Debbie has won the biscuit."
-    assert problems == []
+    assert segment.notes == "Debbie has won the biscuit."
+    assert (segment.marks, segment.fixed, segment.draft) == ([], [], [])  # nothing to fix
     (asked,) = openai.asked_for("talk_segment")
     speaker = asked["text"]["format"]["schema"]["properties"]["turns"]["items"]["properties"]
     assert speaker["speaker"]["enum"] == ["Guildbert", "Debbie"]
@@ -178,7 +179,7 @@ async def test_a_segment_that_says_segment_on_air_is_written_again() -> None:
     openai.segments_in_turn = [leaky]
     ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
     try:
-        turns, _, problems = await write_segment(
+        segment = await write_segment(
             ai,
             station="The Lunch Break",
             hosts=[Host("Guildbert", "Cheeky."), Host("Debbie", "Bubbly.")],
@@ -195,8 +196,96 @@ async def test_a_segment_that_says_segment_on_air_is_written_again() -> None:
         await ai.close()
     first, again = openai.asked_for("talk_segment")
     assert "Listeners never hear of segments" in again["input"]
-    assert "segment" not in turns[1].text
-    assert problems == []
+    assert "segment" not in segment.turns[1].text
+    assert segment.marks == []
+
+
+DRAFT = [
+    {"speaker": "Debbie", "text": "Your marrows again, Guildbert!", "cut_after": "",
+     "together": False},
+    {"speaker": "Guildbert", "text": "He measured them, Debbie. With a tape, mind.",
+     "cut_after": "He measured them", "together": False},
+    {"speaker": "Debbie", "text": "[laughs] Who does that?", "cut_after": "", "together": False},
+]  # fmt: skip
+
+
+async def _write(openai: FakeOpenAI, **changes) -> Segment:
+    openai.segment = {"turns": DRAFT, "notes": "Marrows explained."}
+    ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
+    fields = {
+        "station": "The Lunch Break",
+        "hosts": [
+            Host("Guildbert", "Dry.", obsession="His allotment's marrows."),
+            Host("Debbie", "Bubbly."),
+        ],
+        "dynamic": "Debbie can't let Guildbert finish a story.",
+        "prompt": "Light chat.",
+        "plan": PLAN,
+        "moment": Moment(number=2, count=4, clock=CLOCK, before='"Dreams" by Fleetwood Mac'),
+        "material": {"news": "- A goat was elected mayor."},
+        "notes": "The bet is on.",
+        "said": [[Turn("Guildbert", "Afternoon, all."), Turn("Debbie", "Hiya!")]],
+        "seconds": 120,
+    }
+    try:
+        return await write_segment(ai, **(fields | changes))
+    finally:
+        await ai.close()
+
+
+@pytest.mark.asyncio
+async def test_a_segment_is_edited_for_listeners_who_werent_told() -> None:
+    openai = FakeOpenAI()
+    fixed = [
+        {"speaker": "Debbie", "text": "Guildbert grows marrows on his allotment, and the man two "
+         "plots down measures them. Your marrows again, Guildbert!", "cut_after": "",
+         "together": False},
+        *DRAFT[1:],
+    ]  # fmt: skip
+    problem = "Turn 1 mentions his marrows, which listeners haven't heard about."
+    openai.edit = {"problems": [problem], "turns": fixed}
+    segment = await _write(openai)
+    assert segment.turns[0].text.startswith("Guildbert grows marrows on his allotment")
+    assert segment.turns[1].cut_after == "He measured them"  # its marks kept, and checked
+    assert segment.turns[2].text == "[laughs] Who does that?"
+    assert segment.fixed == [problem]
+    assert segment.draft[0].text == "Your marrows again, Guildbert!"
+
+    # The editor reads it as a listener, apart from the background it can use to fix it.
+    (asked,) = openai.asked_for("talk_edit")
+    assert "Is everything explained?" in asked["instructions"]
+    assert "Does it follow?" in asked["instructions"]
+    heard, background = asked["input"].split("BACKGROUND")
+    assert 'A song has just finished: "Dreams" by Fleetwood Mac.' in heard
+    assert "as the show's notes have it: The bet is on." in heard
+    assert "Guildbert: Afternoon, all.\nDebbie: Hiya!" in heard
+    assert "marrows" not in heard
+    assert "Keeps coming back to: His allotment's marrows." in background
+    assert "[news]\n- A goat was elected mayor." in background
+    assert '"Your marrows again, Guildbert!"' in background  # the draft, last
+
+
+@pytest.mark.asyncio
+async def test_an_edit_that_cant_be_used_leaves_the_draft() -> None:
+    openai = FakeOpenAI()
+    # It found something, but cut nearly all of it.
+    openai.edit = {"problems": ["Turn 2 is odd."], "turns": DRAFT[2:]}
+    segment = await _write(openai)
+    assert [t.text for t in segment.turns][0] == "Your marrows again, Guildbert!"
+    assert (segment.fixed, segment.draft) == ([], [])
+
+    # An edit that can't be had: the draft goes out as written.
+    openai = FakeOpenAI()
+    openai.edit_down = True
+    segment = await _write(openai)
+    assert len(segment.turns) == 3 and segment.fixed == []
+
+    # At the opening, listeners haven't heard anything from them yet.
+    openai = FakeOpenAI()
+    segment = await _write(openai, moment=Moment(number=1, count=4, clock=CLOCK, first=True))
+    (asked,) = openai.asked_for("talk_edit")
+    assert "listeners haven't heard these DJs yet today" in asked["input"]
+    assert "Afternoon, all." not in asked["input"]
 
 
 def timed(path: Path, text: str, seconds: float = 2.0) -> Timed:

@@ -1,19 +1,28 @@
 """Writing a talk station's segments: about two minutes of its DJs talking, as turns, for a
 segment of a show planned in talk.py.
 
+Each segment is written, then edited: a second pass reads the draft as a listener would, who
+knows only what's been said on air, flags anything that doesn't follow or leans on something
+never explained, and fixes just that. If the edit can't be had, the draft goes out as it is.
+
 The AI marks where one DJ cuts another off (`cut_after`, the words heard before the next DJ cuts
 in) and where two say something at the same moment (`together`). The code checks the marks
 rather than trusting them, so a mark that can't work comes off. The turns are voiced one at a
 time and mixed so the DJs really talk over each other (mixing.py)."""
 
+import json
+import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
-from guildfm.ai import AIClient, object_schema
+from guildfm.ai import AIClient, AIError, object_schema
 from guildfm.talk import BY_NAME, Host
 
+log = logging.getLogger(__name__)
+
 PER_SECOND = 17  # characters of speech a second, as ElevenLabs' eleven_v4 speaks
+KEPT_BY_EDIT = 0.6  # of the draft's characters an edit keeps at least, or it's not used
 MAX_CUTS = 2  # interruptions in a segment, so they stay a character trait
 SAID_KEPT = 2  # segments before this one the writer reads in full
 _SEGMENT = re.compile(r"\bsegments?\b", re.IGNORECASE)
@@ -84,6 +93,28 @@ segment, such as the score, the stakes, who owes whom, and what listeners have b
 No segment numbers."""
 
 
+EDIT = """You're the editor on {station}, a radio station playing over the speakers in an \
+office in the UK. Its DJs talk in segments of about two minutes, and someone else has written \
+the next one. Read the draft as a listener would: someone who knows only what's been said on \
+air, and may have just walked into the room.
+
+Check it for two things:
+1. Does it follow? Each turn should follow from the one before it: answer it, react to it, \
+argue with it or build on it. Flag a turn that ignores what was just said, a jump to a new \
+topic with no way in, a reply to something nobody said, or a line that makes no sense where it \
+is.
+2. Is everything explained? Flag a joke or a remark whose premise listeners haven't heard: a \
+story riffed on before it's been told, or a person, place, hobby, rivalry, bet or running joke \
+mentioned as if listeners knew about it, when it hasn't been said on air in what they've heard.
+
+Then fix what you flagged, and nothing else. Explain a premise where it first comes up, in a \
+line or so in the DJ's own voice; add the missing step between two turns; or cut a line that \
+can't be saved. Keep every other turn word for word, with its audio tags and its cut_after and \
+together marks, and keep it about the same length. Use only what's been said on air and the \
+background you're given: never make anything up. Say what each problem was, naming the turn. \
+If there's nothing to fix, list no problems and give the turns back as they are."""
+
+
 @dataclass(frozen=True)
 class Turn:
     speaker: str  # a DJ's name
@@ -113,15 +144,36 @@ class Moment:
     remarks: tuple[str, ...] = ()
 
 
-def _schema(names: list[str]) -> dict[str, Any]:
-    """A segment, as the writer answers: its turns, by DJs named in `names`, and the notes."""
-    turn = object_schema(
+@dataclass(frozen=True)
+class Segment:
+    """A segment as written and edited, ready to voice."""
+
+    turns: list[Turn]
+    notes: str  # the show's notes after it
+    marks: list[str] = field(default_factory=list)  # marks taken off, and why
+    fixed: list[str] = field(default_factory=list)  # what the edit found, and fixed
+    draft: list[Turn] = field(default_factory=list)  # before the edit, if it changed anything
+
+
+def _turn_schema(names: list[str]) -> dict[str, Any]:
+    return object_schema(
         speaker={"type": "string", "enum": names},
         text={"type": "string"},
         cut_after={"type": "string"},
         together={"type": "boolean"},
     )
-    return object_schema(turns={"type": "array", "items": turn}, notes={"type": "string"})
+
+
+def _schema(names: list[str]) -> dict[str, Any]:
+    """A segment, as the writer answers: its turns, by DJs named in `names`, and the notes."""
+    turns = {"type": "array", "items": _turn_schema(names)}
+    return object_schema(turns=turns, notes={"type": "string"})
+
+
+def _edit_schema(names: list[str]) -> dict[str, Any]:
+    """An edit, as the editor answers: the problems it found first, then the turns, fixed."""
+    problems = {"type": "array", "items": {"type": "string"}}
+    return object_schema(problems=problems, turns={"type": "array", "items": _turn_schema(names)})
 
 
 def _due(plan: dict[str, Any], number: int) -> list[str]:
@@ -281,9 +333,10 @@ async def write_segment(
     notes: str,
     said: list[list[Turn]],
     seconds: int,
-) -> tuple[list[Turn], str, list[str]]:
-    """A segment's turns, checked, the show's notes after it, and notes on any marks taken
-    off. `said` is the show's segments so far, the last few of which the writer reads."""
+    edit: bool = True,
+) -> Segment:
+    """A segment, written, edited (unless `edit` is False), and with its marks checked. `said`
+    is the show's segments so far, the last few of which the writer reads."""
     instructions = INSTRUCTIONS.format(
         station=station,
         hosts="\n".join(host.described() for host in hosts),
@@ -292,26 +345,117 @@ async def write_segment(
     )
     told = brief(plan, moment, material, notes, said[-SAID_KEPT:], seconds)
     names = [host.name for host in hosts]
-    turns, notes = await _written(ai, instructions, told, names)
+    turns, after = await _written(ai, instructions, told, names)
     if any(_SEGMENT.search(turn.text) for turn in turns):
         # Once more: the plan talks in segments, and a model sometimes copies it.
-        turns, notes = await _written(ai, instructions, f"{told}\n\n{AGAIN}", names)
-    kept, problems = checked(turns)
+        turns, after = await _written(ai, instructions, f"{told}\n\n{AGAIN}", names)
+    draft, fixed = turns, []
+    if edit and turns:
+        turns, fixed = await _edited(
+            ai, station, hosts, dynamic, plan, moment, material, notes, said[-SAID_KEPT:], turns
+        )
+    kept, marks = checked(turns)
     if any(_SEGMENT.search(turn.text) for turn in kept):
-        problems.append('It still says "segment" on air.')
-    return kept, notes, problems
+        marks.append('It still says "segment" on air.')
+    return Segment(kept, after, marks, fixed, draft if fixed else [])
 
 
 async def _written(
     ai: AIClient, instructions: str, told: str, names: list[str]
 ) -> tuple[list[Turn], str]:
     answer = await ai.json(instructions, told, "talk_segment", _schema(names))
-    turns = [
+    return _turns(answer["turns"], names), answer["notes"].strip()
+
+
+def _turns(answered: list[dict[str, Any]], names: list[str]) -> list[Turn]:
+    return [
         Turn(t["speaker"], t["text"].strip(), t["cut_after"].strip(), t["together"])
-        for t in answer["turns"]
+        for t in answered
         if t["text"].strip() and t["speaker"] in names
     ]
-    return turns, answer["notes"].strip()
+
+
+def heard(moment: Moment, notes: str, said: list[list[Turn]]) -> str:
+    """What listeners have heard before a segment, as the editor is told it."""
+    parts = []
+    if moment.first:
+        parts.append("This segment opens the show: listeners haven't heard these DJs yet today.")
+    elif moment.straight_on:
+        parts.append("It carries straight on from the last segment, with no song between.")
+    elif moment.before:
+        parts.append(f"A song has just finished: {moment.before}.")
+    if notes and not moment.first:
+        parts.append(f"Earlier in the show, as the show's notes have it: {notes}")
+    if said and not moment.first:
+        parts.append(
+            "The last segments, word for word, oldest first:\n"
+            + "\n\n".join("\n".join(f"{t.speaker}: {t.text}" for t in s) for s in said)
+        )
+    return "\n\n".join(parts)
+
+
+def _background(
+    hosts: list[Host],
+    dynamic: str,
+    plan: dict[str, Any],
+    moment: Moment,
+    material: dict[str, str],
+) -> str:
+    parts = [
+        "The DJs:\n" + "\n".join(host.described() for host in hosts),
+        f"How they get on: {dynamic or 'They are old friends.'}",
+        *_due(plan, moment.number),
+    ]
+    if material:
+        parts.append(
+            "What's going on today:\n"
+            + "\n\n".join(f"[{name}]\n{text}" for name, text in material.items())
+        )
+    return "\n\n".join(parts)
+
+
+async def _edited(
+    ai: AIClient,
+    station: str,
+    hosts: list[Host],
+    dynamic: str,
+    plan: dict[str, Any],
+    moment: Moment,
+    material: dict[str, str],
+    notes: str,
+    said: list[list[Turn]],
+    turns: list[Turn],
+) -> tuple[list[Turn], list[str]]:
+    """The turns, edited for listeners, and what the edit found. The draft as it was if the edit
+    couldn't be had, or came back with too little of it."""
+    draft = [
+        {"speaker": t.speaker, "text": t.text, "cut_after": t.cut_after, "together": t.together}
+        for t in turns
+    ]
+    prompt = "\n\n".join(
+        [
+            "WHAT LISTENERS HAVE HEARD\n\n" + (heard(moment, notes, said) or "Nothing yet."),
+            "BACKGROUND, which listeners know only if it's been said on air\n\n"
+            + _background(hosts, dynamic, plan, moment, material),
+            "The draft:\n" + json.dumps(draft, ensure_ascii=False, indent=1),
+        ]
+    )
+    names = [host.name for host in hosts]
+    try:
+        answer = await ai.json(
+            EDIT.format(station=station), prompt, "talk_edit", _edit_schema(names)
+        )
+    except AIError as error:
+        log.warning("A segment went out unedited: %s", error)
+        return turns, []
+    problems = [problem.strip() for problem in answer["problems"] if problem.strip()]
+    edited = _turns(answer["turns"], names)
+    if not problems:
+        return turns, []
+    if sum(len(t.text) for t in edited) < KEPT_BY_EDIT * sum(len(t.text) for t in turns):
+        log.warning("A segment's edit cut too much of it, so it went out as written")
+        return turns, []
+    return edited, problems
 
 
 def _cut_problem(turn: Turn, after: Turn | None, cuts: int) -> str | None:

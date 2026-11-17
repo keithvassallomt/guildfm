@@ -139,6 +139,60 @@ async def _coming(db: AsyncSession) -> list[Track]:
     return [found[track_id] for track_id in dict.fromkeys(ids) if track_id in found]
 
 
+async def heard_before(db: AsyncSession, station_id: int, count: int) -> list[str]:
+    """Up to `count` songs heard before, picked without the AI: songs the station has played,
+    then Best Voted, then anything else heard in the office, so even a new station has
+    something; each the longest unheard first. Anything played lately (in any version),
+    queued, lined up, or explicit while that's turned off is left out, as ever."""
+    since = time.time() - await get_pref(db, "recently_played_hours") * 3600
+    explicit = await get_pref(db, "allow_explicit")
+    lately = await _heard_since(db, since) + await _coming(db)
+    avoid = {song_key(track) for track in lately}
+    last_heard: dict[str, float] = {}
+    heard: list[Track] = []  # everything the office has heard
+    rows = await db.execute(
+        select(Track, func.max(Play.played_at))
+        .join(Play, Play.track_id == Track.id)
+        .group_by(Track.id)
+    )
+    for track, played_at in rows.all():
+        key = song_key(track)
+        last_heard[key] = max(played_at, last_heard.get(key, 0.0))
+        heard.append(track)
+    played_here = select(Play.track_id).where(Play.station_id == station_id)
+    own = list(await db.scalars(select(Track).where(Track.id.in_(played_here))))
+    favourites = [entry.track for entry in await tracks_of(db, (await best_voted(db)).id)]
+    chosen: list[str] = []
+    for pool in (own, favourites, heard):
+        fresh: dict[str, str] = {}  # one version of each song
+        for track in pool:
+            key = song_key(track)
+            if key not in avoid and key not in fresh and (explicit or not track.explicit):
+                fresh[key] = track.id
+        longest_unheard = sorted(fresh, key=lambda key: last_heard.get(key, 0.0))
+        chosen += [fresh[key] for key in longest_unheard[: count - len(chosen)]]
+        avoid |= set(fresh)
+    return chosen
+
+
+async def open_with_song(db: AsyncSession) -> bool:
+    """An all-talk station picks no songs, so when it comes on, or Play is pressed with nothing
+    to play, it opens with one heard before, to play while its first talk is made. True if
+    one was added to the source."""
+    source = await current_source(db)
+    station = source.station if source and source.station_id else None
+    if station is None or not all_talk(station):
+        return False
+    chosen = await heard_before(db, station.id, 1)
+    if not chosen:
+        return False
+    keep = max(0, source.cursor - KEPT_TAKEN)
+    source.order = source.order[keep:] + chosen
+    source.cursor -= keep
+    await db.commit()
+    return True
+
+
 async def _known(db: AsyncSession, title: str, artist: str, explicit: bool) -> SpotifyTrack | None:
     """A song GuildFM has found on Spotify before, by its exact title and the same artist.
     Where there are several versions, the one played most, then the one found most lately."""
@@ -337,44 +391,14 @@ class Radio:
             log.exception("Picking ahead of a show failed")
 
     async def replay(self, station_id: int) -> int:
-        """For when the AI can't pick: songs heard before, so the music carries on. Songs the
-        station has played, then Best Voted, then anything else heard in the office, so even a
-        new station has something; each the longest unheard first. Anything played lately (in
-        any version), queued, lined up, or explicit while that's turned off is left out, as
-        ever. Returns how many were added."""
+        """For when the AI can't pick: songs heard before, so the music carries on (see
+        heard_before). Returns how many were added."""
         async with self._sessions() as db:
             station = await db.get(Station, station_id)
             source = await current_source(db)
             if station is None or source is None or source.station_id != station_id:
                 return 0
-            since = time.time() - await get_pref(db, "recently_played_hours") * 3600
-            explicit = await get_pref(db, "allow_explicit")
-            lately = await _heard_since(db, since) + await _coming(db)
-            avoid = {song_key(track) for track in lately}
-            last_heard: dict[str, float] = {}
-            heard: list[Track] = []  # everything the office has heard
-            rows = await db.execute(
-                select(Track, func.max(Play.played_at))
-                .join(Play, Play.track_id == Track.id)
-                .group_by(Track.id)
-            )
-            for track, played_at in rows.all():
-                key = song_key(track)
-                last_heard[key] = max(played_at, last_heard.get(key, 0.0))
-                heard.append(track)
-            played_here = select(Play.track_id).where(Play.station_id == station_id)
-            own = list(await db.scalars(select(Track).where(Track.id.in_(played_here))))
-            favourites = [entry.track for entry in await tracks_of(db, (await best_voted(db)).id)]
-            chosen: list[str] = []
-            for pool in (own, favourites, heard):
-                fresh: dict[str, str] = {}  # one version of each song
-                for track in pool:
-                    key = song_key(track)
-                    if key not in avoid and key not in fresh and (explicit or not track.explicit):
-                        fresh[key] = track.id
-                longest_unheard = sorted(fresh, key=lambda key: last_heard.get(key, 0.0))
-                chosen += [fresh[key] for key in longest_unheard[: BATCH - len(chosen)]]
-                avoid |= set(fresh)
+            chosen = await heard_before(db, station_id, BATCH)
             if not chosen:
                 return 0
             keep = max(0, source.cursor - KEPT_TAKEN)

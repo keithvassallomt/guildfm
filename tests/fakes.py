@@ -252,6 +252,9 @@ class FakeOpenAI:
             "notes": "Debbie has won the biscuit.",
         }  # fmt: skip
         self.segments_in_turn: list[dict] = []  # for the next few asks, before `segment`
+        # Its edit of a segment: problems found and the turns fixed. None finds nothing.
+        self.edit: dict | None = None
+        self.edit_down = False  # editing fails
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
@@ -288,6 +291,11 @@ class FakeOpenAI:
         elif name == "talk_segment":
             turn = self.segments_in_turn.pop(0) if self.segments_in_turn else self.segment
             text = json.dumps(turn)
+        elif name == "talk_edit" and self.edit_down:
+            return httpx2.Response(500, json={"error": {"message": "nope"}})
+        elif name == "talk_edit":
+            draft = json.loads(body["input"].split("The draft:\n", 1)[1])
+            text = json.dumps(self.edit or {"problems": [], "turns": draft})
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})

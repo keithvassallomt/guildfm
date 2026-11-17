@@ -525,7 +525,10 @@ class PlaybackController:
             if not remaining and self.source:
                 remaining = await self.source()
             if not remaining and self.warm_up and await self.warm_up():
-                return
+                # An all-talk station opens with a song, or else its talk starts when it's ready.
+                remaining = await self.source() if self.source else []
+                if not remaining:
+                    return
             if not remaining:
                 raise NothingToPlay
             await self._call(self._speakers.take_over, remaining)

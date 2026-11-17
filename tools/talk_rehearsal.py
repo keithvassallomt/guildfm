@@ -9,9 +9,10 @@ writes and voices its first few segments, for listening to.
 Host A is the first DJ in the local database, host B is Debbie (the account's voice of that
 name), with the hooks and the dynamic from the prototype. Segments come in links as the station
 makes them, with a song between links. Each run goes in its own folder in data/talk_rehearsal:
-the plan, each segment's MP3 and script, and all of them together in show.mp3, where a short
-tone stands in for each song. A segment costs about 1,000 ElevenLabs credits; --script-only
-writes the scripts without voicing them, for a few cents of OpenAI.
+the plan; each segment's MP3, its script with what the edit fixed, and its draft before the
+edit if it changed anything; and all of them together in show.mp3, where a short tone stands in
+for each song. A segment costs about 1,000 ElevenLabs credits; --script-only writes the scripts
+without voicing them, for a few cents of OpenAI.
 """
 
 import argparse
@@ -104,6 +105,14 @@ async def debbie_voice(key: str) -> str:
 
 
 TONE_SECONDS = 1.5
+
+
+def listed(turns: list[Turn]) -> str:
+    return "\n".join(
+        f"{t.speaker}{' (together)' if t.together else ''}: {t.text}"
+        + (f'   <- cut after "{t.cut_after}"' if t.cut_after else "")
+        for t in turns
+    )
 
 
 async def song_tone(folder: Path) -> Path | None:
@@ -222,7 +231,7 @@ async def main(args: argparse.Namespace) -> None:
                     move=move if index == 0 else None,
                 )
                 started = time.monotonic()
-                turns, notes, problems = await write_segment(
+                segment = await write_segment(
                     ai,
                     station="The Lunch Break",
                     hosts=hosts,
@@ -236,13 +245,14 @@ async def main(args: argparse.Namespace) -> None:
                     seconds=seconds,
                 )
                 written = time.monotonic() - started
+                turns, notes = segment.turns, segment.notes
                 said.append(turns)
-                script = "\n".join(
-                    f"{t.speaker}{' (together)' if t.together else ''}: {t.text}"
-                    + (f'   <- cut after "{t.cut_after}"' if t.cut_after else "")
-                    for t in turns
-                )
-                (folder / f"segment{number}.txt").write_text(script + f"\n\nNotes: {notes}\n")
+                script = listed(turns)
+                fixes = "".join(f"\n- {fixed}" for fixed in segment.fixed)
+                edit = f"\n\nEdited:{fixes}" if fixes else "\n\nEdited: nothing to fix."
+                (folder / f"segment{number}.txt").write_text(script + f"\n\nNotes: {notes}{edit}\n")
+                if segment.draft:
+                    (folder / f"segment{number}-draft.txt").write_text(listed(segment.draft) + "\n")
                 heading = f"\n=== Segment {number} ({move}): written in {written:.0f} s"
                 if not args.script_only:
                     started = time.monotonic()
@@ -253,9 +263,9 @@ async def main(args: argparse.Namespace) -> None:
                     heading += f", voiced in {voiced:.0f} s, {clip.seconds:.0f} s long"
                 print(heading)
                 print(script)
-                print(f"Notes: {notes}")
-                for problem in problems:
-                    print(f"  {problem}")
+                print(f"Notes: {notes}{edit}")
+                for mark in segment.marks:
+                    print(f"  {mark}")
             songs.append(up_next)
 
         if args.script_only:

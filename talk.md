@@ -110,6 +110,17 @@ Listeners know only what they hear, so the talk has to be easy to follow, as if 
 - The writer is never told a segment's number, and the plan never refers to one by number, so neither ends up on air. If a draft still says "segment", it's written again.
 - The opening segment welcomes everyone and doesn't talk about whatever played before the show. After a song, the song is mentioned in the first turn if at all, not every time. A segment with no song before it carries straight on, mid-conversation.
 
+### The edit
+
+Every segment is written, then edited by a second AI call before it's voiced. The editor reads the draft as a listener would. It's told what listeners have heard (the last two segments word for word, the show's notes, whether a song just played or this opens the show), and, kept apart, the background it may use to fix things (the DJs and their hooks, what the plan wants from this segment, the day's material). It checks two things:
+
+1. **Does it follow?** Each turn answers, reacts to, argues with or builds on the one before. No ignoring what was just said, no jumps with no way in, no replies to something nobody said.
+2. **Is everything explained?** No joke whose premise listeners haven't heard: no story riffed on before it's told, no person, hobby, rivalry, bet or running joke mentioned as if known.
+
+It fixes only what it flags, keeping every other turn word for word with its marks, and says what it fixed (in the journal: "Segment 3, edited: ..."). Its most common catch in the first runs was an interruption cut so early that the reply answered words listeners never heard. If the edit fails, or cuts more than 40% of the draft, the draft goes out as written. "Hear them together" in the editor skips it, to stay quick.
+
+It adds 10 to 15 seconds to each segment: about 30 seconds to write and edit, 20 to voice.
+
 ### Banter moves
 
 GuildFM has a list of moves, and the code deals them out: one or two running bits per show, and one move per link, never the same as the last few. The writer gets a job to do rather than "be funny". The code picks, not the AI: left to itself, a model picks the same favourites every time.
@@ -165,6 +176,15 @@ Measured in the spike: a 2-minute link took about 10 s to write, and about 16 s 
 - A link that fits in the 90 s that songs are lined up ahead is made as today.
 - A longer link (at 70/30, links average about 8 minutes) is made in chunks of about 2 minutes. The first chunk is queued as soon as it's ready, and the next is made while it plays. Each chunk takes about 30 s to make, so this keeps up easily.
 - At 100% talk there are no songs, so the chunks simply follow each other.
+
+A show's plan takes 20 to 40 seconds (longer while the day's news is still being looked up), so it's made ahead of the first talk, in the background, and the first talk only has to be written, edited and voiced (about 50 seconds):
+
+- **A station put on by hand,** or by the queue running out: as it comes on, while the song before its first talk plays.
+- **A show in a line-up:** ten minutes before it opens, when its station picks its first songs, planned as it'll be at its start time.
+- **The next hour outside a line-up:** while the last two segments of this hour's plan play.
+- **A plan from another day** isn't used: the show starts afresh.
+
+An all-talk station has no song to make its first talk behind. When it comes on, or Play is pressed with nothing to play, it opens with one song the office has heard before, picked without the AI (the station's own plays first, then Best Voted, then anything heard), and the talk follows it. With no song heard before, as on a new install, the talk starts on its own once it's ready.
 
 ## Songs, requests and skips
 

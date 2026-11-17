@@ -42,7 +42,7 @@ from guildfm.playlists import (
     take_next,
 )
 from guildfm.prefs import get_pref
-from guildfm.radio import Radio, ai_picks
+from guildfm.radio import Radio, ai_picks, open_with_song
 from guildfm.speakers import QueueItem, SpeakersRefused, SpeakersUnavailable, spotify_item
 from guildfm.speakers import spotify_track_id as track_id_in
 
@@ -65,6 +65,9 @@ Choice = Playlist | Station | Lineup | None
 LinedUp = Callable[[int, str, int | None], Awaitable[None]]
 # Told the key of what was playing when someone pressed Skip: a song, or a clip such as talk.
 Skipped = Callable[[str | None], Awaitable[None]]
+# A station coming on, or its show in a line-up opening soon: its id, and the minutes its show
+# ends and starts in a line-up, or None.
+ComingOn = Callable[[int, int | None, int | None], None]
 
 
 @dataclass(frozen=True)
@@ -157,6 +160,7 @@ class QueueEngine:
         # of time, so the DJ can get a line ready.
         self.on_lined_up: list[LinedUp] = []
         self.on_skipped: list[Skipped] = []
+        self.on_coming_on: list[ComingOn] = []
 
         controller.on_track_change.append(self._track_changed)
         controller.on_poll.append(self.keep_fed)
@@ -187,7 +191,15 @@ class QueueEngine:
         if change is None:
             return
         self._opening = change.opening
+        if change.opening:
+            self._coming_on(change.opening.station_id, change.opening.until)
         self.note(f"{change.name} is on, from the {change.lineup} line-up")
+
+    def _coming_on(
+        self, station_id: int, until: int | None = None, starts: int | None = None
+    ) -> None:
+        for callback in self.on_coming_on:
+            callback(station_id, until, starts)
 
     async def keep_lineup_on(self, lineup_id: int) -> None:
         """Put a line-up back on after the station or playlist it was playing was deleted,
@@ -284,6 +296,8 @@ class QueueEngine:
         station = await gap_station(db)
         source = await play_station(db, station)
         self.note(f"The queue ran out, so {station.name} is on")
+        self._coming_on(station.id)
+        await open_with_song(db)
         if self._radio:
             await self._radio.top_up()
         return source
@@ -462,6 +476,8 @@ class QueueEngine:
                 await play_playlist(db, await db.get(Playlist, choice.id))
             else:
                 await play_station(db, await db.get(Station, choice.id))
+                self._coming_on(choice.id)
+            await open_with_song(db)
         await self.changed()
         if self._radio:
             await self._radio.top_up()
@@ -511,6 +527,7 @@ class QueueEngine:
             soon = 0 < slot.start - minute <= PREPARE_MINUTES
             if soon and slot.station_id and slot.station_id != source.station_id:
                 self._radio.prepare(slot.station_id)
+                self._coming_on(slot.station_id, slot.end, slot.start)
 
     async def _first_up(self) -> list[QueueItem]:
         """What to play when GuildFM takes the speakers over and has nothing lined up."""
