@@ -12,12 +12,14 @@ from guildfm.audio import FFMPEG
 from guildfm.mixing import OVERLAP, TOGETHER, placed, voice_segment
 from guildfm.script import (
     INSTRUCTIONS,
+    MENTIONS,
     SONG,
     Moment,
     Segment,
     Turn,
     brief,
     checked,
+    deal_mention,
     remembered,
     write_segment,
 )
@@ -148,6 +150,26 @@ def test_a_segment_with_no_song_before_it_carries_straight_on() -> None:
     assert "It carries straight on from the last segment, with no song between" in told
     assert "A song has just finished" not in told
     assert "[A song played" not in told
+
+
+def test_the_song_before_is_named_reacted_to_or_left_alone_in_turn() -> None:
+    rng = random.Random(1)
+    last, dealt = None, []
+    for _ in range(30):
+        mention = deal_mention(rng, last, "the bet")
+        assert mention != last  # never the same way twice running
+        dealt.append(mention)
+        last = mention
+    assert set(dealt) == set(MENTIONS)
+    # Rating the song is a reaction to it, whatever came last.
+    assert deal_mention(rng, "react", "the verdict") == "react"
+
+    for mention, told_to in MENTIONS.items():
+        moment = Moment(number=2, count=4, clock=CLOCK, before='"Dreams"', mention=mention)
+        told = brief(PLAN, moment, {}, "", [], 120)
+        assert told_to in told
+        assert all(other not in told for other in MENTIONS.values() if other != told_to)
+    assert 'Not "That was ... by ..."' in MENTIONS["react"]
 
 
 def test_what_was_said_is_kept_with_the_songs_between() -> None:

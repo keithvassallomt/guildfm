@@ -12,6 +12,7 @@ time and mixed so the DJs really talk over each other (mixing.py)."""
 
 import json
 import logging
+import random
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -26,6 +27,17 @@ KEPT_BY_EDIT = 0.6  # of the draft's characters an edit keeps at least, or it's 
 MAX_CUTS = 2  # interruptions in a segment, so they stay a character trait
 SAID_KEPT = 2  # segments before this one the writer reads in full
 SONG = ""  # the speaker of the mark, in what was said, for a song that played between segments
+# How the segment after a song treats it, dealt in turn: told to name it "now and then", the
+# writer named it every time.
+MENTIONS = {
+    "name": "The first turn says what the song was, in a few words, as a DJ does.",
+    "react": (
+        "The first turn reacts to the song, as you would to something you've both just heard: "
+        'what it brings to mind, or what one of them thinks of it. Not "That was ... by '
+        '..."; its title or artist can come up in passing.'
+    ),
+    "none": "This time they don't mention the song at all.",
+}
 _SEGMENT = re.compile(r"\bsegments?\b", re.IGNORECASE)
 AGAIN = (
     'An earlier draft of this had a DJ say "segment" on air. Listeners never hear of '
@@ -145,6 +157,7 @@ class Moment:
     before: str | None = None  # the song that just played, such as '"Dreams" by Fleetwood Mac'
     up_next: str | None = None  # the song it brings in, with any shout-out, at the link's end
     move: str | None = None  # the move dealt for this link, on its first segment
+    mention: str = "name"  # how it treats the song before it, if one played: MENTIONS
     skipped: int | None = None  # a segment listeners didn't hear, skipped by a curator
     until: str | None = None  # when the show ends, in a line-up
     guest: str | None = None  # another DJ dropping in for this segment, as Host.described has them
@@ -282,9 +295,9 @@ def brief(
     elif moment.before:
         parts.append(
             f"A song has just finished: {moment.before}. The conversation stopped for it, so "
-            "don't pick up mid-exchange as if it hadn't. The first turn comes back on air, "
-            "saying what the song was now and then, not every time. Then they go back to where "
-            "they left off, saying in a line what it was, or move on to something new."
+            f"don't pick up mid-exchange as if it hadn't. {MENTIONS[moment.mention]} Then they "
+            "go back to where they left off, saying in a line what it was, or move on to "
+            "something new."
         )
     parts.extend(_due(plan, moment.number))
     if moment.move:
@@ -407,6 +420,14 @@ def heard(moment: Moment, notes: str, said: list[list[Turn]]) -> str:
             "between:\n" + _transcript(said, moment)
         )
     return "\n\n".join(parts)
+
+
+def deal_mention(rng: random.Random, last: str | None, move: str | None) -> str:
+    """How the segment after a song treats it: never the same way twice in a row, and a
+    reaction when the move is to rate it."""
+    if move == "the verdict":
+        return "react"
+    return rng.choice([mention for mention in MENTIONS if mention != last])
 
 
 def _after_song(moment: Moment) -> bool:

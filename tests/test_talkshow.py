@@ -12,6 +12,7 @@ from guildfm.lineups import minute_of
 from guildfm.models import DJProfile, EntryState, Play, SourceState, Station, Track
 from guildfm.prefs import DEFAULTS
 from guildfm.queue import in_state
+from guildfm.script import MENTIONS
 from tests import test_lineups as lineups
 from tests.fakes import FakeElevenLabs, FakeOpenAI, FakeSpeakers, spotify_id
 from tests.helpers import ADMIN, read_speakers, sign_in
@@ -152,6 +153,9 @@ def test_a_talk_station_talks_before_each_song(
     told = segments(openai)[1]
     assert "It opens the show" not in told
     assert 'A song has just finished: "Song 2" by Fleetwood Mac.' in told
+    # How it treats the song is dealt, and kept so the next is dealt differently.
+    memory = client.portal.call(_memory, client.app.state.sessionmaker)
+    assert MENTIONS[memory["mention"]] in told
     assert "The show's notes so far: Debbie has won the biscuit." in told
     assert "Guildbert: Right, before you start, I have a theory." in told
     # What today's DJ knows about the songs, the talk show knows too.

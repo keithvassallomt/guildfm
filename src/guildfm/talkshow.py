@@ -51,7 +51,7 @@ from guildfm.playback import PlaybackController, Status
 from guildfm.playlists import current_source
 from guildfm.prefs import get_pref
 from guildfm.queue import LEAD_SECONDS, in_state
-from guildfm.script import SAID_KEPT, Moment, Turn, remembered, write_segment
+from guildfm.script import SAID_KEPT, Moment, Turn, deal_mention, remembered, write_segment
 from guildfm.speech import Clip, SpeechClient, SpeechError, is_eleven
 from guildfm.talk import (
     SEGMENT_SECONDS,
@@ -591,6 +591,10 @@ class TalkShow:
         )
         if air.guests and (move == "the guest" or surprise):
             guest = self.rng.choice(air.guests)
+        mention = "name"
+        if before and not straight_on:
+            mention = deal_mention(self.rng, memory.get("mention"), move)
+            memory["mention"] = mention
         moment = Moment(
             number=number,
             count=memory["count"],
@@ -602,6 +606,7 @@ class TalkShow:
             before=before,
             up_next=up_next,
             move=move,
+            mention=mention,
             skipped=_either(self._skips.pop(show.station_id, None), memory.pop("skipped", None)),
             until=clock(air.until) if air.until is not None else None,
             guest=guest[0].described() if guest else None,

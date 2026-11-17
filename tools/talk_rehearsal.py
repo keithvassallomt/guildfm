@@ -35,7 +35,7 @@ from guildfm.awareness import Awareness, clock_line
 from guildfm.config import ROOT, get_settings
 from guildfm.fields import FROM_THE_WEB, used
 from guildfm.mixing import voice_segment
-from guildfm.script import Moment, Turn, remembered, write_segment
+from guildfm.script import Moment, Turn, deal_mention, remembered, write_segment
 from guildfm.speech import ELEVEN, ELEVENLABS, SpeechClient, mp3_seconds
 from guildfm.talk import (
     Host,
@@ -208,6 +208,7 @@ async def main(args: argparse.Namespace) -> None:
         wanted = min(args.segments, count)
         said: list[list[Turn]] = []
         notes, moves, clips, songs = "", [], [], []
+        mention = None  # how the last segment after a song treated it
         number = 0
         while number < wanted:
             move = deal_move(rng, hosts, False, moves, song=bool(songs))
@@ -218,6 +219,8 @@ async def main(args: argparse.Namespace) -> None:
                 if number >= wanted:
                     break
                 number += 1
+                if before and index == 0:
+                    mention = deal_mention(rng, mention, move)
                 ends_link = index == len(link) - 1 or number == wanted
                 moment = Moment(
                     number=number,
@@ -229,6 +232,7 @@ async def main(args: argparse.Namespace) -> None:
                     before=before if index == 0 else None,
                     up_next=up_next if ends_link else None,
                     move=move if index == 0 else None,
+                    mention=mention or "name",
                 )
                 started = time.monotonic()
                 segment = await write_segment(
