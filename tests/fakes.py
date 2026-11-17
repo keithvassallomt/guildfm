@@ -240,6 +240,16 @@ class FakeOpenAI:
             ],
             "happening": {"idea": "", "starts": 0},
         }  # fmt: skip
+        # A talk show's segment, as it writes it.
+        self.segment = {
+            "turns": [
+                {"speaker": "Guildbert", "text": "Right, before you start, I have a theory.",
+                 "cut_after": "before you start", "together": False},
+                {"speaker": "Debbie", "text": "No theories. Priya asked for ABBA.", "cut_after": "",
+                 "together": False},
+            ],
+            "notes": "Debbie has won the biscuit.",
+        }  # fmt: skip
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
@@ -273,6 +283,8 @@ class FakeOpenAI:
             text = json.dumps({"verdict": self.names.get(body["input"], "fine")})
         elif name == "show_plan":
             text = json.dumps(self.plan)
+        elif name == "talk_segment":
+            text = json.dumps(self.segment)
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})

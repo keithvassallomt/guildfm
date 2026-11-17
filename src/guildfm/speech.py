@@ -10,6 +10,7 @@ went into it, so a daily announcement, or a preview that's then scheduled, reuse
 """
 
 import asyncio
+import base64
 import hashlib
 import json
 import logging
@@ -49,6 +50,8 @@ _VOCAL = re.compile(
 )
 _QUOTED = re.compile(r'["\u201c]([^"\u201d]+)["\u201d]')  # words in "quotes", or curly ones
 CREDITS_KEPT = 60  # seconds the ElevenLabs account's credits are remembered for
+# Characters of the turn before that ElevenLabs is told, so a turn sounds like a reply.
+CONTEXT = 300
 
 _ELEVEN_VOICE = re.compile(rf"{ELEVEN}[A-Za-z0-9]{{1,40}}")
 # Words in square brackets, such as [laughs] or [sighs, quietly], but not [3].
@@ -97,6 +100,17 @@ class Clip:
     def media_path(self) -> str:
         """Where it is under /media."""
         return f"{self.folder}/{self.path.name}"
+
+
+@dataclass(frozen=True)
+class Timed:
+    """A talk station's turn, voiced on its own, with when each character in it is said, so
+    turns can be cut and overlapped (mixing.py)."""
+
+    clip: Clip
+    characters: list[str]
+    starts: list[float]  # seconds into the clip, a character each
+    ends: list[float]
 
 
 @dataclass(frozen=True)
@@ -194,6 +208,82 @@ class SpeechClient:
         draft = path.with_suffix(".tmp")
         draft.write_bytes(data)
         draft.replace(path)
+        return Clip(path, mp3_seconds(data))
+
+    async def say_timed(self, text: str, voice: str, before: str = "") -> Timed:
+        """`text` in the ElevenLabs `voice`, with when each character is said, as it follows
+        `before`, the turn before it. Kept like `say`'s clips, with the timings beside each,
+        and not evened out: the mix of a segment's turns is (mixing.py)."""
+        if not is_eleven(voice):
+            raise SpeechError("Talk stations need ElevenLabs voices.")
+        before = without_tags(before)[-CONTEXT:]
+        recipe = [self._eleven_model, voice, text, before, "timed"]
+        name = hashlib.sha256(json.dumps(recipe).encode()).hexdigest()[:32]
+        path = self._folder / f"{name}.mp3"
+        timings = path.with_suffix(".json")
+        if path.exists() and timings.exists():
+            path.touch()
+            timings.touch()
+            found = json.loads(timings.read_text())
+            clip = Clip(path, mp3_seconds(path.read_bytes()))
+            return Timed(clip, found["characters"], found["starts"], found["ends"])
+
+        try:
+            data, found = await self._eleven_timed(text, voice.removeprefix(ELEVEN), before)
+        except SpeechError as error:
+            self.eleven_health.failed(str(error))
+            raise
+        self.eleven_health.worked()
+        self._folder.mkdir(parents=True, exist_ok=True)
+        for target, content in ((timings, json.dumps(found).encode()), (path, data)):
+            draft = target.with_suffix(".tmp")
+            draft.write_bytes(content)
+            draft.replace(target)
+        clip = Clip(path, mp3_seconds(data))
+        return Timed(clip, found["characters"], found["starts"], found["ends"])
+
+    async def _eleven_timed(self, text: str, voice_id: str, before: str) -> tuple[bytes, dict]:
+        if not self._eleven_key:
+            raise SpeechError("ElevenLabs isn't set up. Add ELEVENLABS_API_KEY to .env.")
+        body = {"text": text, "model_id": self._eleven_model}
+        if before:
+            body["previous_text"] = before
+        try:
+            response = await self._http.post(
+                f"{ELEVENLABS}/v1/text-to-speech/{voice_id}/with-timestamps",
+                params={"output_format": "mp3_44100_128"},
+                json=body,
+                headers={"xi-api-key": self._eleven_key},
+            )
+        except httpx2.HTTPError as error:
+            raise SpeechError(
+                "Couldn't reach ElevenLabs. Check the internet connection."
+            ) from error
+        if response.status_code >= 400:
+            raise SpeechError(_eleven_problem(response))
+        try:
+            answer = response.json()
+            timing = answer.get("alignment") or answer.get("normalized_alignment") or {}
+            found = {
+                "characters": timing["characters"],
+                "starts": timing["character_start_times_seconds"],
+                "ends": timing["character_end_times_seconds"],
+            }
+            return base64.b64decode(answer["audio_base64"]), found
+        except (KeyError, TypeError, ValueError) as error:
+            raise SpeechError("ElevenLabs sent something that wasn't speech.") from error
+
+    async def keep(self, data: bytes) -> Clip:
+        """An MP3 made here, such as a talk station's mixed segment, evened out like the clips
+        and kept with them, named after what's in it."""
+        data = await level(data, self._loudness)
+        name = hashlib.sha256(data).hexdigest()[:32]
+        path = self._folder / f"{name}.mp3"
+        if not path.exists():
+            self._folder.mkdir(parents=True, exist_ok=True)
+            draft = path.with_suffix(".tmp")
+            draft.write_bytes(data)
+            draft.replace(path)
         return Clip(path, mp3_seconds(data))
 
     async def _openai(self, text: str, voice: str, instructions: str) -> bytes:
@@ -379,13 +469,15 @@ class SpeechClient:
         return self._credits
 
     def prune(self) -> None:
-        """Clear out MP3s that haven't been used for a while."""
+        """Clear out MP3s, and the timings of talk stations' turns, that haven't been used for
+        a while."""
         if not self._folder.exists():
             return
         cutoff = time.time() - KEPT_DAYS * 24 * 60 * 60
-        for path in self._folder.glob("*.mp3"):
-            if path.stat().st_mtime < cutoff:
-                path.unlink(missing_ok=True)
+        for pattern in ("*.mp3", "*.json"):
+            for path in self._folder.glob(pattern):
+                if path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
 
 
 def _eleven_problem(response: httpx2.Response) -> str:
