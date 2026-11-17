@@ -33,6 +33,7 @@ dev = [
     "playwright>=1.64.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.17.0",
     "time-machine>=3.5.1",
 ]
@@ -50,3 +51,6 @@ ignore = ["SIM905"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# Tests run side by side, one per core: each starts its own GuildFM, so they take seconds where
+# one at a time took minutes. Add `-n 0` to run them in this process, such as to debug one.
+addopts = ["-n", "auto"]

@@ -1,3 +1,4 @@
+import shutil
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 from guildfm.ai import AIClient
 from guildfm.awareness import Awareness
 from guildfm.config import Settings
+from guildfm.db import upgrade_to_head
 from guildfm.main import create_app
 from guildfm.monitor import MonitorSystem
 from guildfm.speech import SpeechClient
@@ -100,6 +102,15 @@ def fake(service) -> httpx2.AsyncClient:
     return httpx2.AsyncClient(transport=httpx2.MockTransport(service))
 
 
+@pytest.fixture(scope="session")
+def migrated(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A database with every migration applied, made once and copied for each test that starts
+    GuildFM. Migrating a new one for every test took a fifth of a second each time."""
+    path = tmp_path_factory.mktemp("migrated") / "guildfm.db"
+    upgrade_to_head(f"sqlite:///{path}")
+    return path
+
+
 @pytest.fixture
 def start(
     settings: Settings,
@@ -110,11 +121,18 @@ def start(
     elevenlabs: FakeElevenLabs,
     clock: Clock,
     monitor: MonitorSystem,
+    migrated: Path,
 ) -> Callable[[], TestClient]:
     """Starts GuildFM, use it with `with`. Starting it again is a restart: same data, same
     speakers."""
 
     def start() -> TestClient:
+        # A copy of the migrated database, unless there's one already: a restart, or a test
+        # that made its own. GuildFM still checks it's up to date as it starts.
+        database = settings.data_dir / "guildfm.db"
+        if not database.exists():
+            settings.data_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(migrated, database)
         api = SpotifyClient(
             client_id="test",
             client_secret="test",
