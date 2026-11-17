@@ -5,10 +5,15 @@
   gap: 12px;
 }
 
-.djSwitch {
+/* A switch beside a section's heading, such as "Use DJs" or "Mostly talk". */
+.headingSwitch {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.headingSwitch.off {
+  opacity: 0.55;
 }
 
 .field,
@@ -198,4 +203,312 @@ button.delete:hover {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
+}
+
+/* A label with something on the right of it, such as a count of characters. */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The station's DJs: each a line that opens into their details. */
+.djCard {
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+}
+
+.djHead {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.djHead:hover {
+  background: var(--accent-tint);
+}
+
+.initial {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.chevron {
+  display: grid;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.flipped {
+  transform: rotate(180deg);
+}
+
+.djBody {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hooks {
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.djFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.chipIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.together {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+/* Not a talk station yet: what it needs. */
+.notYet {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.notYetIcon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+/* The talk and music slider: orange, and red over 70% talk. */
+.readout {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--touch);
+}
+
+.range {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.hotZone {
+  position: absolute;
+  right: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hot-soft);
+}
+
+.scale {
+  position: relative;
+  height: 16px;
+  margin-top: -6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.scale span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.scale span:first-child {
+  transform: none;
+}
+
+.scale span:last-child {
+  transform: translateX(-100%);
+}
+
+.hot .readout,
+.hot .credits {
+  color: var(--hot-text);
+}
+
+.hot .range {
+  accent-color: var(--hot);
+}
+
+.hotNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--hot-soft);
+  color: var(--hot-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.credits {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* The script prompt: a textarea over a copy of its text with the named fields picked out. The
+   two share one grid cell and the same type, so the copy grows the box with the text. */
+.prompt {
+  display: grid;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--field-bg, var(--surface));
+}
+
+.prompt:focus-within {
+  border-color: var(--accent);
+}
+
+.promptMirror,
+.promptArea {
+  grid-area: 1 / 1;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.promptMirror {
+  color: var(--text);
+  pointer-events: none;
+}
+
+.promptArea {
+  min-height: calc(7 * 1.45em + 24px);
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
+  resize: none;
+  overflow: hidden;
+}
+
+.promptArea::placeholder {
+  color: var(--faint);
+}
+
+.promptArea:focus-visible {
+  outline: none;
+}
+
+.promptArea::selection {
+  background: var(--accent-soft);
+  color: transparent;
+}
+
+.fieldMark {
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.fields {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.fieldRow {
+  min-height: 52px;
+  padding: 6px 12px;
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.fieldRow + .fieldRow {
+  border-top: 1px solid var(--line);
+}
+
+.fieldName {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.fieldAbout {
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.inPrompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* On a phone, each field's description goes under its name. */
+@media (max-width: 520px) {
+  .fieldRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .fieldAbout {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }

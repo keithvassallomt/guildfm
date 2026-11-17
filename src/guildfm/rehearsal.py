@@ -73,7 +73,8 @@ async def rehearse(
             elapsed += jingle.seconds + GAP_SECONDS
         starts_at = (now + timedelta(seconds=elapsed)).astimezone(zone)
         line = None
-        if station.dj:
+        # A talk station's talk is written as it plays, from its show's plan: songs only here.
+        if station.dj and not station.talk_station:
             songs += 1
             if due(songs, (elapsed - last) / 60, station.talk_every, station.talk_unit):
                 if station.global_awareness:

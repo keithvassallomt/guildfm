@@ -26,6 +26,10 @@
   --down-soft: rgba(141, 180, 255, 0.16);
   --warn: #f5c451;
   --warn-soft: rgba(245, 196, 81, 0.14);
+  /* A talk station over 70% talk: costly, with very little music. */
+  --hot: #ff5d5d;
+  --hot-text: #ff7a7a;
+  --hot-soft: rgba(255, 93, 93, 0.14);
   /* Line-ups: shows and playlists on the day, told apart by lightness as well as hue. */
   --show: #e0894d;
   --show-soft: rgba(224, 137, 77, 0.3);
