@@ -35,7 +35,7 @@ from guildfm.awareness import Awareness, clock_line
 from guildfm.config import ROOT, get_settings
 from guildfm.fields import FROM_THE_WEB, used
 from guildfm.mixing import voice_segment
-from guildfm.script import Moment, Turn, write_segment
+from guildfm.script import Moment, Turn, remembered, write_segment
 from guildfm.speech import ELEVEN, ELEVENLABS, SpeechClient, mp3_seconds
 from guildfm.talk import (
     Host,
@@ -246,7 +246,7 @@ async def main(args: argparse.Namespace) -> None:
                 )
                 written = time.monotonic() - started
                 turns, notes = segment.turns, segment.notes
-                said.append(turns)
+                said.append(remembered(moment, turns))
                 script = listed(turns)
                 fixes = "".join(f"\n- {fixed}" for fixed in segment.fixed)
                 edit = f"\n\nEdited:{fixes}" if fixes else "\n\nEdited: nothing to fix."

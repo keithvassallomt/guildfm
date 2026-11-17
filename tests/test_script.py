@@ -10,7 +10,17 @@ import pytest
 from guildfm.ai import AIClient
 from guildfm.audio import FFMPEG
 from guildfm.mixing import OVERLAP, TOGETHER, placed, voice_segment
-from guildfm.script import Moment, Segment, Turn, brief, checked, write_segment
+from guildfm.script import (
+    INSTRUCTIONS,
+    SONG,
+    Moment,
+    Segment,
+    Turn,
+    brief,
+    checked,
+    remembered,
+    write_segment,
+)
 from guildfm.speech import Clip, SpeechClient, Timed, mp3_seconds
 from guildfm.talk import Host
 from tests.conftest import fake
@@ -86,8 +96,9 @@ def test_the_writer_is_told_what_this_segment_is_for() -> None:
         CLOCK,
         "The show runs until 13:00.",
         "It's early in the show.",
-        'A song has just finished: "Dreams" by Fleetwood Mac. They needn\'t mention it every '
-        "time; if they do, it's in the first turn",
+        'A song has just finished: "Dreams" by Fleetwood Mac. The conversation stopped for it, '
+        "so don't pick up mid-exchange as if it hadn't.",
+        "Then they go back to where they left off, saying in a line what it was, or move on",
         "This segment is about: Biscuits",
         "the bet is under way, and pays off later: don't settle it or bring it to a head now. A "
         "biscuit says nobody asks for ABBA.",
@@ -98,6 +109,8 @@ def test_the_writer_is_told_what_this_segment_is_for() -> None:
         "The show's notes so far: Debbie leads.",
         "[news]\n- A goat was elected mayor.",
         "Guildbert: Afternoon, all.\nDebbie: Hiya!",
+        # Where the music came, up to the song that has just finished.
+        'Hiya!\n\n[A song played: "Dreams" by Fleetwood Mac. It has just finished.]',
         "Write about 2040 characters of speech, about 120 seconds.",
     ):
         assert expected in told
@@ -123,6 +136,8 @@ def test_the_writer_is_told_what_this_segment_is_for() -> None:
     assert "the bet is settled: Priya asks for ABBA. Don't start it again." in told
     assert "The happening, a prank, is over: They're on his head." in told
     assert "pay off anything still running, and sign off" in told
+    # Before a song, the conversation is wrapped up, not left hanging over it.
+    assert "wrap up first: land what they're on, or park it openly" in told
     assert "End by bringing in the next one: ABBA" in told
 
 
@@ -132,6 +147,26 @@ def test_a_segment_with_no_song_before_it_carries_straight_on() -> None:
     told = brief(PLAN, moment, {}, "", said, 120)
     assert "It carries straight on from the last segment, with no song between" in told
     assert "A song has just finished" not in told
+    assert "[A song played" not in told
+
+
+def test_what_was_said_is_kept_with_the_songs_between() -> None:
+    turns = [Turn("Debbie", "You've got a problem with always wanting a fresh coat!")]
+    after = Moment(number=2, count=4, clock=CLOCK, before='"Dreams" by Fleetwood Mac')
+    on = Moment(number=3, count=4, clock=CLOCK, before='"Dreams"', straight_on=True)
+    assert remembered(after, turns) == [Turn(SONG, '"Dreams" by Fleetwood Mac'), *turns]
+    assert remembered(on, turns) == turns  # no song came before it
+
+    # The next segment, after another song, reads where both songs came.
+    said = [remembered(after, turns)]
+    next_one = Moment(number=3, count=4, clock=CLOCK, before='"Rumours" by Fleetwood Mac')
+    told = brief(PLAN, next_one, {}, "", said, 120)
+    assert (
+        '[A song played: "Dreams" by Fleetwood Mac]\n'
+        "Debbie: You've got a problem with always wanting a fresh coat!\n\n"
+        '[A song played: "Rumours" by Fleetwood Mac. It has just finished.]'
+    ) in told
+    assert "Never carry on mid-exchange as if no song had played." in INSTRUCTIONS
 
 
 @pytest.mark.asyncio
@@ -255,14 +290,27 @@ async def test_a_segment_is_edited_for_listeners_who_werent_told() -> None:
     (asked,) = openai.asked_for("talk_edit")
     assert "Is everything explained?" in asked["instructions"]
     assert "Does it follow?" in asked["instructions"]
+    assert "carries on mid-exchange after a song as if it hadn't played" in asked["instructions"]
     heard, background = asked["input"].split("BACKGROUND")
     assert 'A song has just finished: "Dreams" by Fleetwood Mac.' in heard
+    assert '[A song played: "Dreams" by Fleetwood Mac. It has just finished.]' in heard
+    assert "After the draft, a song plays" not in asked["input"]
     assert "as the show's notes have it: The bet is on." in heard
     assert "Guildbert: Afternoon, all.\nDebbie: Hiya!" in heard
     assert "marrows" not in heard
     assert "Keeps coming back to: His allotment's marrows." in background
     assert "[news]\n- A goat was elected mayor." in background
     assert '"Your marrows again, Guildbert!"' in background  # the draft, last
+
+
+@pytest.mark.asyncio
+async def test_the_editor_knows_when_a_song_follows_the_draft() -> None:
+    openai = FakeOpenAI()
+    moment = Moment(number=2, count=4, clock=CLOCK, ends_link=True, up_next='"Dreams"')
+    await _write(openai, moment=moment)
+    (asked,) = openai.asked_for("talk_edit")
+    assert 'After the draft, a song plays: "Dreams"\n\nThe draft:\n' in asked["input"]
+    assert "ends before a song on a question or a point left hanging" in asked["instructions"]
 
 
 @pytest.mark.asyncio

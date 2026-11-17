@@ -25,6 +25,7 @@ PER_SECOND = 17  # characters of speech a second, as ElevenLabs' eleven_v4 speak
 KEPT_BY_EDIT = 0.6  # of the draft's characters an edit keeps at least, or it's not used
 MAX_CUTS = 2  # interruptions in a segment, so they stay a character trait
 SAID_KEPT = 2  # segments before this one the writer reads in full
+SONG = ""  # the speaker of the mark, in what was said, for a song that played between segments
 _SEGMENT = re.compile(r"\bsegments?\b", re.IGNORECASE)
 AGAIN = (
     'An earlier draft of this had a DJ say "segment" on air. Listeners never hear of '
@@ -70,6 +71,11 @@ the middle of a turn.
 - Keep to what this segment is about. Leave the rest of what's going on for other segments.
 - A running bit that isn't due now comes up in a line at most, and only if it fits. Don't \
 restate its stakes.
+- Songs play between some segments, and listeners hear the conversation stop for each one. \
+Before a song, they wrap up what they're on: land it, or park it openly to come back to \
+("Hold that thought"), never leaving a question or a jab hanging. After one, they come back \
+on air, then go back to where they were, saying in a line what it was ("Now, about my \
+coat..."), or move on to something new. Never carry on mid-exchange as if no song had played.
 - Segments are how the show is planned, and listeners never hear of them: on air, never \
 say "segment" or a number for one. Say "after this song", "later" or "before the end of \
 the show" instead.
@@ -103,6 +109,8 @@ Check it for two things:
 argue with it or build on it. Flag a turn that ignores what was just said, a jump to a new \
 topic with no way in, a reply to something nobody said, or a line that makes no sense where it \
 is.
+Around a song, flag a draft that carries on mid-exchange after a song as if it hadn't played, \
+or one that ends before a song on a question or a point left hanging.
 2. Is everything explained? Flag a joke or a remark whose premise listeners haven't heard: a \
 story riffed on before it's been told, or a person, place, hobby, rivalry, bet or running joke \
 mentioned as if listeners knew about it, when it hasn't been said on air in what they've heard.
@@ -273,8 +281,10 @@ def brief(
         )
     elif moment.before:
         parts.append(
-            f"A song has just finished: {moment.before}. They needn't mention it every time; "
-            "if they do, it's in the first turn, by whoever speaks first."
+            f"A song has just finished: {moment.before}. The conversation stopped for it, so "
+            "don't pick up mid-exchange as if it hadn't. The first turn comes back on air, "
+            "saying what the song was now and then, not every time. Then they go back to where "
+            "they left off, saying in a line what it was, or move on to something new."
         )
     parts.extend(_due(plan, moment.number))
     if moment.move:
@@ -302,13 +312,18 @@ def brief(
         )
     if said:
         parts.append(
-            "What they said in the last segments, oldest first. Carry on from it; don't repeat "
-            "it.\n" + "\n\n".join("\n".join(f"{t.speaker}: {t.text}" for t in s) for s in said)
+            "What they said in the last segments, oldest first, and the songs that played "
+            "between. Don't repeat it.\n" + _transcript(said, moment)
         )
     if moment.last:
         parts.append("It's the show's last segment: pay off anything still running, and sign off.")
     if moment.ends_link and moment.up_next:
-        parts.append(f"Songs come back after it. End by bringing in the next one: {moment.up_next}")
+        parts.append(
+            "Songs come back after it, and the conversation stops for the song, so wrap up "
+            "first: land what they're on, or park it openly to come back to after the song, "
+            "with no question or jab left hanging. End by bringing in the next one: "
+            f"{moment.up_next}"
+        )
         if moment.remarks:
             parts.append(
                 "About the songs, to bring up now and then, not every time, and the votes only "
@@ -388,10 +403,36 @@ def heard(moment: Moment, notes: str, said: list[list[Turn]]) -> str:
         parts.append(f"Earlier in the show, as the show's notes have it: {notes}")
     if said and not moment.first:
         parts.append(
-            "The last segments, word for word, oldest first:\n"
-            + "\n\n".join("\n".join(f"{t.speaker}: {t.text}" for t in s) for s in said)
+            "The last segments, word for word, oldest first, and the songs that played "
+            "between:\n" + _transcript(said, moment)
         )
     return "\n\n".join(parts)
+
+
+def _after_song(moment: Moment) -> bool:
+    """Whether a song played between the segment before and this one."""
+    return bool(moment.before) and not moment.straight_on
+
+
+def remembered(moment: Moment, turns: list[Turn]) -> list[Turn]:
+    """A segment as it's kept for those after it: its turns, after a mark for the song that
+    played before it, if one did."""
+    return [Turn(SONG, moment.before or ""), *turns] if _after_song(moment) else turns
+
+
+def _transcript(said: list[list[Turn]], moment: Moment) -> str:
+    """What was said lately, oldest first, with the songs that played between, up to the one
+    that has just finished before this segment."""
+    lines = [
+        "\n".join(
+            f"[A song played: {t.text}]" if t.speaker == SONG else f"{t.speaker}: {t.text}"
+            for t in segment
+        )
+        for segment in said
+    ]
+    if _after_song(moment):
+        lines.append(f"[A song played: {moment.before}. It has just finished.]")
+    return "\n\n".join(lines)
 
 
 def _background(
@@ -437,6 +478,11 @@ async def _edited(
             "WHAT LISTENERS HAVE HEARD\n\n" + (heard(moment, notes, said) or "Nothing yet."),
             "BACKGROUND, which listeners know only if it's been said on air\n\n"
             + _background(hosts, dynamic, plan, moment, material),
+            *(
+                [f"After the draft, a song plays: {moment.up_next}"]
+                if moment.ends_link and moment.up_next
+                else []
+            ),
             "The draft:\n" + json.dumps(draft, ensure_ascii=False, indent=1),
         ]
     )

@@ -51,7 +51,7 @@ from guildfm.playback import PlaybackController, Status
 from guildfm.playlists import current_source
 from guildfm.prefs import get_pref
 from guildfm.queue import LEAD_SECONDS, in_state
-from guildfm.script import SAID_KEPT, Moment, Turn, write_segment
+from guildfm.script import SAID_KEPT, Moment, Turn, remembered, write_segment
 from guildfm.speech import Clip, SpeechClient, SpeechError, is_eleven
 from guildfm.talk import (
     SEGMENT_SECONDS,
@@ -641,7 +641,8 @@ class TalkShow:
         self._segments[clip.media_path] = (show.station_id, number)
         while len(self._segments) > SEGMENTS_REMEMBERED:
             self._segments.pop(next(iter(self._segments)))
-        kept = [[[turn.speaker, turn.text] for turn in turns]]
+        # With the song that played before it, so those after it know where the music was.
+        kept = [[[turn.speaker, turn.text] for turn in remembered(moment, turns)]]
         memory.update(
             segment=number,
             notes=notes or memory.get("notes", ""),

@@ -488,4 +488,8 @@ def test_all_talk_talks_on_and_still_plays_requests(
     read_all(client)
     client.portal.call(client.app.state.talk.settle)
     told = segments(openai)[4]
-    assert "carries straight on" in told and "Dreams" not in told
+    assert "carries straight on" in told and "A song has just finished" not in told
+    # What was said shows the request where it played: before the last talk, not this one.
+    said = told.split("the songs that played between.", 1)[1]
+    assert '[A song played: "Dreams" by Fleetwood Mac]\n' in said
+    assert "It has just finished" not in said
