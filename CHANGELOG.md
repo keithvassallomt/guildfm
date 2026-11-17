@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-17
+
 ### Added
 
 - When the speakers won't start any songs and GuildFM starts waiting for them, it says so over
