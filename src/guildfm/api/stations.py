@@ -1,12 +1,14 @@
 """AI stations for curators: making and editing them, putting one on, and hearing the DJ.
 
-A station's DJ is a DJ of their own, who can host other stations too. The editor's form names the
-DJ by id, or none for a new one, with their details: saving the station saves those to the DJ,
-on every station they host."""
+A station's DJs are DJs of their own, who can host other stations too. The editor's form names
+each DJ by id, or none for a new one, with their details: saving the station saves those to the
+DJ, on every station they host. The form takes a list of DJs, for a talk station (talk.md), or
+the one DJ the editor had before."""
 
 import time
 from datetime import UTC, datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -38,8 +40,10 @@ from guildfm.permissions import Permission
 from guildfm.playlists import current_source
 from guildfm.prefs import get_pref, set_pref
 from guildfm.rehearsal import rehearse
-from guildfm.speech import MAX_TEXT, SpeechError, Voice
+from guildfm.speech import MAX_TEXT, SpeechError, Voice, is_eleven
 from guildfm.spotify import SpotifyBusy
+from guildfm.talk import Host
+from guildfm.talkshow import together
 
 router = APIRouter(prefix="/stations")
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -53,6 +57,33 @@ Brief = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, ma
 DJName = Annotated[str, StringConstraints(strip_whitespace=True, max_length=40)]
 Personality = Annotated[str, StringConstraints(strip_whitespace=True, max_length=600)]
 Words = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_TEXT)]
+Hook = Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)]
+Obsession = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
+Dynamic = Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)]
+Prompt = Annotated[str, StringConstraints(strip_whitespace=True, max_length=4000)]
+MOST_DJS = 6
+
+
+class DJIn(BaseModel):
+    """One of a station's DJs: the one with this id, with these details, or a new one."""
+
+    id: int | None = None
+    name: DJName
+    personality: Personality = ""
+    voice: Voice = "marin"
+    pet_peeves: Hook = ""
+    soft_spots: Hook = ""
+    obsession: Obsession = ""
+
+
+class StationDJOut(BaseModel):
+    id: int
+    name: str
+    personality: str
+    voice: str
+    pet_peeves: str
+    soft_spots: str
+    obsession: str
 
 
 class StationIn(BaseModel):
@@ -70,12 +101,46 @@ class StationIn(BaseModel):
     announce_requests: bool = True
     jingles: bool = True
     crossfade: bool = False
+    # The station's DJs, in order, in place of the one DJ above when given. None keeps the
+    # one-DJ form.
+    djs: list[DJIn] | None = Field(None, max_length=MOST_DJS)
+    dynamic: Dynamic = ""  # how its DJs get on
+    talk_station: bool = False
+    talk_ratio: int = Field(40, ge=20, le=100)  # percent of its time that's talk
+    script_prompt: Prompt = ""
 
     @model_validator(mode="after")
-    def dj_has_a_name(self) -> StationIn:
-        if self.dj and not self.dj_name:
+    def djs_make_sense(self) -> StationIn:
+        if self.djs is None and self.dj and not self.dj_name:
             raise PydanticCustomError("dj_name", "Give the DJ a name.")
+        hosts = self.hosts()
+        if any(not dj.name for dj in hosts):
+            raise PydanticCustomError("djs", "Give every DJ a name.")
+        names = [dj.name.lower() for dj in hosts]
+        if len(set(names)) < len(names):
+            raise PydanticCustomError("djs", "Each DJ on a station needs a name of their own.")
+        if self.talk_station:
+            if len(hosts) < 2:
+                raise PydanticCustomError("djs", "A talk station needs two or more DJs.")
+            openai = [dj.name for dj in hosts if not is_eleven(dj.voice)]
+            if openai:
+                raise PydanticCustomError(
+                    "djs",
+                    "A talk station's DJs need ElevenLabs voices, so they can talk over each "
+                    "other: {names} {has} an OpenAI one.",
+                    {"names": " and ".join(openai), "has": "has" if len(openai) == 1 else "have"},
+                )
         return self
+
+    def hosts(self) -> list[DJIn]:
+        """The DJs the form describes, in order."""
+        if self.djs is not None:
+            return self.djs
+        if not self.dj:
+            return []
+        return [
+            DJIn(id=self.dj_id, name=self.dj_name, personality=self.personality, voice=self.voice)
+        ]
 
 
 class StationOut(BaseModel):
@@ -95,6 +160,11 @@ class StationOut(BaseModel):
     announce_requests: bool
     jingles: bool
     crossfade: bool  # the speakers fade each song into the next while it's on
+    djs: list[StationDJOut]  # in order; the first is the one above
+    dynamic: str
+    talk_station: bool
+    talk_ratio: int
+    script_prompt: str
     art_url: str | None  # its cover, once OpenAI has painted one
     made_by: str | None
     playing: bool  # the station filling the gaps between requests
@@ -126,6 +196,26 @@ class CoverIn(BaseModel):
     description: Brief
 
 
+class TogetherIn(BaseModel):
+    """DJs as the editor has them, saved or not, for "Hear them together"."""
+
+    name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] = ""
+    djs: list[DJIn] = Field(min_length=2, max_length=MOST_DJS)
+    dynamic: Dynamic = ""
+    script_prompt: Prompt = ""
+
+    @model_validator(mode="after")
+    def can_talk_over_each_other(self) -> TogetherIn:
+        openai = [dj.name for dj in self.djs if not is_eleven(dj.voice)]
+        if openai:
+            raise PydanticCustomError(
+                "djs",
+                "They need ElevenLabs voices to talk together: {names} {has} an OpenAI one.",
+                {"names": " and ".join(openai), "has": "has" if len(openai) == 1 else "have"},
+            )
+        return self
+
+
 class PreviewIn(BaseModel):
     text: Words
     voice: Voice
@@ -143,7 +233,7 @@ async def _out(db: AsyncSession, station: Station) -> StationOut:
         description=station.description,
         global_awareness=station.global_awareness,
         dj=station.dj,
-        dj_id=station.dj_id,
+        dj_id=station.host.id if station.host else None,
         dj_name=station.dj_name,
         personality=station.personality,
         voice=station.voice,
@@ -153,6 +243,22 @@ async def _out(db: AsyncSession, station: Station) -> StationOut:
         announce_requests=station.announce_requests,
         jingles=station.jingles,
         crossfade=station.crossfade,
+        djs=[
+            StationDJOut(
+                id=dj.id,
+                name=dj.name,
+                personality=dj.personality,
+                voice=dj.voice,
+                pet_peeves=dj.pet_peeves,
+                soft_spots=dj.soft_spots,
+                obsession=dj.obsession,
+            )
+            for dj in station.hosts
+        ],
+        dynamic=station.dynamic,
+        talk_station=station.talk_station,
+        talk_ratio=station.talk_ratio,
+        script_prompt=station.script_prompt,
         art_url=station.art_url,
         made_by=station.creator.display_name if station.creator else None,
         playing=bool(source and source.station_id == station.id),
@@ -180,33 +286,45 @@ STATION_FIELDS = (
     "announce_requests",
     "jingles",
     "crossfade",
+    "dynamic",
+    "talk_station",
+    "talk_ratio",
+    "script_prompt",
 )
 
 
 async def _apply(db: AsyncSession, station: Station, body: StationIn) -> None:
     for field in STATION_FIELDS:
         setattr(station, field, getattr(body, field))
-    station.host = await _host(db, body) if body.dj else None
+    # The one-DJ form has no hooks, so it leaves the DJ's alone.
+    hooks = body.djs is not None
+    station.set_hosts([await _host(db, dj, hooks) for dj in body.hosts()])
 
 
-async def _host(db: AsyncSession, body: StationIn) -> DJProfile:
+async def _host(db: AsyncSession, dj: DJIn, hooks: bool) -> DJProfile:
     """The DJ the form describes: the one it names, with these details, or a new one."""
     host = None
-    if body.dj_id is not None:
-        host = await db.get(DJProfile, body.dj_id)
+    if dj.id is not None:
+        host = await db.get(DJProfile, dj.id)
         if host is None:
             raise HTTPException(404, "That DJ doesn't exist any more.")
-    same_name = select(DJProfile.id).where(func.lower(DJProfile.name) == body.dj_name.lower())
+    same_name = select(DJProfile.id).where(func.lower(DJProfile.name) == dj.name.lower())
     if host is not None:
         same_name = same_name.where(DJProfile.id != host.id)
     if await db.scalar(same_name.limit(1)):
         raise HTTPException(
-            409, f"There's already a DJ called {body.dj_name}. Choose them from the list instead."
+            409, f"There's already a DJ called {dj.name}. Choose them from the list instead."
         )
     if host is None:
         host = DJProfile(created_at=time.time())
         db.add(host)
-    host.name, host.personality, host.voice = body.dj_name, body.personality, body.voice
+    host.name, host.personality, host.voice = dj.name, dj.personality, dj.voice
+    if hooks:
+        host.pet_peeves, host.soft_spots, host.obsession = (
+            dj.pet_peeves,
+            dj.soft_spots,
+            dj.obsession,
+        )
     return host
 
 
@@ -237,6 +355,31 @@ async def preview(body: PreviewIn, _: Maker, request: Request) -> FileResponse:
     try:
         clip = await request.app.state.speech.say(body.text, body.voice, instructions)
     except SpeechError as error:
+        raise HTTPException(502, str(error)) from None
+    return FileResponse(clip.path, media_type="audio/mpeg")
+
+
+@router.post("/together")
+async def hear_together(body: TogetherIn, _: Maker, request: Request, db: Db) -> FileResponse:
+    """A half-minute exchange between the editor's DJs, saved or not, written and voiced the
+    way a talk station's talk is, for the browser to play. About 200 ElevenLabs credits."""
+    state = request.app.state
+    now = datetime.now(UTC).astimezone(ZoneInfo(await get_pref(db, "timezone")))
+    try:
+        clip = await together(
+            state.ai,
+            state.speech,
+            station=body.name or "GuildFM",
+            hosts=[
+                Host(dj.name, dj.personality, dj.pet_peeves, dj.soft_spots, dj.obsession)
+                for dj in body.djs
+            ],
+            voices={dj.name: dj.voice for dj in body.djs},
+            dynamic=body.dynamic,
+            prompt=body.script_prompt,
+            now=now,
+        )
+    except (AIError, SpeechError) as error:
         raise HTTPException(502, str(error)) from None
     return FileResponse(clip.path, media_type="audio/mpeg")
 

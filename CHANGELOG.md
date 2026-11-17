@@ -7,6 +7,17 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Skip music when ready, in the monitor mode bar. Each song starts near its end and stops as
+  soon as the DJ's next words are ready, so trying out a DJ isn't minutes of beeps.
+
+### Changed
+
+- Station and line-up covers are no longer all an office with a radio in it. OpenAI paints
+  each one from its name and its music instead: a play on the name, the mood, or the look of
+  the music's era. Press Paint another in a station's editor for a new one.
+
 ## [0.1.7] - 2026-11-17
 
 ### Added

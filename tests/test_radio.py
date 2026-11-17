@@ -561,6 +561,20 @@ def test_an_hour_with_the_dj_talking_every_few_minutes(client, openai: FakeOpenA
     assert [index for index, slot in enumerate(slots) if slot["line"]] == [0, 3, 6, 9, 12, 15]
 
 
+def test_an_hour_of_a_talk_station_is_its_songs(client, openai: FakeOpenAI) -> None:
+    # Its talk is written as it plays, from its show's plan, so the preview has no DJ lines.
+    openai.picks = HOUR_OF_SONGS
+    sign_in(client, *ADMIN)
+    djs = [
+        {"name": "Guildbert", "voice": "elevenlabs:guildbert01"},
+        {"name": "Debbie", "voice": "elevenlabs:aurora02"},
+    ]
+    slots = preview(client, dj=True, djs=djs, talk_station=True).json()["slots"]
+    assert len(slots) == 18
+    assert not any(slot["line"] for slot in slots)
+    assert openai.asked_for("dj_line") == []
+
+
 def test_an_hour_without_a_dj(client, openai: FakeOpenAI, people) -> None:
     openai.picks = HOUR_OF_SONGS
     sign_in(client, *people["curator"])

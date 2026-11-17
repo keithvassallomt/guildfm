@@ -3,6 +3,9 @@ level. Text to speech comes out around -22 LUFS, well under most music.
 
 It uses ffmpeg's loudnorm filter in two passes: one to measure, one to apply a steady gain with
 a limit on the peaks. ffmpeg is optional: without it, audio plays at the level it came at.
+
+ffmpeg also mixes a talk station's turns into one clip, cut and overlapping (mixing.py).
+Without it, the turns play whole, one after another.
 """
 
 import asyncio
@@ -10,12 +13,15 @@ import json
 import logging
 import re
 import shutil
+from dataclasses import dataclass
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 
 FFMPEG = shutil.which("ffmpeg")
 PEAK = -1.5  # dBTP: room for the MP3 encoding without clipping
 RANGE = 11  # LU: loudnorm's loudness range target
+FADE = 0.05  # seconds a clip cut off in a mix fades out over
 
 
 async def _ffmpeg(data: bytes, *args: str) -> tuple[bytes, str]:
@@ -75,3 +81,41 @@ async def level(data: bytes, loudness: float | None) -> bytes:
         log.warning("Couldn't even out an audio clip's loudness: %s", error)
         return data
     return out or data
+
+
+@dataclass(frozen=True)
+class Part:
+    """A clip's place in a mix."""
+
+    path: Path
+    at: float  # seconds into the mix where its kept part starts
+    start: float  # seconds into the clip where the kept part starts
+    end: float  # and where it ends
+    fade: bool = False  # it's cut off, so it fades out quickly at its end
+
+
+async def mix(parts: list[Part]) -> bytes:
+    """The parts mixed into one stereo MP3, overlapping where they're placed to. Without
+    ffmpeg, the clips whole, one after another."""
+    if not FFMPEG:
+        return b"".join(part.path.read_bytes() for part in parts)
+    args = [FFMPEG, "-hide_banner", "-nostats"]
+    chains = []
+    for number, part in enumerate(parts):
+        args += ["-i", str(part.path)]
+        chain = f"[{number}:a]atrim=start={part.start:.3f}:end={part.end:.3f},asetpts=PTS-STARTPTS"
+        if part.fade:
+            chain += f",afade=t=out:st={max(0.0, part.end - part.start - FADE):.3f}:d={FADE}"
+        chains.append(f"{chain},adelay={round(part.at * 1000)}:all=1[c{number}]")
+    inputs = "".join(f"[c{number}]" for number in range(len(parts)))
+    joined = f"{inputs}amix=inputs={len(parts)}:normalize=0:dropout_transition=0[out]"
+    args += ["-filter_complex", ";".join([*chains, joined]), "-map", "[out]"]
+    args += ["-ac", "2", "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3"]
+    args.append("pipe:1")
+    process = await asyncio.create_subprocess_exec(
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    out, err = await process.communicate()
+    if process.returncode != 0:
+        raise RuntimeError(err.decode(errors="replace")[-300:])
+    return out

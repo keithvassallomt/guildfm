@@ -156,6 +156,9 @@ class PlaybackController:
         self.on_poll: list[Callable[[], Awaitable[None]]] = []
         # What to play when GuildFM takes the speakers over with nothing of its own left.
         self.source: Source | None = None
+        # Asked when Play finds nothing to play: whether something is on its way, such as a
+        # 100% talk station's first talk, which takes the speakers once it's ready.
+        self.warm_up: Callable[[], Awaitable[bool]] | None = None
         # Whether playback hours are open and when that next changes, kept up by the scheduler.
         self.hours: dict[str, Any] | None = None
         # An announcement, the DJ or a jingle is on the speakers. Set by the announcer.
@@ -606,6 +609,11 @@ class PlaybackController:
             remaining = [] if resume and stopped else self._items[self._position - 1 :]
             if not remaining and self.source:
                 remaining = await self.source()
+            if not remaining and self.warm_up and await self.warm_up():
+                # An all-talk station opens with a song, or else its talk starts when it's ready.
+                remaining = await self.source() if self.source else []
+                if not remaining:
+                    return
             if not remaining:
                 raise NothingToPlay
             await self._call(self._speakers.take_over, remaining)
@@ -708,6 +716,24 @@ class PlaybackController:
         self._require_control()
         position = await self._call(self._speakers.add_at, item, self._next_slot())
         self._items.insert(position - 1, item)
+        self._remember()
+
+    @property
+    def anything_ahead(self) -> bool:
+        """Whether anything is lined up on the speakers after the current track."""
+        return self._in_control and self._position < len(self._items)
+
+    async def queue_talk(self, item: QueueItem, start: bool) -> None:
+        """Line up a 100% talk station's talk after everything else on the speakers, there being
+        no song for it to go before; with `start`, play it now, nothing being on, taking the
+        speakers over if need be."""
+        if start:
+            await self.play_now(item)
+        else:
+            self._require_control()
+            position = await self._call(self._speakers.add_at, item, len(self._items) + 1)
+            self._items.insert(position - 1, item)
+        self._clips[item.key] = ("dj", "")
         self._remember()
 
     async def queue_announcement(self, item: QueueItem) -> None:

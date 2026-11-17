@@ -1,13 +1,18 @@
 """Global awareness for stations: the weather where the office is and the music news, so the AI
 can steer its picks and the DJ has something to talk about. Both are kept for a while, so
 stations don't ask again for every song. The news takes up to a minute to gather, longer than
-the DJ has, so it's gathered in the background and used once it's in."""
+the DJ has, so it's gathered in the background and used once it's in.
+
+Talk stations' DJs have more to talk about, gathered the same way when their script prompt asks
+for it (fields.py): light news, British football, and celebrities' birthdays and news."""
 
 import asyncio
 import logging
+import re
 import time
 from collections.abc import Callable
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import date, datetime
 
 import httpx2
 
@@ -45,6 +50,58 @@ NEWS_PROMPT = (
     "bullet points, each with its date, in plain text with no links or formatting. Leave out "
     "gossip. If nothing notable happened, say so."
 )
+LIGHT_NEWS_PROMPT = (
+    "Search the web for light news from the last day or two that two radio DJs could chat "
+    "about: odd, funny, surprising or heart-warming stories, from the UK or anywhere. Leave out "
+    "politics, elections, wars, crime, court cases, disasters, accidents, deaths, illness and "
+    "anything else sad or divisive. Give at most five short, factual bullet points, each with "
+    "its date and where it happened, in plain text with no links or formatting. If nothing "
+    "suitable happened, say so."
+)
+FOOTBALL_PROMPT = (
+    "Search the web for British football from the last few days: results and scores in the "
+    "Premier League, the English Football League, the Scottish Premiership and the cups, and "
+    "what people are talking about, such as a shock result, a manager leaving or a record. "
+    "British clubs and the home nations only, and nothing but football. Leave out crime, court "
+    "cases, abuse and serious injuries. Give at most six short, factual bullet points, each with "
+    "its date, in plain text with no links or formatting. If there's been no football, say so."
+)
+CELEBRITIES_PROMPT = (
+    "Today is {date}. Search the web for well-known people an office in the UK would know, such "
+    "as musicians, actors, TV presenters and sports stars, whose birthday is today, and for "
+    "anniversaries today of famous records, films, shows and events. Add any light celebrity "
+    "news from the last few days. For a birthday, give the date of birth exactly as a reliable "
+    "source has it, never an age. Leave out deaths, anniversaries of deaths, illness, scandal, "
+    "break-ups and court cases. Give at most six short, factual bullet points in plain text with "
+    "no links or formatting."
+)
+
+
+@dataclass(frozen=True)
+class Topic:
+    """Something the AI looks up on the web for the DJs."""
+
+    prompt: str  # what to look for; {date} is today, such as "Monday 16 November 2026"
+    seconds: float  # how long what it finds is kept
+    daily: bool = False  # only good on the day it was found, such as today's birthdays
+
+
+TOPICS = {
+    "music": Topic(NEWS_PROMPT, NEWS_SECONDS),
+    "news": Topic(LIGHT_NEWS_PROMPT, 6 * 60 * 60),
+    "sports": Topic(FOOTBALL_PROMPT, 3 * 60 * 60),
+    "celebrities": Topic(CELEBRITIES_PROMPT, 12 * 60 * 60, daily=True),
+}
+
+
+# A source the web search cites, as "([bbc.co.uk](https://...))", or a link, "[words](url)".
+_CITED = re.compile(r"\s*\(\[[^\]]*\]\([^)]*\)\)")
+_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
+def without_links(text: str) -> str:
+    """What the web search found without the sources and links it adds, asked or not."""
+    return _LINK.sub(r"\1", _CITED.sub("", text)).strip()
 
 
 def part_of_day(hour: int) -> str:
@@ -74,14 +131,15 @@ class Awareness:
         self._clock = clock
         self._places: dict[str, tuple[float, float] | None] = {}
         self._weather: dict[str, tuple[float, str | None]] = {}  # when it was read, and what
-        self._news: tuple[float, str | None] | None = None
-        self._gathering: asyncio.Task | None = None
+        # By topic: when it was found, what (None for nothing), and for a daily topic the day.
+        self._found: dict[str, tuple[float, str | None, str]] = {}
+        self._gathering: dict[str, asyncio.Task] = {}
         self.weather_health = Health()
 
     async def close(self) -> None:
-        if self._gathering:
-            self._gathering.cancel()
-            await asyncio.gather(self._gathering, return_exceptions=True)
+        for task in self._gathering.values():
+            task.cancel()
+        await asyncio.gather(*self._gathering.values(), return_exceptions=True)
         await self._http.aclose()
 
     async def _place(self, location: str) -> tuple[float, float] | None:
@@ -148,28 +206,51 @@ class Awareness:
     def news(self) -> str | None:
         """A few lines of recent music news, or None if there's none in yet. When it's out of
         date, fresh news is gathered in the background for next time."""
-        kept = self._news
-        fresh = kept and self._clock() - kept[0] < (NEWS_SECONDS if kept[1] else FAILED_SECONDS)
-        if not fresh and not (self._gathering and not self._gathering.done()):
-            self._gathering = asyncio.create_task(self.gather_news())
-        return kept[1] if kept else None
+        return self.gathered("music")
 
-    async def gather_news(self) -> None:
+    def gathered(self, topic: str, today: date | None = None) -> str | None:
+        """What the AI found on `topic` (one of TOPICS), or None if nothing's in yet. When it's
+        out of date, more is gathered in the background for next time. What's found on a daily
+        topic is only good on `today`, the day it was found."""
+        spec = TOPICS[topic]
+        day = today.isoformat() if spec.daily and today else ""
+        kept = self._found.get(topic)
+        current = kept is not None and kept[2] == day
+        keep_for = spec.seconds if current and kept[1] else FAILED_SECONDS
+        fresh = current and self._clock() - kept[0] < keep_for
+        running = self._gathering.get(topic)
+        if not fresh and not (running and not running.done()):
+            self._gathering[topic] = asyncio.create_task(self._gather(topic, today, day))
+        return kept[1] if current else None
+
+    async def _gather(self, topic: str, today: date | None, day: str) -> None:
+        spec = TOPICS[topic]
+        when = today or date.today()
+        prompt = spec.prompt.format(date=f"{when:%A} {when.day} {when:%B %Y}")
         try:
-            text = await self._ai.text(NEWS_INSTRUCTIONS, NEWS_PROMPT, web_search=True)
+            text = without_links(await self._ai.text(NEWS_INSTRUCTIONS, prompt, web_search=True))
         except AIError as error:
-            log.warning("Couldn't get the music news: %s", error)
+            log.warning("Couldn't look up %s: %s", topic, error)
             text = None
-        # Stale news beats none while the next lot is gathered.
-        if text or not self._news:
-            self._news = (self._clock(), text)
+        # Stale finds beat none while the next lot is gathered, if they're for the same day.
+        kept = self._found.get(topic)
+        if text or kept is None or kept[2] != day:
+            self._found[topic] = (self._clock(), text, day)
         else:
-            self._news = (self._clock() - NEWS_SECONDS + FAILED_SECONDS, self._news[1])
+            self._found[topic] = (self._clock() - spec.seconds + FAILED_SECONDS, kept[1], day)
+
+    async def ready(self, topics: list[str], today: date, timeout: float) -> None:
+        """Waits up to `timeout` seconds for what's being gathered on `topics`, starting on any
+        that aren't in yet."""
+        for topic in topics:
+            self.gathered(topic, today)
+        running = [task for t in topics if (task := self._gathering.get(t)) and not task.done()]
+        if running:
+            await asyncio.wait(running, timeout=timeout)
 
     async def settle(self) -> None:
-        """Wait for news being gathered. For tests."""
-        if self._gathering:
-            await self._gathering
+        """Wait for everything being gathered. For tests."""
+        await asyncio.gather(*self._gathering.values())
 
     async def context(self, location: str, now: datetime) -> str:
         """The time, the weather and the news, for a prompt."""

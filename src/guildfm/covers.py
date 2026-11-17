@@ -29,16 +29,21 @@ MODELS: dict[str, type[Station] | type[Lineup]] = {"station": Station, "lineup":
 
 
 def prompt(name: str, description: str, kind: Kind = "station") -> str:
+    # Where it plays isn't in the prompt: told it was an office's radio, every cover was an
+    # office with a radio in it.
     what = (
-        "a radio station playing over the speakers in an office. What it plays"
+        "a music station. What it plays"
         if kind == "station"
-        else "a line-up for an office's radio: the day's shows and playlists, planned like a "
-        "radio station's schedule. What it's like"
+        else "a day of shows and playlists. What it's like"
     )
     return (
         f'Square cover art for "{name}", {what}: {description}\n\n'
         "Make it look like album art: one bold, simple idea that still reads as a small "
-        "thumbnail, in rich colour, filling the whole square. "
+        "thumbnail, in rich colour, filling the whole square. Take the idea from the name and "
+        "the music: a play on the name, the mood of the music, or the look of its era and "
+        "scene, such as the record sleeves, posters and fashions it brings to mind. Don't show "
+        "an office, desks, computers, a radio, speakers, microphones or headphones, or anyone "
+        "at work. "
         f'Put the name, "{name}", on it as the only words, spelled exactly like that, '
         "in a bold, clear typeface that's easy to read when the cover is small. No other text, "
         "numbers or logos."

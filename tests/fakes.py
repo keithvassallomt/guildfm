@@ -238,6 +238,33 @@ class FakeOpenAI:
         self.picks_in_turn: list[list[dict]] = []  # for the next few asks, before `picks`
         self.line = {"script": "That was lovely. Here's another."}
         self.news = "Nothing notable in music news this week."
+        # What its other web searches find, by a word in what it's asked to look for.
+        self.found: dict[str, str] = {}
+        # A talk show's plan, as it answers.
+        self.plan = {
+            "segments": [{"about": f"Topic {n}"} for n in range(1, 13)],
+            "bits": [
+                {"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.",
+                 "ending": "Priya asks for ABBA.", "setup": 1, "payoff": 9},
+                {"move": "the score", "idea": "Guess the year.", "ending": "A draw.", "setup": 2,
+                 "payoff": 10},
+            ],
+            "happening": {"idea": "", "ending": "", "starts": 0, "ends": 0},
+        }  # fmt: skip
+        # A talk show's segment, as it writes it.
+        self.segment = {
+            "turns": [
+                {"speaker": "Guildbert", "text": "Right, before you start, I have a theory.",
+                 "cut_after": "before you start", "together": False},
+                {"speaker": "Debbie", "text": "No theories. Priya asked for ABBA.", "cut_after": "",
+                 "together": False},
+            ],
+            "notes": "Debbie has won the biscuit.",
+        }  # fmt: skip
+        self.segments_in_turn: list[dict] = []  # for the next few asks, before `segment`
+        # Its edit of a segment: problems found and the turns fixed. None finds nothing.
+        self.edit: dict | None = None
+        self.edit_down = False  # editing fails
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
@@ -269,11 +296,22 @@ class FakeOpenAI:
             text = json.dumps(self.line)
         elif name == "name_check":
             text = json.dumps({"verdict": self.names.get(body["input"], "fine")})
+        elif name == "show_plan":
+            text = json.dumps(self.plan)
+        elif name == "talk_segment":
+            turn = self.segments_in_turn.pop(0) if self.segments_in_turn else self.segment
+            text = json.dumps(turn)
+        elif name == "talk_edit" and self.edit_down:
+            return httpx2.Response(500, json={"error": {"message": "nope"}})
+        elif name == "talk_edit":
+            draft = json.loads(body["input"].split("The draft:\n", 1)[1])
+            text = json.dumps(self.edit or {"problems": [], "turns": draft})
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})
         else:
-            text = self.news
+            asked = body.get("input", "")
+            text = next((found for word, found in self.found.items() if word in asked), self.news)
         output = [
             {"type": "reasoning", "summary": []},
             {"type": "message", "content": [{"type": "output_text", "text": text}]},
@@ -357,9 +395,28 @@ class FakeElevenLabs:
         if request.url.path.startswith("/v1/music"):
             return self._music(request.url.path, json.loads(request.content))
         voice = request.url.path.removeprefix("/v1/text-to-speech/")
-        self.requests.append({"voice": voice, **json.loads(request.content)})
+        timed = voice.endswith("/with-timestamps")
+        voice = voice.removesuffix("/with-timestamps")
+        body = json.loads(request.content)
+        self.requests.append({"voice": voice, **body})
         if self.status != 200:
             return httpx2.Response(self.status, json={"detail": self.detail or {}})
+        if timed:
+            # The characters said evenly through the clip, after a tenth of a second.
+            text, seconds = body["text"], self.seconds
+            step = (seconds - 0.2) / max(1, len(text))
+            starts = [round(0.1 + i * step, 3) for i in range(len(text))]
+            timing = {
+                "characters": list(text),
+                "character_start_times_seconds": starts,
+                "character_end_times_seconds": [round(s + step, 3) for s in starts],
+            }
+            audio = base64.b64encode(mp3(seconds)).decode()
+            # Billed at about 0.44 credits a character, as eleven_v4 is on Keith's plan.
+            cost = {"character-cost": str(round(len(text) * 0.44))}
+            return httpx2.Response(
+                200, json={"audio_base64": audio, "alignment": timing}, headers=cost
+            )
         return httpx2.Response(
             200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
         )

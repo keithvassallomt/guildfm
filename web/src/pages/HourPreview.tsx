@@ -59,6 +59,8 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
   }, [open]);
 
   const voice = { voice: station.voice, dj_name: station.dj_name, personality: station.personality };
+  // A talk station's talk is written as it plays, from its show's plan, so the hour has its songs.
+  const dj = station.dj && !station.talk_station;
   const talks = hour?.slots.filter((slot) => slot.line).length ?? 0;
   const jingles = hour?.slots.filter((slot) => slot.jingle).length ?? 0;
 
@@ -68,7 +70,7 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
         {loading && (
           <p role="status" className={h.waiting}>
             <Icon name="radio" size={18} />
-            Picking an hour of songs{station.dj ? " and writing what the DJ says" : ""}. This
+            Picking an hour of songs{dj ? " and writing what the DJ says" : ""}. This
             takes about a minute.
           </p>
         )}
@@ -78,10 +80,12 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
             <p className={styles.muted}>
               {hour.slots.length} songs, {hour.minutes} minutes
               {jingles ? `, ${jingles} ${jingles === 1 ? "jingle" : "jingles"}` : ""}
-              {station.dj ? `, and ${station.dj_name} talks ${talks} times` : ""}. Requests would
+              {dj ? `, and ${station.dj_name} talks ${talks} times` : ""}. Requests would
               play first, so the real hour will differ. Nothing here is kept.
+              {station.talk_station &&
+                " On a talk station the DJs' talk is written as the show goes, so the hour shows its songs. Hear them together gives a taste of the talk."}
             </p>
-            {(station.dj || jingles > 0) && (
+            {(dj || jingles > 0) && (
               <ul className={h.legend} aria-label="Key">
                 <li>
                   <span className={h.keySong} aria-hidden="true" />
@@ -93,7 +97,7 @@ export function HourPreview({ open, onClose, station, stationId }: Props) {
                     A jingle between songs: the music pauses
                   </li>
                 )}
-                {station.dj && (
+                {dj && (
                   <li>
                     <span className={h.keyBetween} aria-hidden="true" />
                     The DJ between songs: the music pauses

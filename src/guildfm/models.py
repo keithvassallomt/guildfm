@@ -179,12 +179,32 @@ class DJProfile(Base):
     personality: Mapped[str] = mapped_column(String(600), default="")
     # An OpenAI voice ("marin"), or an ElevenLabs one ("elevenlabs:" and its id).
     voice: Mapped[str] = mapped_column(String(64), default="marin")
+    # Hooks for the banter on talk stations, all optional: what the other DJs can wind them up
+    # about, what they go soft on, and what they keep coming back to.
+    pet_peeves: Mapped[str] = mapped_column(String(300), default="")
+    soft_spots: Mapped[str] = mapped_column(String(300), default="")
+    obsession: Mapped[str] = mapped_column(String(200), default="")
     created_at: Mapped[float]
 
 
+class StationDJ(Base):
+    """A DJ on a station, in the station's order. On a music station the first one talks
+    between songs; a talk station has them all. Goes with the station, never with the DJ."""
+
+    __tablename__ = "station_djs"
+
+    station_id: Mapped[int] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), primary_key=True
+    )
+    dj_id: Mapped[int] = mapped_column(ForeignKey("djs.id", ondelete="CASCADE"), primary_key=True)
+    position: Mapped[int] = mapped_column(default=0)
+
+    dj: Mapped[DJProfile] = relationship(lazy="joined")
+
+
 class Station(Base):
-    """An AI radio station: the AI picks its songs from a description, and an optional DJ talks
-    between them."""
+    """An AI radio station: the AI picks its songs from a description, and optional DJs talk
+    between them. A talk station is mostly its DJs talking, from a script prompt."""
 
     __tablename__ = "stations"
 
@@ -196,10 +216,17 @@ class Station(Base):
     )
     description: Mapped[str] = mapped_column(String(600))
     global_awareness: Mapped[bool] = mapped_column(default=False)
-    # The DJ hosting it, if any. A DJ can host several stations.
-    dj_id: Mapped[int | None] = mapped_column(
-        ForeignKey("djs.id", ondelete="SET NULL"), default=None
-    )
+    # How its DJs get on, for a station with two or more. The station's, not the DJs': the
+    # same DJs can get on differently elsewhere.
+    dynamic: Mapped[str] = mapped_column(String(1000), default="")
+    # A talk station is mostly its DJs talking: this much of its time, in percent (20 to 100),
+    # written from its script prompt.
+    talk_station: Mapped[bool] = mapped_column(default=False)
+    talk_ratio: Mapped[int] = mapped_column(default=40)
+    script_prompt: Mapped[str] = mapped_column(String(4000), default="")
+    # A talk station's running bits from its last few shows, oldest first, so a daily show
+    # doesn't repeat itself and can call back: each its day, move and idea (see talk.py).
+    talk_log: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
     talk_every: Mapped[int] = mapped_column(default=3)
     talk_unit: Mapped[TalkUnit] = mapped_column(
         Enum(TalkUnit, native_enum=False, length=16, values_callable=enum_values),
@@ -225,7 +252,29 @@ class Station(Base):
     art_for: Mapped[str | None] = mapped_column(String(32), default=None)
 
     creator: Mapped[User | None] = relationship(lazy="joined")
-    host: Mapped[DJProfile | None] = relationship(lazy="joined")
+    # Its DJs, in order. A DJ can host several stations.
+    hosting: Mapped[list[StationDJ]] = relationship(
+        order_by=StationDJ.position, cascade="all, delete-orphan", lazy="selectin"
+    )
+
+    @property
+    def hosts(self) -> list[DJProfile]:
+        """Its DJs, in order."""
+        return [row.dj for row in self.hosting]
+
+    def set_hosts(self, djs: list[DJProfile]) -> None:
+        """Make `djs` its DJs, in that order. Those it already has keep their place on it."""
+        rows = []
+        for position, dj in enumerate(djs):
+            row = next((row for row in self.hosting if row.dj is dj), None) or StationDJ(dj=dj)
+            row.position = position
+            rows.append(row)
+        self.hosting = rows
+
+    @property
+    def host(self) -> DJProfile | None:
+        """The DJ who talks between songs on a music station: its first."""
+        return self.hosting[0].dj if self.hosting else None
 
     # The DJ's details, as the DJ, the hour preview and the editor's form all see them.
     @property

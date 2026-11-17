@@ -5,9 +5,14 @@ things out without the office hearing.
 clock: each song lasts as long as the real one would, and browsers play beeps for it, while
 GuildFM's own clips (the DJ, jingles and announcements) play for real. `MonitorRelay` tells the
 browsers what's playing, and admins who pressed Listen here hear it.
+
+With skip music on, a song only plays until what's said after it is ready: it starts near its
+end, so GuildFM lines up the next song and makes the talk before it straight away, and gives
+way as soon as that talk is lined up.
 """
 
 import asyncio
+import itertools
 import logging
 import re
 import threading
@@ -27,12 +32,21 @@ SONG_SECONDS = 180.0  # for a song whose length GuildFM doesn't know
 OVERLAYS_KEPT = 30.0  # seconds a clip over the music stays in the state, for late browsers
 RELAY_SECONDS = 0.25
 HEARTBEAT_SECONDS = 5.0  # the state is sent at least this often, so browsers keep in step
+# Seconds of a song left once skip music jumps to near its end: under queue.LEAD_SECONDS, so the
+# next song is lined up, and what's said before it made, straight away.
+READY_LEFT = 88.0
+SAID = "/media/speech/"  # where the DJ's words, talk and announcements are served from
 _TITLE = re.compile(r"<dc:title>(.*?)</dc:title>", re.DOTALL)
 
 
 def _is_clip(item: QueueItem) -> bool:
     """An MP3 that GuildFM serves, such as the DJ between songs, rather than a song."""
     return item.uri.startswith("http")
+
+
+def _is_said(item: QueueItem) -> bool:
+    """A clip of something said, such as the DJ, rather than a jingle."""
+    return _is_clip(item) and urlparse(item.uri).path.startswith(SAID)
 
 
 def _title(item: QueueItem) -> str:
@@ -57,6 +71,7 @@ class MonitorSystem:
         self._volume = 20
         self._overlays: list[dict[str, Any]] = []  # clips over the music, newest last
         self._overlay_ids = 0
+        self._skip_music = False
         self.version = 0  # goes up with every change, for the relay
 
     # Keeping time
@@ -83,7 +98,12 @@ class MonitorSystem:
         self._changed()
 
     def _advance(self) -> None:
-        """Move on past anything that has finished since the last look."""
+        """Move on past anything that has finished since the last look, and with skip music,
+        past music that's waited long enough."""
+        self._catch_up()
+        self._hurry()
+
+    def _catch_up(self) -> None:
         while self._transport == "PLAYING" and (item := self._current()):
             seconds = item.seconds or SONG_SECONDS
             ends = self._since - self._offset + seconds
@@ -94,6 +114,35 @@ class MonitorSystem:
             else:
                 self._transport, self._offset = "STOPPED", seconds
                 self._changed()
+
+    def _hurry(self) -> None:
+        """With skip music: a song gives way once something said is lined up in the pause after
+        it, and until then plays only its last stretch, which is long enough to make it."""
+        if not self._skip_music or self._transport != "PLAYING":
+            return
+        item = self._current()
+        if item is None or _is_clip(item):
+            return
+        pause = itertools.takewhile(_is_clip, self._queue[self._position :])
+        if any(_is_said(clip) for clip in pause):
+            self._start(self._position + 1)
+            return
+        seconds = item.seconds or SONG_SECONDS
+        if seconds - self._elapsed() > READY_LEFT:
+            self._offset, self._since = seconds - READY_LEFT, self._clock()
+            self._changed()
+
+    @property
+    def skip_music(self) -> bool:
+        return self._skip_music
+
+    @skip_music.setter
+    def skip_music(self, on: bool) -> None:
+        with self._lock:
+            if on != self._skip_music:
+                self._skip_music = on
+                self._changed()
+            self._advance()
 
     def tick(self) -> int:
         """Catch up with the clock. Returns `version`, which changes when anything does."""
@@ -120,6 +169,7 @@ class MonitorSystem:
                 },
                 "elapsed": self._elapsed(),
                 "volume": self._volume,
+                "skip_music": self._skip_music,
                 "overlays": [
                     {
                         "id": overlay["id"],
@@ -203,6 +253,7 @@ class MonitorSystem:
         with self._lock:
             self._queue, self._ours = list(items), True
             self._start(1)
+            self._hurry()
 
     def add_next(self, item: QueueItem) -> int:
         with self._lock:
@@ -210,6 +261,7 @@ class MonitorSystem:
             position = (self._position or 0) + 1
             self._queue.insert(position - 1, item)
             self._changed()
+            self._hurry()
             return position
 
     def add_at(self, item: QueueItem, position: int) -> int:
@@ -219,6 +271,7 @@ class MonitorSystem:
             if self._position and position <= self._position:
                 self._position += 1
             self._changed()
+            self._hurry()
             return position
 
     def remove(self, position: int) -> None:
@@ -236,6 +289,7 @@ class MonitorSystem:
     def play_position(self, position: int) -> None:
         with self._lock:
             self._start(position)
+            self._hurry()
 
     def play_clip(
         self, uid: str, url: str, volume: int, start: threading.Barrier | None = None

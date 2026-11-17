@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
 from guildfm.live import LiveHub
-from guildfm.monitor import MonitorRelay, MonitorSystem
+from guildfm.monitor import READY_LEFT, MonitorRelay, MonitorSystem
+from guildfm.queue import LEAD_SECONDS
 from guildfm.speakers import clip_item, spotify_item
 from tests.conftest import Ticker
 from tests.fakes import FakeSpeakers, spotify_id
@@ -10,6 +11,7 @@ from tests.helpers import ADMIN, read_speakers, sign_in
 SONG = spotify_item(spotify_id("fm1"), sid=9, sn=1, seconds=200)
 OTHER = spotify_item(spotify_id("fm2"), sid=9, sn=1, seconds=100)
 LINE = clip_item("http://127.0.0.1:8000/media/speech/line.mp3", "Della", seconds=8)
+JINGLE = clip_item("http://127.0.0.1:8000/media/jingles/ident.mp3", "GuildFM", seconds=6)
 
 
 # The stand-in for the speakers
@@ -55,6 +57,41 @@ def test_a_clip_in_the_queue_plays_between_the_songs(ticker: Ticker) -> None:
     item = monitor.state()["item"]
     assert (item["kind"], item["path"]) == ("clip", "/media/speech/line.mp3")
     ticker.now += 5
+    assert monitor.snapshot(False).track.uri == OTHER.uri
+
+
+def test_skip_music_plays_a_song_only_until_the_talk_after_it_is_ready(ticker: Ticker) -> None:
+    monitor = MonitorSystem(clock=ticker)
+    monitor.take_over([SONG, OTHER])
+    ticker.now += 10
+    monitor.skip_music = True
+    # Straight to near the end, so the next song is lined up and the talk made now...
+    playing = monitor.snapshot(False)
+    assert playing.track.duration - playing.track.position <= READY_LEFT < LEAD_SECONDS
+    assert monitor.state()["skip_music"] is True
+
+    # ...and a jingle lined up after it isn't the talk, so the song plays on...
+    monitor.add_at(JINGLE, 2)
+    assert monitor.snapshot(False).track.uri == SONG.uri
+    # ...until what's said is, when it gives way to the pause: the jingle, then the talk.
+    ticker.now += 30
+    monitor.add_at(LINE, 3)
+    assert monitor.snapshot(False).track.uri == JINGLE.uri
+    ticker.now += 6
+    assert monitor.snapshot(False).track.uri == LINE.uri
+    # The next song starts near its end too.
+    ticker.now += 8
+    playing = monitor.snapshot(False)
+    assert (playing.track.uri, playing.track.position) == (OTHER.uri, 100 - READY_LEFT)
+
+
+def test_skip_music_waits_out_the_last_stretch_when_nothing_is_said(ticker: Ticker) -> None:
+    monitor = MonitorSystem(clock=ticker)
+    monitor.skip_music = True
+    monitor.take_over([SONG, OTHER])
+    ticker.now += READY_LEFT - 1
+    assert monitor.snapshot(False).track.uri == SONG.uri
+    ticker.now += 2
     assert monitor.snapshot(False).track.uri == OTHER.uri
 
 
@@ -163,6 +200,22 @@ def test_it_stays_on_after_a_restart(start, speakers) -> None:
         sign_in(client, *ADMIN)
         state = client.get("/api/playback").json()
         assert (state["monitor"], state["status"]) == (True, "stopped")
+
+
+def test_skip_music_is_kept_after_a_restart(start, speakers) -> None:
+    with start() as client:
+        sign_in(client, *ADMIN)
+        response = client.put("/api/playback/monitor/skip-music", json={"on": True})
+        assert response.json()["skip_music"] is True
+    with start() as client:
+        sign_in(client, *ADMIN)
+        assert client.get("/api/playback/monitor").json()["skip_music"] is True
+
+
+def test_only_those_who_control_playback_switch_skip_music(client, people) -> None:
+    sign_in(client, *people["curator"])
+    response = client.put("/api/playback/monitor/skip-music", json={"on": True})
+    assert response.status_code == 403
 
 
 def test_announcements_for_chosen_rooms_play_in_the_browser(client, speakers, monitor) -> None:

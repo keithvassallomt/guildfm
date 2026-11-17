@@ -30,11 +30,12 @@ from guildfm.office import Office, OfficeOnly
 from guildfm.playback import PlaybackController
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine
-from guildfm.radio import Radio
+from guildfm.radio import Radio, open_with_song
 from guildfm.schedule import Scheduler
 from guildfm.speakers import SocoSystem, SpeakerSystem
 from guildfm.speech import SpeechClient
 from guildfm.spotify import SpotifyClient
+from guildfm.talkshow import TalkShow
 from guildfm.web import mount_web, send_browsers_to
 
 SESSION_DAYS = 180
@@ -70,6 +71,7 @@ def create_app(
         async with app.state.sessionmaker() as db:
             await seed_admin(db, settings)
             monitoring = await get_pref(db, "monitor")
+            app.state.monitor.skip_music = await get_pref(db, "monitor_skip_music")
             app.state.spotify.zone = ZoneInfo(await get_pref(db, "timezone"))
         if monitoring:
             await app.state.playback.use(app.state.monitor, monitoring=True)
@@ -133,8 +135,36 @@ def create_app(
             app.state.announcer,
             settings.data_dir / "media",
         )
-        # The jingle first, so it plays before anything the DJ says in the same pause.
-        app.state.queue.on_lined_up += [app.state.jingles.lined_up, app.state.dj.lined_up]
+        app.state.talk = TalkShow(
+            app.state.sessionmaker,
+            app.state.announcer,
+            app.state.ai,
+            app.state.speech,
+            app.state.awareness,
+            app.state.playback,
+            **clock,
+        )
+        # The jingle first, so it plays before anything the DJ says in the same pause. A talk
+        # station's DJs talk through the talk show instead of the DJ.
+        app.state.queue.on_lined_up += [
+            app.state.jingles.lined_up,
+            app.state.dj.lined_up,
+            app.state.talk.lined_up,
+        ]
+        app.state.queue.on_skipped.append(app.state.talk.skipped)
+        # After the queue has had its go, so a request lined up comes first.
+        app.state.playback.on_poll.append(app.state.talk.keep_talking)
+        app.state.queue.on_coming_on.append(app.state.talk.prepare)
+
+        async def warm_up() -> bool:
+            """Play with nothing to play: an all-talk station opens with a song heard before,
+            or else its first talk is made and starts when it's ready."""
+            async with app.state.sessionmaker() as db:
+                if await open_with_song(db):
+                    return True
+            return await app.state.talk.warm_up()
+
+        app.state.playback.warm_up = warm_up
 
         loops = (
             (
@@ -156,6 +186,7 @@ def create_app(
                 await task
         await app.state.radio.close()
         await app.state.dj.close()
+        await app.state.talk.close()
         await app.state.covers.close()
         await app.state.composer.close()
         await app.state.spotify.close()

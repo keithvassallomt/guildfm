@@ -330,13 +330,30 @@ export type PlaylistTile = {
 };
 
 /** A DJ, who can host any number of stations. */
-export type DJProfile = {
+/** What a talk station's other DJs can wind them up about, what they go soft on, and what they
+ * keep coming back to. */
+export type Hooks = {
+  pet_peeves: string;
+  soft_spots: string;
+  obsession: string;
+};
+
+export type DJProfile = Hooks & {
   id: number;
   name: string;
   personality: string;
   voice: string;
   /** The stations they host, by name. */
   stations: { id: number; name: string }[];
+};
+
+/** One of a station's DJs, as the editor has them: saving the station saves these to the DJ,
+ * or makes a new one when `id` is null. */
+export type StationDJ = Hooks & {
+  id: number | null;
+  name: string;
+  personality: string;
+  voice: string;
 };
 
 export type SourceKind = "queue" | "library" | "radio" | "lineups";
@@ -513,6 +530,15 @@ export type StationFields = {
   jingles: boolean;
   /** The speakers fade each song into the next while it's on. */
   crossfade: boolean;
+  /** Its DJs in order. The first is also the one the dj_ fields above describe. */
+  djs: StationDJ[];
+  /** How its DJs get on. */
+  dynamic: string;
+  /** Mostly its DJs talking, from the script prompt (talk.md). */
+  talk_station: boolean;
+  /** Percent of a talk station's time that's talk, 20 to 100. */
+  talk_ratio: number;
+  script_prompt: string;
 };
 
 export type Station = StationFields & {
@@ -600,6 +626,8 @@ export type Voices = {
   elevenlabs: { id: string; name: string }[];
   /** Whether there's an ElevenLabs key in .env. */
   elevenlabs_ready: boolean;
+  /** The ElevenLabs account's credits a month, when it'll say. */
+  credits_limit: number | null;
 };
 
 /** How an outside service is doing. "off" isn't set up; "unused" hasn't been needed yet. */
