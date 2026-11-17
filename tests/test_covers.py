@@ -38,6 +38,9 @@ def test_a_new_station_gets_a_cover(client: TestClient, openai: FakeOpenAI) -> N
     assert "Upbeat soul for the lunch hour." in asked["prompt"]
     assert 'name, "Lunchtime Grooves", on it as the only words' in asked["prompt"]
     assert "No other text" in asked["prompt"]
+    # Not an office with a radio in it, every time.
+    assert "Don't show an office" in asked["prompt"]
+    assert "in an office" not in asked["prompt"]
     # On Now Playing's tiles too.
     tiles = client.get("/api/now").json()["stations"]
     assert next(t for t in tiles if t["id"] == made["id"])["art_url"] == url

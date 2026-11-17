@@ -145,7 +145,7 @@ def test_a_lineup_gets_a_cover(client: TestClient, openai: FakeOpenAI) -> None:
     body = make_lineup(client, []).json()
     client.portal.call(client.app.state.covers.settle)
     assert client.get(f"/api/lineups/{body['id']}").json()["art_url"].startswith("/media/covers/")
-    assert "a line-up for an office's radio" in openai.images[-1]["prompt"]
+    assert "a day of shows and playlists" in openai.images[-1]["prompt"]
 
 
 # Playing
