@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-17
+
 ### Added
 
 - Talk stations: a station with two or more DJs, each with an ElevenLabs voice, can be mostly
