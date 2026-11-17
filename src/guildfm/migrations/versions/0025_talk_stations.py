@@ -57,6 +57,9 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column("script_prompt", sa.String(length=4000), nullable=False, server_default="")
         )
+        batch_op.add_column(
+            sa.Column("talk_log", sa.JSON(), nullable=False, server_default=sa.text("'[]'"))
+        )
         batch_op.drop_constraint("fk_stations_dj_id_djs", type_="foreignkey")
         batch_op.drop_column("dj_id")
 
@@ -68,6 +71,7 @@ def downgrade() -> None:
         batch_op.create_foreign_key(
             "fk_stations_dj_id_djs", "djs", ["dj_id"], ["id"], ondelete="SET NULL"
         )
+        batch_op.drop_column("talk_log")
         batch_op.drop_column("script_prompt")
         batch_op.drop_column("talk_ratio")
         batch_op.drop_column("talk_station")

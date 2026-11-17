@@ -224,6 +224,9 @@ class Station(Base):
     talk_station: Mapped[bool] = mapped_column(default=False)
     talk_ratio: Mapped[int] = mapped_column(default=40)
     script_prompt: Mapped[str] = mapped_column(String(4000), default="")
+    # A talk station's running bits from its last few shows, oldest first, so a daily show
+    # doesn't repeat itself and can call back: each its day, move and idea (see talk.py).
+    talk_log: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
     talk_every: Mapped[int] = mapped_column(default=3)
     talk_unit: Mapped[TalkUnit] = mapped_column(
         Enum(TalkUnit, native_enum=False, length=16, values_callable=enum_values),

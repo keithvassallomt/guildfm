@@ -230,6 +230,16 @@ class FakeOpenAI:
         self.news = "Nothing notable in music news this week."
         # What its other web searches find, by a word in what it's asked to look for.
         self.found: dict[str, str] = {}
+        # A talk show's plan, as it answers.
+        self.plan = {
+            "segments": [{"about": f"Segment {n}"} for n in range(1, 13)],
+            "bits": [
+                {"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.", "setup": 1,
+                 "payoff": 9},
+                {"move": "the score", "idea": "Guess the year.", "setup": 2, "payoff": 10},
+            ],
+            "happening": {"idea": "", "starts": 0},
+        }  # fmt: skip
         self.down = False  # the text model fails
         self.images: list[dict] = []  # covers it's asked to paint
         self.images_down = False  # the image model fails
@@ -261,6 +271,8 @@ class FakeOpenAI:
             text = json.dumps(self.line)
         elif name == "name_check":
             text = json.dumps({"verdict": self.names.get(body["input"], "fine")})
+        elif name == "show_plan":
+            text = json.dumps(self.plan)
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})
@@ -350,9 +362,24 @@ class FakeElevenLabs:
         if request.url.path.startswith("/v1/music"):
             return self._music(request.url.path, json.loads(request.content))
         voice = request.url.path.removeprefix("/v1/text-to-speech/")
-        self.requests.append({"voice": voice, **json.loads(request.content)})
+        timed = voice.endswith("/with-timestamps")
+        voice = voice.removesuffix("/with-timestamps")
+        body = json.loads(request.content)
+        self.requests.append({"voice": voice, **body})
         if self.status != 200:
             return httpx2.Response(self.status, json={"detail": self.detail or {}})
+        if timed:
+            # The characters said evenly through the clip, after a tenth of a second.
+            text, seconds = body["text"], self.seconds
+            step = (seconds - 0.2) / max(1, len(text))
+            starts = [round(0.1 + i * step, 3) for i in range(len(text))]
+            timing = {
+                "characters": list(text),
+                "character_start_times_seconds": starts,
+                "character_end_times_seconds": [round(s + step, 3) for s in starts],
+            }
+            audio = base64.b64encode(mp3(seconds)).decode()
+            return httpx2.Response(200, json={"audio_base64": audio, "alignment": timing})
         return httpx2.Response(
             200, content=mp3(self.seconds), headers={"content-type": "audio/mpeg"}
         )
