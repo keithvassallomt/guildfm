@@ -63,6 +63,7 @@ SHORTEST_SHOW = 10  # minutes planned at least, for a show that's nearly over
 MATERIAL_WAIT = 20  # seconds a show's plan waits for its web fields to come in
 LONGEST = 30 * 60  # seconds of talk between two songs at most
 MOVES_REMEMBERED = 5
+SEGMENTS_REMEMBERED = 200  # handed-over segments known by their clip, for skips
 
 
 def lengths(ratio: int) -> list[int]:
@@ -124,6 +125,12 @@ def _slot_end(source: SourceState, station_id: int, now: datetime) -> int | None
     return slot.end if slot and slot.station_id == station_id else None
 
 
+def _either(told: int | None, stored: int | None) -> int | None:
+    """A skip the talk show was told of, or one kept in its memory: both, so neither is told
+    to the writer twice."""
+    return told if told is not None else stored
+
+
 def _song(entry: QueueEntry) -> str:
     return f'"{entry.track.title}" by {entry.track.artists}'
 
@@ -160,6 +167,11 @@ class TalkShow:
         self._clock = clock
         self.rng = rng or random.Random()  # deals the moves and rolls the dice
         self._tasks: set[asyncio.Task] = set()
+        # The segments handed over lately, by clip ("speech/....mp3"): the station and number.
+        self._segments: dict[str, tuple[int, int]] = {}
+        # Segments skipped and not yet told to the writer, by station. Also kept in dj_memory
+        # for a restart, but a link being made could save over that.
+        self._skips: dict[int, int] = {}
 
     async def close(self) -> None:
         """Stop talking, before the database closes."""
@@ -263,7 +275,9 @@ class TalkShow:
                 before=before if index == 0 else None,
                 up_next=up_next if ends_link else None,
                 move=move if index == 0 else None,
-                skipped=memory.pop("skipped", None) if index == 0 else None,
+                skipped=_either(
+                    self._skips.pop(show.station_id, None), memory.pop("skipped", None)
+                ),
                 until=clock(until) if until is not None else None,
                 guest=guest[0].described() if guest else None,
                 remarks=remarks if ends_link else (),
@@ -300,6 +314,9 @@ class TalkShow:
             )
             self._announcer.say(spoken)
             handed.append(spoken)
+            self._segments[clip.media_path] = (show.station_id, number)
+            while len(self._segments) > SEGMENTS_REMEMBERED:
+                self._segments.pop(next(iter(self._segments)))
             kept = [[[turn.speaker, turn.text] for turn in turns]]
             memory.update(
                 segment=number,
@@ -318,6 +335,24 @@ class TalkShow:
             if last:
                 break
         return handed
+
+    async def skipped(self, key: str | None) -> None:
+        """Someone pressed Skip while `key` was playing: if it was a segment of talk, the next
+        one is told listeners didn't hear it, so it doesn't pay off what it set up."""
+        found = next(
+            (where for path, where in self._segments.items() if key and key.endswith(f"/{path}")),
+            None,
+        )
+        if found is None:
+            return
+        station_id, number = found
+        self._skips[station_id] = number
+        async with self._sessions() as db:
+            source = await current_source(db)
+            if source and source.station_id == station_id and source.dj_memory:
+                source.dj_memory = {**source.dj_memory, "skipped": number}
+                await db.commit()
+        log.info("Segment %d was skipped", number)
 
     async def _plan(
         self,

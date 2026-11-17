@@ -63,6 +63,8 @@ ACTIVITY_KEPT = 30
 Choice = Playlist | Station | Lineup | None
 # Told the entry, its track key, and when a song opens a line-up's show, the minute the show ends.
 LinedUp = Callable[[int, str, int | None], Awaitable[None]]
+# Told the key of what was playing when someone pressed Skip: a song, or a clip such as talk.
+Skipped = Callable[[str | None], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -154,6 +156,7 @@ class QueueEngine:
         # Told the entry and its track key when the next song is handed to the speakers ahead
         # of time, so the DJ can get a line ready.
         self.on_lined_up: list[LinedUp] = []
+        self.on_skipped: list[Skipped] = []
 
         controller.on_track_change.append(self._track_changed)
         controller.on_poll.append(self.keep_fed)
@@ -373,6 +376,7 @@ class QueueEngine:
     async def skip(self) -> None:
         """Skip the current song, lining up the next request first so the music carries on."""
         controller = self._controller
+        skipped = controller.current_key
         item = None
         if controller.in_control:
             async with self.lock, self._sessions() as db:
@@ -382,6 +386,8 @@ class QueueEngine:
         if item:
             await controller.queue_next(item)
         await controller.skip()
+        for callback in self.on_skipped:
+            await callback(skipped)
         await self.changed()
 
     async def previous(self) -> None:

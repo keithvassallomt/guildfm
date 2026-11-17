@@ -211,3 +211,27 @@ def test_one_dj_isnt_a_talk_show(
     line_up_next(client, speakers)
     assert openai.asked_for("show_plan") == []
     assert len(openai.asked_for("dj_line")) == 1  # the DJ talks between songs, as ever
+
+
+def test_the_talk_after_a_skipped_segment_knows_it_wasnt_heard(
+    client: TestClient, openai: FakeOpenAI, speakers: FakeSpeakers
+) -> None:
+    sign_in(client, *ADMIN)
+    on_air(client, openai)
+    line_up_next(client, speakers)
+    client.portal.call(client.app.state.announcer.tick)
+    speakers.song_ends()
+    read_speakers(client)
+    assert "/media/speech/" in speakers.queue[speakers.position - 1].uri  # the talk is on
+
+    client.post("/api/playback/skip").raise_for_status()
+    read_speakers(client)
+    assert "/media/" not in speakers.queue[speakers.position - 1].uri  # Song 2
+    line_up_next(client, speakers)
+    told = segments(openai)[1]
+    assert "Listeners didn't hear segment 1: someone skipped it." in told
+
+    # Told once.
+    next_song(client, speakers)
+    line_up_next(client, speakers)
+    assert "Listeners didn't hear" not in segments(openai)[2]

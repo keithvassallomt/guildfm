@@ -149,6 +149,7 @@ def create_app(
             app.state.dj.lined_up,
             app.state.talk.lined_up,
         ]
+        app.state.queue.on_skipped.append(app.state.talk.skipped)
 
         loops = (
             (
