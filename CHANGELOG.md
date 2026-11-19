@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-19
+
 ### Changed
 
 - While GuildFM has the speakers, a room that drops out of the group and sits there silent goes
