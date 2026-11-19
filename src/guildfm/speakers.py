@@ -45,6 +45,9 @@ class Room:
     volume: int
     in_group: bool
     on_tv: bool
+    # Out of the group with its own group stopped: dropped out, or taken out to be quiet, rather
+    # than playing something else.
+    idle: bool = False
 
 
 @dataclass(frozen=True)
@@ -147,6 +150,7 @@ class SpeakerSystem(Protocol):
     def set_room_volume(self, uid: str, volume: int) -> None: ...
     def set_crossfade(self, on: bool) -> None: ...
     def take_over(self, items: list[QueueItem]) -> None: ...
+    def rejoin(self, uids: list[str]) -> None: ...
     def add_next(self, item: QueueItem) -> int: ...
     def add_at(self, item: QueueItem, position: int) -> int: ...
     def remove(self, position: int) -> None: ...
@@ -167,6 +171,23 @@ def _seconds(clock: str | None) -> int:
     return hours * 3600 + minutes * 60 + seconds
 
 
+def pick_group(groups, followed: str | None):
+    """The group GuildFM plays to, normally the only one, of every room. When the rooms are split
+    up: one playing from its own queue, as GuildFM's does, then the biggest, then the one led by
+    `followed`, the coordinator GuildFM was on. Sonos sometimes splits a group into single rooms
+    by itself, and going by size alone then picked any stopped room and took it for a takeover."""
+    groups = list(groups)
+    if len(groups) == 1:
+        return groups[0]
+
+    def rank(group) -> tuple[bool, int, bool]:
+        leader = group.coordinator
+        on_queue = leader.get_current_media_info().get("uri") == QUEUE_URI.format(uid=leader.uid)
+        return on_queue, len(group.members), leader.uid == followed
+
+    return max(groups, key=rank)
+
+
 class SocoSystem:
     """The real speakers. `hosts` skips discovery and talks to those addresses directly."""
 
@@ -174,6 +195,7 @@ class SocoSystem:
         self._hosts = hosts
         self._zones: list[SoCo] = []
         self._coordinator: SoCo | None = None
+        self._followed: str | None = None  # the coordinator last found, kept through errors
         self._models: dict[str, str] = {}
         self._households: dict[str, str] = {}
 
@@ -182,9 +204,8 @@ class SocoSystem:
         if not zones:
             raise SpeakersUnavailable("No Sonos speakers found on the network.")
         self._zones = sorted(zones, key=lambda zone: zone.player_name)
-        # GuildFM plays to the biggest group, which is normally every room.
-        groups = self._zones[0].all_groups
-        self._coordinator = max(groups, key=lambda group: len(group.members)).coordinator
+        self._coordinator = pick_group(self._zones[0].all_groups, self._followed).coordinator
+        self._followed = self._coordinator.uid
 
     def _guard(self, action):
         try:
@@ -230,6 +251,17 @@ class SocoSystem:
             rooms = []
             if full:
                 members = {zone.uid for zone in coordinator.group.members}
+                stopped: dict[str, bool] = {}  # by coordinator, for rooms out of the group
+
+                def idle(zone: SoCo) -> bool:
+                    if zone.uid in members:
+                        return False
+                    leader = zone.group.coordinator
+                    if leader.uid not in stopped:
+                        state = leader.get_current_transport_info()["current_transport_state"]
+                        stopped[leader.uid] = state == "STOPPED"
+                    return stopped[leader.uid]
+
                 rooms = [
                     Room(
                         uid=zone.uid,
@@ -238,6 +270,7 @@ class SocoSystem:
                         volume=zone.volume,
                         in_group=zone.uid in members,
                         on_tv=zone.is_playing_tv,
+                        idle=idle(zone),
                     )
                     for zone in self._zones
                 ]
@@ -321,6 +354,16 @@ class SocoSystem:
             for item in items:
                 self._enqueue(item, 0)
             coordinator.play_from_queue(0)
+
+        self._guard(apply)
+
+    def rejoin(self, uids: list[str]) -> None:
+        """Put the rooms with `uids` back in the group GuildFM plays to."""
+
+        def apply() -> None:
+            for zone in self._zones:
+                if zone.uid in uids:
+                    zone.join(self._coordinator)
 
         self._guard(apply)
 

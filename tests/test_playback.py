@@ -224,6 +224,41 @@ async def test_tv_takes_only_the_arc_out_of_the_group(controller, speakers, stea
     assert controller.status == Status.PLAYING
 
 
+async def test_rooms_that_drop_out_of_the_group_are_put_back(controller, speakers, steady):
+    await controller.play_now(TRACK)
+    steady.advance(5)
+    speakers.group_falls_apart()
+    await controller.poll(full=True)
+    assert speakers.rejoined == []  # it might be on its way to something else
+    await controller.poll(full=True)
+    assert speakers.rejoined == [["RINCON_KITCHEN", "RINCON_ARC"]]
+    assert all(room.in_group for room in speakers.rooms.values())
+    assert controller.status == Status.PLAYING
+
+
+async def test_a_room_playing_something_else_stays_out(controller, speakers, steady) -> None:
+    await controller.play_now(TRACK)
+    steady.advance(5)
+    speakers.someone_plays_in("RINCON_KITCHEN")
+    for _ in range(3):
+        await controller.poll(full=True)
+    assert speakers.rejoined == []
+    assert controller.status == Status.PLAYING
+
+
+async def test_rooms_are_only_put_back_while_guildfm_drives(controller, speakers, steady) -> None:
+    speakers.group_falls_apart()
+    for _ in range(3):
+        await controller.poll(full=True)
+    await controller.play_now(TRACK)
+    await outside_takeover(controller, speakers, steady)
+    assert controller.status == Status.OVERRIDDEN
+    speakers.group_falls_apart()
+    for _ in range(3):
+        await controller.poll(full=True)
+    assert speakers.rejoined == []
+
+
 async def test_track_changes_are_reported(controller) -> None:
     changes = []
 

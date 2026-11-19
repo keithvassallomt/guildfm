@@ -255,6 +255,9 @@ class MonitorSystem:
             self._start(1)
             self._hurry()
 
+    def rejoin(self, uids: list[str]) -> None:
+        """The monitor is a single room, never out of its group."""
+
     def add_next(self, item: QueueItem) -> int:
         with self._lock:
             self._advance()

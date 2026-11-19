@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+from dataclasses import replace
 from typing import NamedTuple
 from urllib.parse import parse_qsl
 
@@ -54,6 +55,7 @@ class FakeSpeakers:
             "RINCON_ARC": Room("RINCON_ARC", "Downstairs", "Sonos Arc", 14, True, False),
         }
         self.took_over: list[list[QueueItem]] = []
+        self.rejoined: list[list[str]] = []  # rooms put back in the group, call by call
         self.track_position = 3  # seconds into the current queued track, out of 200
         self.clips: list[PlayedClip] = []
         self.refusing_clips: set[str] = set()  # rooms that turn overlay clips down
@@ -77,8 +79,18 @@ class FakeSpeakers:
         self.transport = "PAUSED_PLAYBACK"
 
     def tv_turns_on(self) -> None:
-        arc = self.rooms["RINCON_ARC"]
-        self.rooms["RINCON_ARC"] = Room(arc.uid, arc.name, arc.model, arc.volume, False, True)
+        self.rooms["RINCON_ARC"] = replace(self.rooms["RINCON_ARC"], in_group=False, on_tv=True)
+
+    def group_falls_apart(self) -> None:
+        """Every other room drops out of the group and sits there stopped, as Sonos sometimes
+        leaves them. The coordinator carries on with the queue."""
+        for uid, room in self.rooms.items():
+            if uid != COORDINATOR:
+                self.rooms[uid] = replace(room, in_group=False, idle=True)
+
+    def someone_plays_in(self, uid: str) -> None:
+        """Someone takes one room out of the group to play something else there."""
+        self.rooms[uid] = replace(self.rooms[uid], in_group=False, idle=False)
 
     # The SpeakerSystem interface
 
@@ -150,9 +162,7 @@ class FakeSpeakers:
     def set_group_volume(self, volume: int) -> None:
         self._check()
         for uid, room in self.rooms.items():
-            self.rooms[uid] = Room(
-                room.uid, room.name, room.model, volume, room.in_group, room.on_tv
-            )
+            self.rooms[uid] = replace(room, volume=volume)
 
     def set_crossfade(self, on: bool) -> None:
         self._check()
@@ -160,8 +170,7 @@ class FakeSpeakers:
 
     def set_room_volume(self, uid: str, volume: int) -> None:
         self._check()
-        room = self.rooms[uid]
-        self.rooms[uid] = Room(room.uid, room.name, room.model, volume, room.in_group, room.on_tv)
+        self.rooms[uid] = replace(self.rooms[uid], volume=volume)
 
     def take_over(self, items: list[QueueItem]) -> None:
         self._check()
@@ -170,6 +179,12 @@ class FakeSpeakers:
         self.position = 1
         self.media_uri = QUEUE_URI.format(uid=COORDINATOR)
         self.transport = "PLAYING"
+
+    def rejoin(self, uids: list[str]) -> None:
+        self._check()
+        self.rejoined.append(list(uids))
+        for uid in uids:
+            self.rooms[uid] = replace(self.rooms[uid], in_group=True, idle=False)
 
     def add_next(self, item: QueueItem) -> int:
         self._check()

@@ -3,7 +3,8 @@
 GuildFM is either driving the speakers (it put the music in the Sonos queue and is in control)
 or it isn't. While driving, anything else showing up on the speakers means someone took over
 from the Sonos or Spotify app; GuildFM then steps aside until an admin presses Play, or until the
-speakers are playing GuildFM's queue again.
+speakers are playing GuildFM's queue again. Rooms that drop out of the group and sit there
+stopped, as Sonos sometimes leaves them, it puts back.
 
 GuildFM notes down what it put on the speakers, so after a restart it can tell whether they're
 still playing its queue and carry on driving them. It keeps the speakers' queue short: a few
@@ -47,6 +48,9 @@ RESTART_SECONDS = 5  # further into a song than this, Previous starts it again
 KEEP_PLAYED = 3  # songs that have played kept on the speakers, so Previous can go back
 CLIP_STOP_SECONDS = 10  # speakers stopping this soon after a clip was on stopped at its end
 TAKE_BACK_READINGS = 3  # readings of the speakers back on GuildFM's queue before it drives them
+# Full readings in a row of a room out of the group and stopped before GuildFM puts it back, so
+# a room on its way to playing something else isn't caught in between.
+DROPPED_READINGS = 2
 # A song the speakers stop this few seconds in never really played. Sonos does that when it
 # can't get songs from Spotify.
 FAILED_START_SECONDS = 10
@@ -140,6 +144,7 @@ class PlaybackController:
         self._grace_until = 0.0
         self._mismatches = 0
         self._back_readings = 0  # in a row, of the speakers back on GuildFM's queue
+        self._dropped: dict[str, int] = {}  # full readings in a row of each room stopped, out
         self._clip_heard_at = float("-inf")  # when the speakers were last read playing a clip
         # Songs in a row the speakers stopped as soon as they started, each once, in order.
         self._failed: list[str] = []
@@ -288,6 +293,7 @@ class PlaybackController:
         failed = self._failed_start(previous, snapshot)
         await self._trim()
         await self._fit_crossfade()
+        await self._bring_back(snapshot)
 
         if failed:
             for callback in self.on_failed_start:
@@ -350,6 +356,31 @@ class PlaybackController:
         self._position = snapshot.queue_position
         self._remember()
         log.info("The speakers are back on GuildFM's queue, so it's driving them again")
+
+    async def _bring_back(self, snapshot: Snapshot) -> None:
+        """While driving, put rooms back in the group once they've sat stopped outside it for a
+        few seconds. Sonos sometimes splits the group up by itself, which leaves those rooms
+        silent. Rooms on the TV or playing something else are left alone. Only full readings
+        have the rooms."""
+        if not snapshot.rooms:
+            return
+        if not self._in_control:
+            self._dropped = {}
+            return
+        out = [room for room in snapshot.rooms if room.idle and not room.on_tv]
+        self._dropped = {room.uid: self._dropped.get(room.uid, 0) + 1 for room in out}
+        back = [room for room in out if self._dropped[room.uid] >= DROPPED_READINGS]
+        if not back:
+            return
+        names = ", ".join(room.name for room in back)
+        try:
+            await self._call(self._speakers.rejoin, [room.uid for room in back])
+        except SpeakersUnavailable, SpeakersRefused:
+            log.warning("Couldn't put %s back in the group", names, exc_info=True)
+            return
+        for room in back:
+            del self._dropped[room.uid]
+        log.info("%s dropped out of the group, so GuildFM put them back", names)
 
     def _failed_start(
         self, previous: Snapshot | None, snapshot: Snapshot

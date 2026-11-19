@@ -44,6 +44,8 @@ If the speakers are switched off, or the network is down, the badge says **Speak
 
 A room whose speaker is switched over to the TV just drops out. The other rooms carry on.
 
+Sonos sometimes splits the rooms up by itself, which leaves some of them silent. GuildFM puts a room like that back with the others within about 10 seconds, as long as nothing else is playing in it. For the same reason, taking a room out of the group in the Sonos app doesn't keep it quiet for long: turn its volume down instead.
+
 ## The speakers won't start songs
 
 Sometimes the speakers stop each song a few seconds after it starts. That happens when they can't get songs from Spotify, and it usually sorts itself out within a few minutes.

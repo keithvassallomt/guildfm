@@ -7,6 +7,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- While GuildFM has the speakers, a room that drops out of the group and sits there silent goes
+  back in within about 10 seconds. Rooms on the TV or playing something else are left alone. To
+  keep a room quiet, turn its volume down rather than taking it out of the group.
+
+### Fixed
+
+- When Sonos split the speakers into separate rooms, GuildFM could take it for someone using the
+  Sonos app, say the speakers were overridden and stop until a curator pressed Play. It now
+  stays with the rooms playing its queue.
+
 ## [0.1.8] - 2026-11-17
 
 ### Added
