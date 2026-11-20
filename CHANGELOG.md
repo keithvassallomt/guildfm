@@ -14,6 +14,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   there was nothing to play. A station now opens straight away with a song it has played
   before, and its new picks follow. A station that has never played anything still waits for
   its picks.
+- On a talk station at 40% or 45% talk, the talk before each song was one segment of up to three
+  minutes. It took about 80 seconds to write and voice, so it was often ready only after its
+  song had started, and was dropped unheard but still paid for. Talk now comes in segments of
+  two minutes at most, so the first is ready in time and the rest are made while it plays. A
+  show's plan is sized to match, so it neither runs out early nor ends before its running bits
+  pay off.
 
 ## [0.1.9] - 2026-11-19
 

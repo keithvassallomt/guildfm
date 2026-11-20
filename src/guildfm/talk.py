@@ -1,7 +1,7 @@
 """Talk stations: shows that are mostly their DJs talking, from a script prompt. See talk.md.
 
 A show is planned when it starts: the whole show in a line-up, an hour at a time outside one.
-Its talk comes in segments of about two minutes, the most that's written and voiced in one go.
+Its talk comes in segments of two minutes at most, the most that's written and voiced in time.
 The code deals the show one or two running bits from the banter moves, and rolls the dice for a
 happening; the AI then plans what each segment is about and places the bits' setups and
 payoffs across them. The code deals the moves, not the AI: left to itself, a model picks the
@@ -10,6 +10,7 @@ same favourites every time.
 The plan is kept with the show's state in the source's dj_memory. Each show's running bits go
 in a short log on the station, so a daily show doesn't repeat itself and can call back."""
 
+import math
 import random
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,7 +19,8 @@ from typing import Any
 from guildfm.ai import AIClient, object_schema
 from guildfm.models import DJProfile
 
-SEGMENT_SECONDS = 120  # talk written and voiced in one go
+SEGMENT_SECONDS = 120  # talk written and voiced in one go, at most
+LONGEST = 30 * 60  # seconds of talk between two songs at most
 SONG_SECONDS = 210  # a song, about, for sizing links
 HAPPENING_CHANCE = 0.4  # of a show having a happening
 LOG_KEPT = 12  # running bits kept in a station's log
@@ -174,9 +176,23 @@ def link_seconds(ratio: int) -> int | None:
     return round(SONG_SECONDS * ratio / (100 - ratio))
 
 
+def segment_lengths(ratio: int) -> list[int]:
+    """How long each segment of a link runs, in seconds, at `ratio` percent talk: never more
+    than two minutes. The first is made while the song before it plays, in the 90 seconds the
+    song is lined up ahead (less when the station crossfades), and a longer one can't be: at
+    the office a three-minute segment took 83 seconds to write and voice, and its song started
+    first. At 100%, the only songs are requests, and a request's link is one segment bringing
+    it in."""
+    if ratio >= 100:
+        return [SEGMENT_SECONDS]
+    total = min(link_seconds(ratio) or LONGEST, LONGEST)
+    count = math.ceil(total / SEGMENT_SECONDS)
+    return [round(total / count)] * count
+
+
 def segment_count(minutes: int, ratio: int) -> int:
     """How many segments of talk a show of `minutes` has at `ratio` percent talk."""
-    return max(1, round(minutes * 60 * ratio / 100 / SEGMENT_SECONDS))
+    return max(1, round(minutes * 60 * ratio / 100 / segment_lengths(ratio)[0]))
 
 
 PLAN_INSTRUCTIONS = (
@@ -238,7 +254,7 @@ async def plan_show(
     else:
         parts.append(f"This plans the next {minutes} minutes of the show: {count} segments.")
     parts.append(
-        f"Each segment is about two minutes of talk, numbered 1 to {count}. "
+        f"Each segment is up to two minutes of talk, numbered 1 to {count}. "
         + ("There are no songs: the talk runs on." if ratio >= 100 else "Songs play between them.")
     )
     parts.append(

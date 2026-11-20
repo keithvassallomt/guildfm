@@ -1,11 +1,11 @@
 """The talk on a talk station (see talk.md): the link before each song, as the queue lines it up.
 
-A link runs as long as the station's talk ratio says (talk.link_seconds), in segments of about
-two minutes. Each is written (script.py), voiced so its DJs talk over each other (mixing.py), and
-handed to the announcer as soon as it's ready, so it goes into the Sonos queue just before the
-song while the one before it plays: the first in the 90 seconds the song is lined up ahead
-(queue.LEAD_SECONDS), the rest while the talk plays. Once the song has started, or a segment
-can't be written or voiced, the link ends there and the songs carry on.
+A link runs as long as the station's talk ratio says (talk.link_seconds), in segments of two
+minutes at most (talk.segment_lengths). Each is written (script.py), voiced so its DJs talk over
+each other (mixing.py), and handed to the announcer as soon as it's ready, so it goes into the
+Sonos queue just before the song while the one before it plays: the first in the 90 seconds the
+song is lined up ahead (queue.LEAD_SECONDS), the rest while the talk plays. Once the song has
+started, or a segment can't be written or voiced, the link ends there and the songs carry on.
 
 At 100% talk the station picks no songs, so there's nothing for the talk to go before. Then,
 after each reading of the speakers, the talk show keeps a segment queued after whatever's on,
@@ -59,10 +59,10 @@ from guildfm.talk import (
     all_talk,
     deal_bits,
     deal_move,
-    link_seconds,
     logged,
     plan_show,
     roll_happening,
+    segment_lengths,
     talks,
 )
 
@@ -75,20 +75,9 @@ MATERIAL_WAIT_AHEAD = 90  # the same for a line-up's show, planned ten minutes b
 AHEAD_KEPT = timedelta(minutes=30)  # how long a plan made ahead is good for
 NEXT_HOUR_AHEAD = 2  # segments left in an hour's plan when the next hour's is made
 LOOK_EVERY = 30.0  # seconds between checks that a talk station playing has today's plan
-LONGEST = 30 * 60  # seconds of talk between two songs at most
 MOVES_REMEMBERED = 5
 MOVE_EVERY = 3  # segments, at 100% talk, where there are no links to deal moves to
 SEGMENTS_REMEMBERED = 200  # handed-over segments known by their clip, for skips
-
-
-def lengths(ratio: int) -> list[int]:
-    """How long each segment of a link runs, in seconds, at `ratio` percent talk. At 100%, the
-    only songs are requests, and a request's link is one segment bringing it in."""
-    if ratio >= 100:
-        return [SEGMENT_SECONDS]
-    total = min(link_seconds(ratio) or LONGEST, LONGEST)
-    count = max(1, round(total / SEGMENT_SECONDS))
-    return [round(total / count)] * count
 
 
 def _day(now: datetime) -> str:
@@ -491,7 +480,7 @@ class TalkShow:
         if not await self._planned(air, opens):
             return []
         found = await self._material(air)
-        segments = lengths(air.show.ratio)
+        segments = segment_lengths(air.show.ratio)
         # The song before a show's opening isn't talked about, so it gets no verdict.
         opening = air.memory["segment"] == 0 and not air.memory.get("continuing")
         move = self._deal(air, song=not opening)

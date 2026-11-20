@@ -17,6 +17,7 @@ from guildfm.talk import (
     plan_show,
     roll_happening,
     segment_count,
+    segment_lengths,
 )
 from tests.conftest import fake
 from tests.fakes import FakeOpenAI
@@ -32,9 +33,16 @@ def test_talk_takes_its_share_of_the_time() -> None:
     assert link_seconds(40) == 140
     assert link_seconds(80) == 840  # 14 minutes between songs
     assert link_seconds(100) is None  # no songs: it runs on
-    assert segment_count(60, 40) == 12
+    # Two minutes at most, so the first is made while the song before it plays.
+    assert segment_lengths(30) == [90]
+    assert segment_lengths(40) == [70, 70]
+    assert segment_lengths(45) == [86, 86]
+    assert segment_lengths(70) == [98] * 5
+    assert segment_lengths(95) == [120] * 15  # half an hour between songs at most
+    assert segment_lengths(100) == [120]
+    assert segment_count(60, 40) == 21  # 24 minutes of talk, 70 seconds at a time
     assert segment_count(60, 100) == 30
-    assert segment_count(15, 20) == 2
+    assert segment_count(15, 20) == 3
 
 
 def test_a_links_move_is_dealt_fairly() -> None:
@@ -90,7 +98,7 @@ async def _plan(openai: FakeOpenAI, **changes):
         "material": {"news": "- 15 Nov: A goat was elected mayor."},
         "starts": LUNCHTIME,
         "minutes": 60,
-        "ratio": 40,
+        "ratio": 30,
         "bits": ["the bet", "the score"],
         "happening": None,
         "log": [{"on": "2026-11-13", "move": "the challenge", "idea": "No saying rain."}],

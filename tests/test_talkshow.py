@@ -60,8 +60,8 @@ async def _station(sessionmaker, ratio: int, hosts: int = 2) -> int:
         return station.id
 
 
-def on_air(client: TestClient, openai: FakeOpenAI, ratio: int = 40, hosts: int = 2) -> int:
-    """A talk station, on and playing its first song."""
+def on_air(client: TestClient, openai: FakeOpenAI, ratio: int = 30, hosts: int = 2) -> int:
+    """A talk station, on and playing its first song. At 30%, a link is one segment."""
     openai.picks = FLEETWOOD
     station = client.portal.call(_station, client.app.state.sessionmaker, ratio, hosts)
     client.post(f"/api/stations/{station}/play").raise_for_status()
@@ -128,7 +128,7 @@ def test_a_talk_station_talks_before_each_song(
     assert "A song has just finished" not in told  # it played before the show
     assert not re.search(r"segment \d", told, re.IGNORECASE)  # never said, so never told
     assert 'End by bringing in the next one: "Song 2" by Fleetwood Mac' in told
-    assert "Write about 2380 characters of speech, about 140 seconds." in told
+    assert "Write about 1530 characters of speech, about 90 seconds." in told
     assert "[weather]\nRight now in Carlisle, Cumbria, UK: light rain" in told
     # The DJ leaves it to them.
     assert openai.asked_for("dj_line") == []
@@ -262,7 +262,7 @@ def test_a_talk_show_in_a_line_up_is_planned_before_it_opens(
 ) -> None:
     sign_in(client, *ADMIN)
     openai.picks = FLEETWOOD
-    station = client.portal.call(_station, client.app.state.sessionmaker, 40)
+    station = client.portal.call(_station, client.app.state.sessionmaker, 30)
     playlist = lineups.make_playlist(client)
     slots = [
         lineups.playlist_slot(playlist, "09:45", "10:15"),
