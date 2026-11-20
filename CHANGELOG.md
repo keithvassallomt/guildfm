@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-11-20
+
 ### Added
 
 - Making a station is now a few plain steps, starting with what kind of station it is: Just
