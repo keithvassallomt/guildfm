@@ -29,9 +29,25 @@ def test_a_word_that_isnt_a_name_is_turned_down(client: TestClient, openai: Fake
     assert response.json()["detail"].startswith("That doesn't look like a name.")
 
 
+def test_a_name_with_a_description_is_turned_down(client: TestClient, openai: FakeOpenAI) -> None:
+    openai.names["GARY FROM NOTTIGHAM"] = "described"
+    response = sign_up(client, "gary", "GARY FROM NOTTIGHAM")
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "Just your name, please: leave out where you're from or what you do."
+    )
+    # The AI is told the rule, and can answer with it.
+    (asked,) = [a for a in openai.asked_for("name_check") if a["input"] == "GARY FROM NOTTIGHAM"]
+    assert '"Gary from Nottingham", "Sam in Accounts"' in asked["instructions"]
+    assert "misspellings don't change the answer" in asked["instructions"]
+    assert "described" in asked["text"]["format"]["schema"]["properties"]["verdict"]["enum"]
+
+
 def test_a_username_only_has_to_be_clean(client: TestClient, openai: FakeOpenAI) -> None:
     openai.names["hatkinson101"] = "not_a_name"
     assert sign_up(client, "hatkinson101", "Harry").status_code == 201
+    openai.names["garyfromnotts"] = "described"
+    assert sign_up(client, "garyfromnotts", "Gary").status_code == 201
     openai.names["fucktard"] = "vulgar"
     response = sign_up(client, "fucktard", "Harry")
     assert response.status_code == 422
@@ -43,6 +59,11 @@ def test_renaming_yourself_is_checked_too(client: TestClient, openai: FakeOpenAI
     openai.names["BigBalls"] = "vulgar"
     response = client.patch("/api/me", json={"display_name": "BigBalls"})
     assert response.status_code == 422
+    assert client.get("/api/me").json()["display_name"] == "Ricky"
+    openai.names["Ricky in Accounts"] = "described"
+    described = client.patch("/api/me", json={"display_name": "Ricky in Accounts"})
+    assert described.status_code == 422
+    assert described.json()["detail"].startswith("Just your name, please")
     assert client.get("/api/me").json()["display_name"] == "Ricky"
     asked = len(openai.asked_for("name_check"))
     # Saving the profile without changing the name doesn't ask again.

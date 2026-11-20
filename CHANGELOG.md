@@ -36,6 +36,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - New stations know what's going on (the time, the weather and music news) unless that's
   turned off.
 
+### Fixed
+
+- A display name with a description added, such as "Gary from Nottingham", is now turned down
+  every time, however it's capitalised or spelt, with a message saying to leave the description
+  out. Before, the check was close to a coin toss for names like these, so trying again or
+  changing the capitals got them through. Real names that look a little like that, such as
+  "Jan van der Berg" or "Gary Nottingham", and nicknames such as "Big Mike", are still fine.
+
 ## [0.1.10] - 2026-11-20
 
 ### Changed

@@ -1,6 +1,7 @@
 """Checking the names people pick for themselves, which the whole office sees beside their
-requests: nothing vulgar, and a name or nickname rather than any old word. OpenAI judges. If it
-can't be reached, or takes too long, the name goes through rather than stop people signing up."""
+requests: nothing vulgar, a name or nickname rather than any old word, and just the name, without
+a description added such as where they're from. OpenAI judges. If it can't be reached, or takes
+too long, the name goes through rather than stop people signing up."""
 
 import asyncio
 import logging
@@ -16,6 +17,7 @@ JUDGE_SECONDS = 10  # someone is waiting on the sign-up form
 class Verdict(StrEnum):
     FINE = "fine"
     VULGAR = "vulgar"
+    DESCRIBED = "described"  # a name with something added to describe them: "Sam in Accounts"
     NOT_A_NAME = "not_a_name"
 
 
@@ -23,18 +25,31 @@ VERDICT = object_schema(verdict={"type": "string", "enum": [verdict.value for ve
 
 INSTRUCTIONS = """\
 You check a name someone picked for themselves in an office jukebox app. Everyone in the office \
-sees it beside the songs they request. The input is the name and nothing else.
+sees it beside the songs they request, and the DJ reads it out. The input is the name and \
+nothing else.
 
 Answer "vulgar" for anything rude, sexual, crude or offensive, in any language, including \
 disguised spellings and words run together, such as "bigballs" or "fucktard".
+
+Answer "described" for a name with something added to describe the person: where they're from \
+or where they work, their job, their team or department, a title, or a tag line. Such as \
+"Gary from Nottingham", "Sam in Accounts", "Dave the plumber", "Priya (marketing)", \
+"Jen - HR", "Tom, Head of Sales", "Lisa at reception" or "Kev the legend". Capitals, spacing, \
+punctuation and misspellings don't change the answer: "GARY FROM NOTTIGHAM", "gary from \
+nottingham" and "Sam  in acounts" are "described" too. Answer it every time you see a name \
+followed by "from", "in", "at" or "the" and a place, a job or a team, or by a description in \
+brackets, or after a dash or a comma.
 
 Answer "not_a_name" for anything that isn't plausibly what a person is called: an ordinary \
 word, a made-up word, a phrase or gibberish, such as "bungalistic", "pizza" or "asdfgh".
 
 Otherwise answer "fine". First names, surnames, full names, initials, short forms and everyday \
 nicknames from any culture are fine, in any capitals, such as "Dan Jackson", "ricky", "JP", \
-"Mo", "Big Mike" or "Siobhán". A username can add digits or join parts of a name, such as \
-"hatkinson101" or "keithv"."""
+"Mo", "Big Mike", "Maltese Keith" or "Siobhán". A nickname with a word before the name, the way \
+friends say it, is fine. So are surnames with particles, such as "Ahmed bin Rashid", \
+"Jan van der Berg", "Leonardo da Vinci" or "Maria dos Santos", and a surname that happens to \
+be a place, such as "Gary Nottingham". A username can add digits or join parts of a name, such \
+as "hatkinson101" or "keithv"."""
 
 
 async def judge(ai: AIClient, name: str) -> Verdict:
@@ -55,6 +70,8 @@ async def name_problem(ai: AIClient, display_name: str, username: str | None = N
     shown, *login = await asyncio.gather(*checks)
     if shown == Verdict.VULGAR:
         return "Pick a name you'd be happy for the whole office to see."
+    if shown == Verdict.DESCRIBED:
+        return "Just your name, please: leave out where you're from or what you do."
     if shown == Verdict.NOT_A_NAME:
         return "That doesn't look like a name. Use your own, or what people in the office call you."
     if login and login[0] == Verdict.VULGAR:
