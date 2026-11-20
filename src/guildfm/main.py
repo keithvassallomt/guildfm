@@ -157,8 +157,8 @@ def create_app(
         app.state.queue.on_coming_on.append(app.state.talk.prepare)
 
         async def warm_up() -> bool:
-            """Play with nothing to play: an all-talk station opens with a song heard before,
-            or else its first talk is made and starts when it's ready."""
+            """Play with nothing to play: a station opens with a song heard before, or else an
+            all-talk station's first talk is made and starts when it's ready."""
             async with app.state.sessionmaker() as db:
                 if await open_with_song(db):
                     return True

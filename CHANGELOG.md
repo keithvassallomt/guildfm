@@ -7,6 +7,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Putting a station on could leave a gap of about 20 seconds while it picked its first songs.
+  If what was playing ended or was skipped in that time, the speakers stopped and Play said
+  there was nothing to play. A station now opens straight away with a song it has played
+  before, and its new picks follow. A station that has never played anything still waits for
+  its picks.
+
 ## [0.1.9] - 2026-11-19
 
 ### Changed

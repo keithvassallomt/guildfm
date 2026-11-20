@@ -476,8 +476,8 @@ async def repaint(
 
 @router.post("/{station_id}/play")
 async def play(station_id: int, user: Player, request: Request, db: Db) -> StationOut:
-    """Make the station fill the gaps between requests, from the next song on. Its first songs
-    take a moment to pick."""
+    """Make the station fill the gaps between requests, from the next song on. Its first picks
+    take a moment, so it opens with a song it has played before, if it has one."""
     station = await _station(db, station_id)
     if await request.app.state.queue.switch(station):
         request.app.state.queue.note(f"{user.display_name} put {station.name} on")

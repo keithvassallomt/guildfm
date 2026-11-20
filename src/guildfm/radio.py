@@ -139,11 +139,14 @@ async def _coming(db: AsyncSession) -> list[Track]:
     return [found[track_id] for track_id in dict.fromkeys(ids) if track_id in found]
 
 
-async def heard_before(db: AsyncSession, station_id: int, count: int) -> list[str]:
+async def heard_before(
+    db: AsyncSession, station_id: int, count: int, *, own: bool = False
+) -> list[str]:
     """Up to `count` songs heard before, picked without the AI: songs the station has played,
     then Best Voted, then anything else heard in the office, so even a new station has
-    something; each the longest unheard first. Anything played lately (in any version),
-    queued, lined up, or explicit while that's turned off is left out, as ever."""
+    something; each the longest unheard first. With `own`, only songs the station has played.
+    Anything played lately (in any version), queued, lined up, or explicit while that's turned
+    off is left out, as ever."""
     since = time.time() - await get_pref(db, "recently_played_hours") * 3600
     explicit = await get_pref(db, "allow_explicit")
     lately = await _heard_since(db, since) + await _coming(db)
@@ -160,10 +163,12 @@ async def heard_before(db: AsyncSession, station_id: int, count: int) -> list[st
         last_heard[key] = max(played_at, last_heard.get(key, 0.0))
         heard.append(track)
     played_here = select(Play.track_id).where(Play.station_id == station_id)
-    own = list(await db.scalars(select(Track).where(Track.id.in_(played_here))))
-    favourites = [entry.track for entry in await tracks_of(db, (await best_voted(db)).id)]
+    pools = [list(await db.scalars(select(Track).where(Track.id.in_(played_here))))]
+    if not own:
+        favourites = [entry.track for entry in await tracks_of(db, (await best_voted(db)).id)]
+        pools += [favourites, heard]
     chosen: list[str] = []
-    for pool in (own, favourites, heard):
+    for pool in pools:
         fresh: dict[str, str] = {}  # one version of each song
         for track in pool:
             key = song_key(track)
@@ -176,14 +181,18 @@ async def heard_before(db: AsyncSession, station_id: int, count: int) -> list[st
 
 
 async def open_with_song(db: AsyncSession) -> bool:
-    """An all-talk station picks no songs, so when it comes on, or Play is pressed with nothing
-    to play, it opens with one heard before, to play while its first talk is made. True if
-    one was added to the source."""
+    """A station with nothing left to play opens with one song heard before, so the music
+    starts straight away: when it comes on with no songs picked ahead of its show, or Play is
+    pressed with nothing to play. A station's AI picks take about twenty seconds and follow
+    it, so it opens only with a song it has played itself, which fits it; a station that
+    hasn't played any waits for its picks. An all-talk station picks no songs, so it opens with
+    one to play while its first talk is made, from any the office has heard if it has none of
+    its own. True if one was added to the source."""
     source = await current_source(db)
     station = source.station if source and source.station_id else None
-    if station is None or not all_talk(station):
+    if station is None or source.cursor < len(source.order):
         return False
-    chosen = await heard_before(db, station.id, 1)
+    chosen = await heard_before(db, station.id, 1, own=not all_talk(station))
     if not chosen:
         return False
     keep = max(0, source.cursor - KEPT_TAKEN)

@@ -404,6 +404,34 @@ def test_the_ai_is_asked_again_when_too_many_picks_are_out(
     ) in caplog.text
 
 
+def test_a_station_opens_with_a_song_of_its_own_while_it_picks(
+    client: TestClient, openai: FakeOpenAI, settings: Settings, speakers: FakeSpeakers
+) -> None:
+    openai.picks = FLEETWOOD
+    sign_in(client, *ADMIN)
+    station = make_station(client)
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", 3 * DAYS, station["id"])
+    played(settings, spotify_id("gyow"), "Go Your Own Way", "Fleetwood Mac", 4 * DAYS)  # elsewhere
+    put_on(client, station)
+    # Its picks take a while, so a song it has played comes first, with nothing to wait for.
+    assert upcoming(client)[:2] == ["Dreams", "Song 1"]
+    asked = openai.asked_for("picks")[0]["input"]
+    assert "Lined up to play. Don't pick these either:\nFleetwood Mac – Dreams" in asked
+    client.post("/api/playback/play").raise_for_status()
+    assert playing(client) == "Dreams"
+
+
+def test_a_station_with_no_songs_of_its_own_waits_for_its_picks(
+    client: TestClient, openai: FakeOpenAI, settings: Settings
+) -> None:
+    openai.picks = FLEETWOOD
+    played(settings, spotify_id("dreams"), "Dreams", "Fleetwood Mac", ago=3 * DAYS)
+    sign_in(client, *ADMIN)
+    put_on(client, make_station(client))
+    # Nothing the office heard on another station, which might not fit this one.
+    assert upcoming(client)[0] == "Song 1"
+
+
 def test_no_asking_again_once_spotify_pauses(
     client: TestClient, openai: FakeOpenAI, spotify: FakeSpotify
 ) -> None:
