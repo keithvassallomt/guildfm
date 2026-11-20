@@ -313,6 +313,7 @@ async def test_a_segment_is_edited_for_listeners_who_werent_told() -> None:
     assert "Is everything explained?" in asked["instructions"]
     assert "Does it follow?" in asked["instructions"]
     assert "carries on mid-exchange after a song as if it hadn't played" in asked["instructions"]
+    assert asked["input"].startswith(f"{CLOCK}\n\nWHAT LISTENERS HAVE HEARD")  # not guessed
     heard, background = asked["input"].split("BACKGROUND")
     assert 'A song has just finished: "Dreams" by Fleetwood Mac.' in heard
     assert '[A song played: "Dreams" by Fleetwood Mac. It has just finished.]' in heard

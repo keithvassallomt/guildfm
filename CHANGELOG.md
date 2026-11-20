@@ -20,6 +20,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   two minutes at most, so the first is ready in time and the rest are made while it plays. A
   show's plan is sized to match, so it neither runs out early nor ends before its running bits
   pay off.
+- A talk station's editing pass wasn't told the day or time, so it could guess wrong and change
+  a line that had them right. On The Squawk Box's first morning it decided a Friday was a
+  Thursday. It's now told, as the writer is.
 
 ## [0.1.9] - 2026-11-19
 

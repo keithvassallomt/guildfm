@@ -496,6 +496,8 @@ async def _edited(
     ]
     prompt = "\n\n".join(
         [
+            # The day and time, or it guesses them, and "fixes" a line that has them right.
+            moment.clock,
             "WHAT LISTENERS HAVE HEARD\n\n" + (heard(moment, notes, said) or "Nothing yet."),
             "BACKGROUND, which listeners know only if it's been said on air\n\n"
             + _background(hosts, dynamic, plan, moment, material),
