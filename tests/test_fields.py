@@ -1,9 +1,13 @@
 """The named fields in a talk station's script prompt, and what's behind each."""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
+from guildfm.ai import AIClient
+from guildfm.awareness import Awareness
 from guildfm.fields import material, used
 from guildfm.models import (
     DJProfile,
@@ -14,6 +18,7 @@ from guildfm.models import (
     SourceState,
     Station,
 )
+from tests.conftest import fake
 from tests.fakes import FakeOpenAI
 
 # Tuesday 13 October 2026, at lunchtime in the office.
@@ -156,3 +161,38 @@ def test_djs_are_the_other_djs(client: TestClient) -> None:
         "djs": "GuildFM's other DJs:\n- Della. Warm and upbeat. Hosts Friday Feeling. "
         "Pet peeves: Songs that fade out. Keeps coming back to: Her sourdough starter."
     }
+
+
+@pytest.mark.asyncio
+async def test_whats_found_is_kept_over_a_restart(tmp_path: Path) -> None:
+    openai = FakeOpenAI()
+    openai.found = {"light news": "- A goat was elected mayor."}
+    ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
+    memory, today = tmp_path / "awareness.json", LUNCHTIME.date()
+    at = 1_800_000_000.0  # the time of day, as time.time() has it
+    started: list[Awareness] = []
+
+    def start(wall: float, since_start: float) -> Awareness:
+        awareness = Awareness(ai, clock=lambda: since_start, memory=memory, wall=lambda: wall)
+        started.append(awareness)
+        return awareness
+
+    before = start(at, 5000.0)
+    await before.ready(["news"], today, 5)
+    assert len(web_searches(openai)) == 1
+
+    # Restarted a minute later, its clock starting again: still good, so not looked up again.
+    after = start(at + 60, 3.0)
+    assert after.gathered("news", today) == "- A goat was elected mayor."
+    await after.settle()
+    assert len(web_searches(openai)) == 1
+
+    # Seven hours on, it's out of date: used while fresh news is looked up.
+    later = start(at + 7 * 60 * 60, 3.0)
+    assert later.gathered("news", today) == "- A goat was elected mayor."
+    await later.settle()
+    assert len(web_searches(openai)) == 2
+
+    for awareness in started:
+        await awareness.close()
+    await ai.close()

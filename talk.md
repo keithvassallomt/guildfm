@@ -23,6 +23,7 @@ Each DJ's personality gets three more fields, under **Personality** in the DJ pa
 | Running obsession | 200 characters | Building a shed. Has been for eleven years. | Confessions, asides, and callbacks across shows. |
 
 - All three are optional. A move that needs a hook isn't dealt for a DJ without one: no wind-up for a DJ with no pet peeves.
+- Each show is dealt one or two of each DJ's hooks, by the code, resting the ones they had last show if they have others. The planner, the writer and the editor only see those. Left to itself, the AI brought every hook into every show, so the same few stories came round each day (found at the office, 2026-11-20).
 - A hint under them: "For talk stations: what the other DJs can wind them up about, what they go soft on, and what they keep coming back to."
 - Changes apply on every station the DJ hosts, as the personality does today, and the editor says so.
 - The help topic "The DJ" gets the three fields.
@@ -47,7 +48,7 @@ How to write good two-host talk is built into GuildFM (see "How the script is wr
 
 ### Named fields
 
-The script prompt editor supports named fields. GuildFM only gathers the data for the fields a prompt uses.
+The script prompt editor supports named fields. GuildFM only gathers the data for the fields a prompt uses. What it finds is kept in `data/awareness.json` as well as in memory, so a restart doesn't lose the day's news and football: a show planned just after one waits only 20 seconds for them, and found nothing when they had to be looked up again (2026-11-20).
 
 | Field | What it is | Where it comes from |
 |---|---|---|
@@ -84,8 +85,10 @@ Topics to draw on include, but are not limited to:
 ### Three layers
 
 1. **Built in, always on.** How to write natural two-host talk, interruptions, audio tags, and the rules on facts and teasing. Every talk station gets these, so creators don't have to rediscover them.
-2. **The station's script prompt.** What the show is about, its topics and segments, its tone.
+2. **The station's script prompt.** What the show is about, its topics and segments, its tone. The planner and the writer are told it's a guide, not a checklist: they keep to its spirit, but can stray from it for variety, so a show needn't use everything in it.
 3. **The show plan.** Written by the AI when a show starts. A show in a line-up knows how long it runs, and is planned whole. A talk station playing outside a line-up has no known length, so it's planned an hour at a time. The plan picks the running bits and places their setups and payoffs across the links. Each bit has an idea (what it is and what's at stake) and an ending (how it pays off), and the writer is only told the ending when it's due: told it earlier, the writer plays it out early. Each link is then written with the plan, what's been said so far, and the songs either side. The plan and the show's state are kept in the source's `dj_memory`.
+
+   Each show goes in a short log on the station (its last six shows): its running bits with how they ended, a few words naming each segment's topic (the planner names them), and the hooks it had. The planner is shown the bits, to call back to but not repeat, and the last three shows' topics, which listeners have heard, so it doesn't plan them again. The writer only knows what's been said in the show it's writing.
 
 ### Built-in rules
 

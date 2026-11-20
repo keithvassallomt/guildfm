@@ -33,6 +33,8 @@ Under it is about how many ElevenLabs credits an hour of it costs, and how many 
 
 Say what the show is about, as you'd brief a presenter: the kind of chat, and what to draw on. How to sound like two people, the running bits and the surprises are GuildFM's job.
 
+The prompt is a guide, not a checklist. To keep shows varied, a show won't always use everything in it, and the DJs can wander onto other things.
+
 Fields in square brackets bring in what's going on today. They're picked out in the prompt and listed under it, and **Add** puts one where the cursor is:
 
 - **[news]**: light, odd and funny stories.
@@ -48,13 +50,14 @@ GuildFM only looks up the fields the prompt uses, before each show.
 
 ## How they get on
 
-Under **DJs**, **How they get on** says who winds whom up, and who interrupts whom. It belongs to this station, so the same DJs can get on differently somewhere else. **Hear them together** writes and voices a half-minute exchange between them, and plays it on this device, not the office speakers. It costs about 200 credits.
+Under **DJs**, **How they get on** says who winds whom up, and who interrupts whom. It belongs to this station, so the same DJs can get on differently somewhere else. Everything in it comes up in every show, so keep running jokes, such as a feud over the office fridge, in a DJ's hooks, which are shared out a show at a time. **Hear them together** writes and voices a half-minute exchange between them, and plays it on this device, not the office speakers. It costs about 200 credits.
 
 ![How they get on, and hearing them together](shot:talk-djs)
 
 ## On air
 
 - The show is planned an hour at a time, or the whole show in a line-up, with running bits set up early and paid off later. The first talk comes after the first song.
+- Each show remembers what the last few talked about, so a daily show doesn't keep coming back to the same stories.
 - The talk stops for each song: the DJs wrap up before it, and pick up again after it.
 - Requests still play, and the DJs bring them in.
 - In a line-up, the show opens at the start of its slot and signs off at the end.

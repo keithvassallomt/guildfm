@@ -257,7 +257,7 @@ class FakeOpenAI:
         self.found: dict[str, str] = {}
         # A talk show's plan, as it answers.
         self.plan = {
-            "segments": [{"about": f"Topic {n}"} for n in range(1, 13)],
+            "segments": [{"about": f"Topic {n}", "topic": f"topic {n}"} for n in range(1, 13)],
             "bits": [
                 {"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.",
                  "ending": "Priya asks for ABBA.", "setup": 1, "payoff": 9},

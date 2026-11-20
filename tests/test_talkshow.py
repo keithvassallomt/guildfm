@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from guildfm.lineups import minute_of
 from guildfm.models import DJProfile, EntryState, Play, SourceState, Station, Track
@@ -92,6 +93,43 @@ def segments(openai: FakeOpenAI) -> list[str]:
     return [body["input"] for body in openai.asked_for("talk_segment")]
 
 
+async def _give_debbie(sessionmaker, hooks: dict[str, str]) -> None:
+    async with sessionmaker() as db:
+        debbie = await db.scalar(select(DJProfile).where(DJProfile.name == "Debbie"))
+        for hook, text in hooks.items():
+            setattr(debbie, hook, text)
+        await db.commit()
+
+
+def test_a_show_has_only_the_hooks_dealt_to_it(
+    client: TestClient, openai: FakeOpenAI, speakers: FakeSpeakers
+) -> None:
+    sign_in(client, *ADMIN)
+    openai.picks = FLEETWOOD
+    sessionmaker = client.app.state.sessionmaker
+    station = client.portal.call(_station, sessionmaker, 30)
+    hooks = {
+        "pet_peeves": "Fish in the office microwave.",
+        "soft_spots": "Power ballads.",
+        "obsession": "Finding out who nicks her yoghurts.",
+    }
+    client.portal.call(_give_debbie, sessionmaker, hooks)
+    client.post(f"/api/stations/{station}/play").raise_for_status()
+    client.portal.call(client.app.state.radio.settle)
+    client.post("/api/playback/play").raise_for_status()
+    line_up_next(client, speakers)
+
+    dealt = client.portal.call(_memory, sessionmaker)["plan"]["hooks"]["Debbie"]
+    assert 1 <= len(dealt) <= 2
+    (planned,) = openai.asked_for("show_plan")
+    (written,) = openai.asked_for("talk_segment")
+    for hook, text in hooks.items():
+        assert (text in planned["instructions"]) == (hook in dealt)
+        assert (text in written["instructions"]) == (hook in dealt)
+    # The producer's words guide the writer, who can stray from them for variety.
+    assert "That's a guide, not a checklist" in written["instructions"]
+
+
 async def _memory(sessionmaker) -> dict:
     async with sessionmaker() as db:
         source = await db.get(SourceState, 1)
@@ -118,11 +156,11 @@ def test_a_talk_station_talks_before_each_song(
     assert "The Lunch Break: segment 1 of 12, " in caplog.text
     assert "2 turns, 90 characters, 40 credits; written in" in caplog.text
 
-    # Planned once, outside a line-up an hour at a time: 12 segments of talk at 40%.
+    # Planned once, outside a line-up an hour at a time: 12 segments of talk at 30%.
     (plan,) = openai.asked_for("show_plan")
     assert "This plans the next 60 minutes of the show: 12 segments." in plan["input"]
     assert "Debbie can't let Guildbert finish a story." in plan["instructions"]
-    # At 40%, a link is one segment, about as long as two-fifths of a song and a song.
+    # At 30%, a link is one segment, as long as three-sevenths of a song.
     (told,) = segments(openai)
     assert "It opens the show: welcome everyone" in told
     assert "A song has just finished" not in told  # it played before the show
@@ -143,8 +181,12 @@ def test_a_talk_station_talks_before_each_song(
     memory = client.portal.call(_memory, client.app.state.sessionmaker)
     assert (memory["segment"], memory["count"]) == (1, 12)
     assert memory["notes"] == "Debbie has won the biscuit."
-    bits = client.portal.call(_log, client.app.state.sessionmaker, station)
-    assert bits and all(bit["move"] in ("the bet", "the score", "the challenge") for bit in bits)
+    # The show goes in the station's log: its running bits, its topics and its hooks.
+    (logged,) = client.portal.call(_log, client.app.state.sessionmaker, station)
+    moves = [bit["move"] for bit in logged["bits"]]
+    assert moves and set(moves) <= {"the bet", "the score", "the challenge"}
+    assert logged["topics"] == [f"topic {n}" for n in range(1, 13)]
+    assert logged["hooks"] == {"Guildbert": ["pet_peeves"]}  # the only one either of them has
 
     # The next link carries on from the first, with no new plan.
     next_song(client, speakers)

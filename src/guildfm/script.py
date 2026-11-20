@@ -54,6 +54,9 @@ How they get on: {dynamic}
 What the show is about, in its producer's words:
 {prompt}
 
+That's a guide, not a checklist: keep to its spirit, but you can reasonably stray from it for \
+the sake of variety.
+
 Write what they say next as a list of turns. Make it sound like people talking, not one \
 person split in two:
 - They have different opinions, and say so. They don't praise each other's points or finish \

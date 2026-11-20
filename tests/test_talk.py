@@ -1,16 +1,20 @@
 """Talk stations: the banter moves, the dice and the show plan."""
 
+import importlib.util
 import random
 from datetime import datetime
 
 import pytest
 
 from guildfm.ai import AIClient
+from guildfm.db import MIGRATIONS
 from guildfm.talk import (
     BY_NAME,
-    LOG_KEPT,
+    SHOWS_KEPT,
+    TOPICS_SHOWN,
     Host,
     deal_bits,
+    deal_hooks,
     deal_move,
     link_seconds,
     logged,
@@ -18,9 +22,26 @@ from guildfm.talk import (
     roll_happening,
     segment_count,
     segment_lengths,
+    with_hooks,
 )
 from tests.conftest import fake
 from tests.fakes import FakeOpenAI
+
+
+def show(
+    on: str,
+    topics: list[str] | None = None,
+    bits: list[tuple[str, str]] = (),
+    hooks: dict[str, list[str]] | None = None,
+) -> dict:
+    """A show in a station's log."""
+    return {
+        "on": on,
+        "bits": [{"move": move, "idea": idea} for move, idea in bits],
+        "topics": topics or [],
+        "hooks": hooks or {},
+    }
+
 
 GUILDBERT = Host("Guildbert", "Cheeky.", pet_peeves="Songs that fade out.")
 DEBBIE = Host("Debbie", "Bubbly.", soft_spots="ABBA.")
@@ -72,7 +93,7 @@ def test_a_show_gets_one_or_two_running_bits_unlike_the_last() -> None:
     rng = random.Random(2)
     counts = set()
     for _ in range(100):
-        bits = deal_bits(rng, [{"on": "2026-11-13", "move": "the bet", "idea": "Biscuits."}])
+        bits = deal_bits(rng, [show("2026-11-13", bits=[("the bet", "Biscuits.")])])
         assert "the bet" not in bits
         assert all(BY_NAME[bit].running for bit in bits)
         counts.add(len(bits))
@@ -101,7 +122,9 @@ async def _plan(openai: FakeOpenAI, **changes):
         "ratio": 30,
         "bits": ["the bet", "the score"],
         "happening": None,
-        "log": [{"on": "2026-11-13", "move": "the challenge", "idea": "No saying rain."}],
+        "log": [
+            show("2026-11-13", ["the goat mayor", "Debbie's bees"], [("the challenge", "No rain.")])
+        ],
         "until": "13:00",
     }
     try:
@@ -115,6 +138,7 @@ async def test_a_show_is_planned_from_what_it_was_dealt() -> None:
     openai = FakeOpenAI()
     plan = await _plan(openai)
     assert plan["segments"] == [f"Topic {n}" for n in range(1, 13)]
+    assert plan["topics"] == [f"topic {n}" for n in range(1, 13)]  # named, for the log
     assert plan["bits"] == [
         {"move": "the bet", "idea": "A biscuit says nobody asks for ABBA.",
          "ending": "Priya asks for ABBA.", "setup": 1, "payoff": 9},
@@ -129,11 +153,16 @@ async def test_a_show_is_planned_from_what_it_was_dealt() -> None:
     assert "Debbie: Bubbly. Soft spots: ABBA." in told
     assert "Debbie can't let Guildbert finish a story." in told
     assert "Draw on the [news]." in told
+    assert "That's a guide, not a checklist." in told  # strayed from, for variety
     prompt = asked["input"]
     assert "The show runs until 13:00: 12 segments of talk." in prompt
     assert "[news]\n- 15 Nov: A goat was elected mayor." in prompt
     assert "- the bet: Stakes are set early" in prompt
-    assert "- 2026-11-13: the challenge, No saying rain." in prompt
+    assert "- 2026-11-13: the challenge, No rain." in prompt
+    # What the last shows talked about, so it isn't planned again.
+    assert "Listeners have heard these, so don't plan them again." in prompt
+    assert "- 2026-11-13: the goat mayor; Debbie's bees" in prompt
+    assert "Name each segment's topic in a few words" in prompt
     assert "leave the happening's idea empty" in prompt
     # Easy to follow: a topic or two a segment, hooks explained, and no segment numbers on air.
     assert "Give each segment one topic, two at most" in prompt
@@ -180,12 +209,79 @@ async def test_a_plan_that_doesnt_fit_the_show_is_made_to() -> None:
     assert plan["happening"] is None
 
 
-def test_the_log_keeps_the_last_few_bits() -> None:
+def test_the_log_keeps_the_last_few_shows() -> None:
     bit = {"move": "the bet", "idea": "Biscuits.", "ending": "Debbie won.", "setup": 1, "payoff": 4}
-    plan = {"bits": [bit]}
-    log: list[dict[str, str]] = []
+    plan = {"bits": [bit], "topics": ["the goat mayor"], "hooks": {"Debbie": ["obsession"]}}
+    log: list[dict] = []
     for day in range(1, 20):
         log = logged(log, plan, f"2026-11-{day:02d}")
-    assert len(log) == LOG_KEPT
-    # How it ended too, for calling back to.
-    assert log[-1] == {"on": "2026-11-19", "move": "the bet", "idea": "Biscuits. Debbie won."}
+    assert len(log) == SHOWS_KEPT
+    # Its bits with how they ended, for calling back to, its topics and the hooks it had.
+    assert log[-1] == show(
+        "2026-11-19",
+        ["the goat mayor"],
+        [("the bet", "Biscuits. Debbie won.")],
+        {"Debbie": ["obsession"]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_only_the_last_few_shows_topics_are_shown() -> None:
+    openai = FakeOpenAI()
+    log = [show(f"2026-11-{day:02d}", [f"topic from the {day}th"]) for day in range(10, 15)]
+    await _plan(openai, log=log)
+    prompt = openai.asked_for("show_plan")[0]["input"]
+    shown = [day for day in range(10, 15) if f"topic from the {day}th" in prompt]
+    assert shown == list(range(15 - TOPICS_SHOWN, 15))
+
+
+def test_each_show_has_a_hook_or_two_of_each_djs_resting_the_last() -> None:
+    rng = random.Random(5)
+    debbie = Host(
+        "Debbie",
+        "Bubbly.",
+        pet_peeves="Fish in the office microwave.",
+        soft_spots="ABBA.",
+        obsession="Finding out who nicks her yoghurts.",
+    )
+    hosts = [debbie, Host("Guildbert", "Cheeky.")]  # he has no hooks
+    log: list[dict] = []
+    counts, obsessed = set(), 0
+    for day in range(200):
+        hooks = deal_hooks(rng, hosts, log)
+        assert "Guildbert" not in hooks
+        had = hooks["Debbie"]
+        counts.add(len(had))
+        if log:  # none she had last time, while she has others
+            assert not set(had) & set(log[-1]["hooks"]["Debbie"])
+        obsessed += "obsession" in had
+        log = logged(log, {"bits": [], "hooks": hooks}, str(day))
+    assert counts == {1, 2}
+    assert 0.25 < obsessed / 200 < 0.6  # the yoghurts come up in some shows, not every one
+
+    # The show's DJs have only the hooks dealt to it.
+    (dealt,) = with_hooks([debbie], {"Debbie": ["soft_spots"]})
+    assert (dealt.pet_peeves, dealt.soft_spots, dealt.obsession) == ("", "ABBA.", "")
+    assert "yoghurts" not in dealt.described()
+    assert with_hooks([debbie], None) == [debbie]  # a plan from before hooks were dealt
+
+
+def test_a_log_kept_by_bit_is_kept_by_show() -> None:
+    path = MIGRATIONS / "versions" / "0026_talk_log_by_show.py"
+    spec = importlib.util.spec_from_file_location("log_by_show", path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    by_bit = [
+        {"on": "2026-11-19", "move": "the bet", "idea": "Biscuits."},
+        {"on": "2026-11-20", "move": "the score", "idea": "Odd news numbers."},
+        {"on": "2026-11-20", "move": "the challenge", "idea": "No saying cold."},
+    ]
+    by_show = [
+        show("2026-11-19", bits=[("the bet", "Biscuits.")]),
+        show(
+            "2026-11-20",
+            bits=[("the score", "Odd news numbers."), ("the challenge", "No saying cold.")],
+        ),
+    ]
+    assert migration._by_show(by_bit) == by_show
+    assert migration._by_bit(by_show) == by_bit

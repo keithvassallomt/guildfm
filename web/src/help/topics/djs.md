@@ -33,7 +33,7 @@ Under the personality are three things that give the DJs on a talk station somet
 - **Soft spots**: what they go soft on, and give themselves away over.
 - **Running obsession**: something they keep coming back to, show after show.
 
-All three are optional, and music stations don't use them. Each comes up now and then, not every time they talk, and the first time one does, the DJs explain it, so nobody's left out of the joke.
+All three are optional, and music stations don't use them. Each comes up now and then, not every time they talk, and the first time one does, the DJs explain it, so nobody's left out of the joke. Each show on a talk station gets one or two of each DJ's hooks, different from the last show's, so the same ones don't come up every day.
 
 ![A DJ's hooks](shot:station-hooks)
 

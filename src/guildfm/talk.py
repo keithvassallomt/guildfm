@@ -7,12 +7,15 @@ happening; the AI then plans what each segment is about and places the bits' set
 payoffs across them. The code deals the moves, not the AI: left to itself, a model picks the
 same favourites every time.
 
-The plan is kept with the show's state in the source's dj_memory. Each show's running bits go
-in a short log on the station, so a daily show doesn't repeat itself and can call back."""
+The code also deals each DJ one or two of their hooks for the show, resting the ones they had
+last time: left to itself, the AI brings every hook into every show, and the same few stories
+come round each day. The plan is kept with the show's state in the source's dj_memory. Each
+show goes in a short log on the station, with its running bits, what it talked about and the
+hooks it had, so a daily show doesn't repeat itself and can call back."""
 
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any
 
@@ -23,7 +26,9 @@ SEGMENT_SECONDS = 120  # talk written and voiced in one go, at most
 LONGEST = 30 * 60  # seconds of talk between two songs at most
 SONG_SECONDS = 210  # a song, about, for sizing links
 HAPPENING_CHANCE = 0.4  # of a show having a happening
-LOG_KEPT = 12  # running bits kept in a station's log
+SHOWS_KEPT = 6  # shows kept in a station's log
+TOPICS_SHOWN = 3  # recent shows whose topics the planner is shown, so it doesn't repeat them
+HOOKS = ("pet_peeves", "soft_spots", "obsession")  # a DJ's hooks, as Host has them
 MOVES_KEPT = 2  # a link's move is never one of the last this many
 
 
@@ -133,13 +138,41 @@ def _hooked(move: Move, hosts: list[Host]) -> bool:
     return not move.needs or any(getattr(host, hook) for host in hosts for hook in move.needs)
 
 
-def deal_bits(rng: random.Random, log: list[dict[str, str]]) -> list[str]:
-    """The running bits for a show: one or two, leaving out the moves its last show used if
-    there's anything else."""
+def deal_bits(rng: random.Random, log: list[dict[str, Any]]) -> list[str]:
+    """The running bits for a show: one or two, leaving out the last two the station's shows
+    used if there's anything else."""
     running = [move.name for move in MOVES if move.running]
-    lately = {bit["move"] for bit in log[-2:]}
+    lately = {bit["move"] for bit in [b for show in log for b in show["bits"]][-2:]}
     fresh = [name for name in running if name not in lately] or running
     return rng.sample(fresh, min(len(fresh), rng.choice((1, 2))))
+
+
+def deal_hooks(
+    rng: random.Random, hosts: list[Host], log: list[dict[str, Any]]
+) -> dict[str, list[str]]:
+    """Which of each DJ's hooks a show has, by name: one or two of those they have, resting the
+    ones they had in the station's last show if there are others."""
+    last = log[-1].get("hooks", {}) if log else {}
+    dealt = {}
+    for host in hosts:
+        have = [hook for hook in HOOKS if getattr(host, hook)]
+        if not have:
+            continue
+        fresh = [hook for hook in have if hook not in last.get(host.name, [])] or have
+        chosen = rng.sample(fresh, min(len(fresh), rng.choice((1, 2))))
+        dealt[host.name] = [hook for hook in HOOKS if hook in chosen]
+    return dealt
+
+
+def with_hooks(hosts: list[Host], hooks: dict[str, list[str]] | None) -> list[Host]:
+    """The DJs with only the hooks dealt to the show. All of them for a plan made before hooks
+    were dealt, which has None."""
+    if hooks is None:
+        return hosts
+    return [
+        replace(host, **{hook: "" for hook in HOOKS if hook not in hooks.get(host.name, [])})
+        for host in hosts
+    ]
 
 
 def deal_move(
@@ -200,12 +233,15 @@ PLAN_INSTRUCTIONS = (
     "the UK. This show is mostly talk: its DJs chat, bicker and banter, with songs in between. "
     "Plan it, don't write it: someone else writes what they say, a segment at a time.\n\n"
     "The DJs:\n{hosts}\n\nHow they get on: {dynamic}\n\n"
-    "What the show is about, in its producer's words:\n{prompt}"
+    "What the show is about, in its producer's words:\n{prompt}\n\n"
+    "That's a guide, not a checklist. Keep to its spirit, but stray from it where it makes for "
+    "a more varied show: not every show needs everything in it, and the DJs can take in things "
+    "it doesn't mention."
 )
 PLAN = object_schema(
     segments={
         "type": "array",
-        "items": object_schema(about={"type": "string"}),
+        "items": object_schema(about={"type": "string"}, topic={"type": "string"}),
     },
     bits={
         "type": "array",
@@ -239,14 +275,15 @@ async def plan_show(
     ratio: int,
     bits: list[str],
     happening: str | None,
-    log: list[dict[str, str]],
+    log: list[dict[str, Any]],
     until: str | None = None,
 ) -> dict[str, Any]:
     """A show's plan: what each segment is about, and where its running bits and happening
     fall. `until` is when a show in a line-up ends, such as "13:00"; without it, the plan is
-    for the next `minutes`, with more to come. `log` is the station's running bits from its
-    last few shows. Setups and payoffs that don't fit the show are moved so they do, and a bit
-    the AI made up beyond those dealt is dropped."""
+    for the next `minutes`, with more to come. `log` is the station's last few shows: their
+    running bits and what they talked about. `hosts` have the hooks dealt to the show. The plan
+    names each segment's topic, for the log. Setups and payoffs that don't fit the show are
+    moved so they do, and a bit the AI made up beyond those dealt is dropped."""
     count = segment_count(minutes, ratio)
     parts = [f"It's {starts:%A} {starts.day} {starts:%B}, {starts:%H:%M}."]
     if until:
@@ -261,7 +298,10 @@ async def plan_show(
         "Plan it so that someone listening can follow it. Give each segment one topic, two at "
         "most, with room to tell it and argue about it. Spread what's going on across the show; "
         "it doesn't all have to be used. Listeners know only what's said on air, so the first "
-        "segment to bring up one of a DJ's hooks, such as a hobby or a rival, explains it."
+        "segment to bring up one of a DJ's hooks, such as a hobby or a rival, explains it. "
+        'Name each segment\'s topic in a few words, such as "the goat elected mayor" or '
+        "\"Debbie's yoghurt thief\": it goes in the station's log, so later shows know what's "
+        "been covered."
     )
     if material:
         parts.append(
@@ -285,10 +325,19 @@ async def plan_show(
         )
     else:
         parts.append("This show has no happening: leave the happening's idea empty.")
-    if log:
+    bits_lately = [(show["on"], bit) for show in log for bit in show["bits"]]
+    if bits_lately:
         parts.append(
             "Running bits from the last few shows, oldest first. Don't repeat them, but you can "
-            "call back to one:\n" + "\n".join(f"- {b['on']}: {b['move']}, {b['idea']}" for b in log)
+            "call back to one:\n"
+            + "\n".join(f"- {on}: {bit['move']}, {bit['idea']}" for on, bit in bits_lately)
+        )
+    covered = [(show["on"], show["topics"]) for show in log[-TOPICS_SHOWN:] if show["topics"]]
+    if covered:
+        parts.append(
+            "What the last few shows talked about, oldest first. Listeners have heard these, so "
+            "don't plan them again. A DJ's hook can come back, with something new about it:\n"
+            + "\n".join(f"- {on}: {'; '.join(topics)}" for on, topics in covered)
         )
     parts.append(
         "No politics, religion or tragedy, and no made-up facts about real people or songs. "
@@ -305,6 +354,8 @@ async def plan_show(
 
     segments = [s["about"].strip() for s in answer["segments"]][:count]
     segments += ["Whatever comes up."] * (count - len(segments))
+    named = [s.get("topic", "").strip() for s in answer["segments"]][:count]
+    topics = list(dict.fromkeys(topic for topic in named if topic))
     placed = []
     last = max(1, count - 1)  # paid off before the last segment, if there's room
     answered = list(answer["bits"])
@@ -338,7 +389,7 @@ async def plan_show(
             "starts": start,
             "ends": min(max(start, answered_happening["ends"]), count),
         }
-    return {"segments": segments, "bits": placed, "happening": surprise}
+    return {"segments": segments, "topics": topics, "bits": placed, "happening": surprise}
 
 
 def _same(said: str, name: str) -> bool:
@@ -351,10 +402,16 @@ def _dealt(said: str, names: list[str]) -> bool:
     return any(_same(said, name) for name in names)
 
 
-def logged(log: list[dict[str, str]], plan: dict[str, Any], day: str) -> list[dict[str, str]]:
-    """The station's log with a show's running bits added, keeping the last few."""
-    added = [
-        {"on": day, "move": bit["move"], "idea": f"{bit['idea']} {bit.get('ending', '')}".strip()}
-        for bit in plan["bits"]
-    ]
-    return [*log, *added][-LOG_KEPT:]
+def logged(log: list[dict[str, Any]], plan: dict[str, Any], day: str) -> list[dict[str, Any]]:
+    """The station's log with a show added, keeping the last few: its running bits with how
+    they ended, for calling back to, what it talked about, and the hooks it had."""
+    show = {
+        "on": day,
+        "bits": [
+            {"move": bit["move"], "idea": f"{bit['idea']} {bit.get('ending', '')}".strip()}
+            for bit in plan["bits"]
+        ],
+        "topics": plan.get("topics", []),
+        "hooks": plan.get("hooks", {}),
+    }
+    return [*log, show][-SHOWS_KEPT:]

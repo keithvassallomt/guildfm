@@ -58,12 +58,14 @@ from guildfm.talk import (
     Host,
     all_talk,
     deal_bits,
+    deal_hooks,
     deal_move,
     logged,
     plan_show,
     roll_happening,
     segment_lengths,
     talks,
+    with_hooks,
 )
 
 log = logging.getLogger(__name__)
@@ -99,7 +101,7 @@ class Show:
     dynamic: str
     prompt: str
     ratio: int
-    log: list[dict[str, str]]
+    log: list[dict[str, Any]]  # the station's last few shows
 
     @classmethod
     def of(cls, station: Station) -> Show:
@@ -169,6 +171,11 @@ class OnAir:
     location: str
     now: datetime  # in the office's time zone
     before: str | None  # the song that just played
+
+    @property
+    def hosts(self) -> list[Host]:
+        """The DJs, with the hooks dealt to the show."""
+        return with_hooks(self.show.hosts, (self.memory.get("plan") or {}).get("hooks"))
 
 
 @dataclass
@@ -550,7 +557,7 @@ class TalkShow:
         """A move for a link, or a stretch of talk at 100%, remembered so it rests. `song` is
         whether a song just played, for the talk to be about."""
         moves = list(air.memory.get("moves", []))
-        move = deal_move(self.rng, air.show.hosts, bool(air.guests), moves, song)
+        move = deal_move(self.rng, air.hosts, bool(air.guests), moves, song)
         air.memory["moves"] = [*moves, move][-MOVES_REMEMBERED:]
         return move
 
@@ -601,7 +608,7 @@ class TalkShow:
             guest=guest[0].described() if guest else None,
             remarks=remarks,
         )
-        hosts, voices = show.hosts, show.voices
+        hosts, voices = air.hosts, show.voices
         if guest:
             hosts, voices = [*hosts, guest[0]], voices | {guest[0].name: guest[1]}
         said = [[Turn(*turn) for turn in segment] for segment in memory.get("said", [])]
@@ -692,11 +699,12 @@ class TalkShow:
             station = await db.get(Station, show.station_id)
             found = await material(db, self._awareness, station, location, now) if station else {}
         bits = deal_bits(self.rng, show.log)
+        hooks = deal_hooks(self.rng, show.hosts, show.log)
         happening = roll_happening(self.rng, bool(air.guests))
         plan = await plan_show(
             self._ai,
             station=show.name,
-            hosts=show.hosts,
+            hosts=with_hooks(show.hosts, hooks),
             dynamic=show.dynamic,
             prompt=show.prompt,
             material=found,
@@ -708,12 +716,18 @@ class TalkShow:
             log=show.log,
             until=clock(until) if until is not None else None,
         )
+        plan["hooks"] = hooks
         log.info(
-            "%s planned: %d segments, %s, %s",
+            "%s planned: %d segments, %s, %s; hooks: %s",
             show.name,
             len(plan["segments"]),
             " and ".join(bits),
             happening or "no happening",
+            "; ".join(
+                f"{name}'s {', '.join(hook.replace('_', ' ') for hook in had)}"
+                for name, had in hooks.items()
+            )
+            or "none",
         )
         return plan
 

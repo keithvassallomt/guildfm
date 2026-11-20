@@ -4,15 +4,19 @@ stations don't ask again for every song. The news takes up to a minute to gather
 the DJ has, so it's gathered in the background and used once it's in.
 
 Talk stations' DJs have more to talk about, gathered the same way when their script prompt asks
-for it (fields.py): light news, British football, and celebrities' birthdays and news."""
+for it (fields.py): light news, British football, and celebrities' birthdays and news. What's
+found is kept in a file too, so a restart doesn't lose the day's news, and a talk show planned
+just after one has it."""
 
 import asyncio
+import json
 import logging
 import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
+from pathlib import Path
 
 import httpx2
 
@@ -125,14 +129,19 @@ class Awareness:
         ai: AIClient,
         http: httpx2.AsyncClient | None = None,
         clock: Callable[[], float] = time.monotonic,
+        *,
+        memory: Path | None = None,
+        wall: Callable[[], float] = time.time,
     ) -> None:
         self._ai = ai
         self._http = http or httpx2.AsyncClient(timeout=WEATHER_TIMEOUT)
         self._clock = clock
+        self._memory = memory  # where what's found is kept for after a restart
+        self._wall = wall  # the time of day, for ageing what's kept over a restart
         self._places: dict[str, tuple[float, float] | None] = {}
         self._weather: dict[str, tuple[float, str | None]] = {}  # when it was read, and what
         # By topic: when it was found, what (None for nothing), and for a daily topic the day.
-        self._found: dict[str, tuple[float, str | None, str]] = {}
+        self._found: dict[str, tuple[float, str | None, str]] = self._recalled()
         self._gathering: dict[str, asyncio.Task] = {}
         self.weather_health = Health()
 
@@ -238,6 +247,36 @@ class Awareness:
             self._found[topic] = (self._clock(), text, day)
         else:
             self._found[topic] = (self._clock() - spec.seconds + FAILED_SECONDS, kept[1], day)
+        self._remember()
+
+    def _remember(self) -> None:
+        """Keep what's been found, each with when it was found by the time of day, since the
+        clock that ages it starts again with the app."""
+        if self._memory is None:
+            return
+        wall, now = self._wall(), self._clock()
+        notes = {
+            topic: {"at": wall - (now - at), "text": text, "day": day}
+            for topic, (at, text, day) in self._found.items()
+        }
+        draft = self._memory.with_suffix(".tmp")
+        draft.write_text(json.dumps(notes))
+        draft.replace(self._memory)
+
+    def _recalled(self) -> dict[str, tuple[float, str | None, str]]:
+        """What was found before a restart, as old as it really is."""
+        if self._memory is None:
+            return {}
+        try:
+            notes = json.loads(self._memory.read_text())
+            wall, now = self._wall(), self._clock()
+            return {
+                topic: (now - max(0.0, wall - note["at"]), note["text"], note["day"])
+                for topic, note in notes.items()
+                if topic in TOPICS
+            }
+        except OSError, ValueError, KeyError, TypeError, AttributeError:
+            return {}
 
     async def ready(self, topics: list[str], today: date, timeout: float) -> None:
         """Waits up to `timeout` seconds for what's being gathered on `topics`, starting on any

@@ -230,7 +230,9 @@ def create_app(
         image_model=settings.openai_image_model,
         image_quality=settings.openai_image_quality,
     )
-    app.state.awareness = awareness or Awareness(app.state.ai)
+    app.state.awareness = awareness or Awareness(
+        app.state.ai, memory=settings.data_dir / "awareness.json"
+    )
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.guildfm_secret_key.get_secret_value(),
