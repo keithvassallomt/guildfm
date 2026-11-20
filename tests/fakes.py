@@ -289,6 +289,8 @@ class FakeOpenAI:
         self.hearing_down = False
         # What it makes of names people pick, by name; any other name is fine.
         self.names: dict[str, str] = {}
+        # How DJs get on, as it suggests for the station editor.
+        self.dynamic = "Guildbert is dry. Debbie is loud, and laughs at her own jokes."
         # Jingle descriptions it writes, in the generator, handed out in turn.
         self.ideas = [
             {"name": f"Idea {n}", "description": f"Bright sting number {n}.", "seconds": 6 + n}
@@ -321,6 +323,8 @@ class FakeOpenAI:
         elif name == "talk_edit":
             draft = json.loads(body["input"].split("The draft:\n", 1)[1])
             text = json.dumps(self.edit or {"problems": [], "turns": draft})
+        elif name == "dynamic":
+            text = json.dumps({"dynamic": self.dynamic})
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})
@@ -375,7 +379,12 @@ class FakeElevenLabs:
 
     def __init__(self) -> None:
         self.voices = [
-            {"voice_id": "guildbert01", "name": "Guildbert", "category": "generated"},
+            {
+                "voice_id": "guildbert01",
+                "name": "Guildbert",
+                "category": "generated",
+                "labels": {"accent": "british", "age": "middle_aged", "gender": "male"},
+            },
             {"voice_id": "aurora02", "name": "aurora", "category": "cloned"},
         ]
         self.requests: list[dict] = []  # text to speech: the voice, model and text

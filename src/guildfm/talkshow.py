@@ -229,6 +229,38 @@ async def together(
     return await voice_segment(speech, turns, voices)
 
 
+DYNAMIC_INSTRUCTIONS = """You write how the DJs on a radio talk show get on with each other, \
+for the people setting up the show. Its writers read it before every segment.
+
+From who each DJ is, write three or four plain sentences: what each makes of the other, who \
+winds whom up and how, who interrupts whom, and where they side together. Draw on their \
+personalities. Leave their pet peeves, soft spots and obsessions as they are: those come up a \
+show at a time, and this comes up in every show, so it's about the two of them, not running \
+jokes. Warm underneath: they bicker, but they like each other. British English, everyday words, \
+no lists, no headings, no dashes, and under 600 characters."""
+
+DYNAMIC = {
+    "type": "object",
+    "properties": {"dynamic": {"type": "string"}},
+    "required": ["dynamic"],
+    "additionalProperties": False,
+}
+
+
+async def suggest_dynamic(ai: AIClient, *, station: str, hosts: list[Host], prompt: str) -> str:
+    """How `hosts` might get on, written by the AI from who they are, for the station editor's
+    "Suggest one". Raises AIError if it can't."""
+    parts = [f"The show: {station}." if station else "A new show."]
+    if prompt:
+        parts.append(f"What it's about: {prompt}")
+    parts.append("The DJs:\n" + "\n".join(host.described() for host in hosts))
+    answer = await ai.json(DYNAMIC_INSTRUCTIONS, "\n\n".join(parts), "dynamic", DYNAMIC)
+    dynamic = str(answer.get("dynamic", "")).strip()
+    if not dynamic:
+        raise AIError("The AI didn't suggest anything this time. Try again.")
+    return dynamic[:1000]
+
+
 class TalkShow:
     def __init__(
         self,

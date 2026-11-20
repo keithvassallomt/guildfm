@@ -123,6 +123,20 @@ class Music:
 class ElevenVoice:
     voice: str  # "elevenlabs:" and its id
     name: str
+    note: str = ""  # what it sounds like, from its labels: "British, middle aged, male"
+
+
+def voice_note(labels: object) -> str:
+    """A voice's ElevenLabs labels as a short note, such as "British, middle aged, male"."""
+    if not isinstance(labels, dict):
+        return ""
+    words = [
+        str(labels[key]).replace("_", " ").replace("-", " ").strip()
+        for key in ("accent", "age", "gender", "descriptive", "description")
+        if labels.get(key)
+    ]
+    note = ", ".join(word for word in words if word)
+    return (note[:1].upper() + note[1:])[:60]
 
 
 @dataclass(frozen=True)
@@ -444,7 +458,12 @@ class SpeechClient:
             return self._voices
         self.eleven_health.worked()
         self._voices = sorted(
-            (ElevenVoice(ELEVEN + v["voice_id"], v.get("name") or "Unnamed") for v in found),
+            (
+                ElevenVoice(
+                    ELEVEN + v["voice_id"], v.get("name") or "Unnamed", voice_note(v.get("labels"))
+                )
+                for v in found
+            ),
             key=lambda voice: voice.name.lower(),
         )
         self._voices_at = time.monotonic()

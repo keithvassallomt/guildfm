@@ -623,7 +623,8 @@ export type JingleRound = {
 /** The voices GuildFM can speak in. An ElevenLabs voice's id starts "elevenlabs:". */
 export type Voices = {
   openai: string[];
-  elevenlabs: { id: string; name: string }[];
+  /** Each with what it sounds like, such as "British, middle aged, male", when ElevenLabs says. */
+  elevenlabs: { id: string; name: string; note: string }[];
   /** Whether there's an ElevenLabs key in .env. */
   elevenlabs_ready: boolean;
   /** The ElevenLabs account's credits a month, when it'll say. */

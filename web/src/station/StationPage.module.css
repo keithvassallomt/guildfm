@@ -1,0 +1,417 @@
+/* A station's page: a card for each part with Change, and its cover, jingles and Delete beside
+   them on a wide screen. Put it on and Preview an hour are in the header on a wide screen and
+   in a bar over the tab bar on a phone. */
+
+.page {
+  container: station / inline-size;
+  --fab-space: 76px;
+  max-width: 1120px;
+  padding: 12px 16px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.back,
+.back:hover {
+  width: var(--touch);
+  height: var(--touch);
+  margin-left: -10px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+}
+
+.headText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crumbs {
+  display: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.crumbs a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--text);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.title {
+  min-width: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.kindChip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.headEnd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wideActions {
+  display: none;
+}
+
+.onAir {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.columns {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.parts {
+  flex: 1;
+  min-width: 0;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.part,
+.card {
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.partTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.partTitle {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.change {
+  min-height: var(--touch);
+  margin: -10px -8px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.change:hover {
+  color: var(--accent-hover);
+}
+
+.big {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.text {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.muted {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+
+.clamp2,
+.clamp3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clamp2 {
+  -webkit-line-clamp: 2;
+}
+
+.clamp3 {
+  -webkit-line-clamp: 3;
+}
+
+.pair,
+.mix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mix {
+  gap: 8px;
+}
+
+.showFoot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.djs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dj {
+  padding: 5px 5px 5px 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hear {
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hear:hover {
+  background: var(--accent-tint);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sideTitle {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cover {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.coverArt {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+.coverText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* As a button class too, so it wins over the secondary button's colours. */
+button.delete,
+button.delete:hover {
+  border-color: var(--hot-soft);
+  color: var(--hot-text);
+}
+
+/* Preview and Put it on, over the tab bar on a phone. */
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 10px 16px 12px;
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar > :last-child {
+  flex: 1;
+  text-align: center;
+}
+
+.confirm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* The Change dialog's footer: what's missing, then Back or Cancel, and Next or Save. */
+.dialogFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 10px;
+}
+
+.why {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.dialogButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.chain {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: 28px 40px 48px;
+    gap: 28px;
+    --fab-space: 0px;
+  }
+
+  .header {
+    align-items: flex-end;
+    gap: 16px;
+  }
+
+  .back:not(.always) {
+    display: none;
+  }
+
+  .crumbs {
+    display: block;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+
+  .wideActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bar {
+    display: none;
+  }
+}
+
+@container station (min-width: 880px) {
+  .columns {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .side {
+    width: 320px;
+    flex-shrink: 0;
+  }
+
+  .cover {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .coverArt {
+    width: 100%;
+    height: 200px;
+  }
+}

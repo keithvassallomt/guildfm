@@ -136,9 +136,11 @@ def test_every_page_has_help(address: str, page: str) -> None:
     assert any(
         address in [p.strip() for p in topic.meta.get("pages", "").split(",")] for topic in ALL
     ), f"no topic is the help for {address}"
-    assert "<HelpLink" in (WEB / "pages" / f"{page}.tsx").read_text(), f"{page} has no ?"
+    (source,) = WEB.rglob(f"{page}.tsx")
+    assert "<HelpLink" in source.read_text(), f"{page} has no ?"
 
 
 def test_routes_are_read() -> None:
     assert ("/", "NowPlayingPage") in routes()
-    assert ("/radio/:id", "StationEditor") in routes()
+    assert ("/radio/new", "NewStation") in routes()
+    assert ("/radio/:id", "StationPage") in routes()

@@ -141,6 +141,26 @@ const paths = {
       <rect x="17" y="14" width="4" height="7" rx="1.5" />
     </>
   ),
+  music: (
+    <>
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </>
+  ),
+  mic: (
+    <>
+      <rect x="9" y="2" width="6" height="13" rx="3" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+    </>
+  ),
+  chat: (
+    <>
+      <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
+      <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
+    </>
+  ),
+  edit: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;

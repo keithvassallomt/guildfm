@@ -29,8 +29,11 @@ async def open_now(s: Scene) -> None:
 
 
 async def open_station(s: Scene, name: str) -> None:
-    """A station's editor, once it and its cover are in."""
+    """A station's page, once it, its cover and its jingles are in."""
     page = s.page
-    await s.open(f"/radio/{s.office.stations[name]}", page.get_by_label("What should it play?"))
+    await s.open(
+        f"/radio/{s.office.stations[name]}", page.get_by_role("heading", name=name, level=1)
+    )
     await page.get_by_role("button", name="Paint another").wait_for()
+    await page.get_by_role("button", name="Generate jingles").wait_for()
     await s.settle()

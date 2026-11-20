@@ -87,6 +87,38 @@
   padding-bottom: 16px;
 }
 
+/* Full screen on phones, scrolling between its title and footer. */
+.full {
+  height: 100dvh;
+  max-height: 100dvh;
+  border-top: 0;
+  border-radius: 0;
+}
+
+.full[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.full .body {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.full .content {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -16px;
+  padding: 0 16px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.full.withFooter .content {
+  padding-bottom: 16px;
+}
+
 @media (min-width: 768px) {
   .dialog {
     max-width: 440px;
@@ -115,6 +147,23 @@
   }
 
   .tall.withFooter .content {
+    padding-bottom: 16px;
+  }
+
+  .full {
+    max-width: 640px;
+    height: auto;
+    max-height: min(88dvh, 900px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+
+  .full .content {
+    margin: 0 -24px;
+    padding: 0 24px 24px;
+  }
+
+  .full.withFooter .content {
     padding-bottom: 16px;
   }
 

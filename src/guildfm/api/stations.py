@@ -43,7 +43,7 @@ from guildfm.rehearsal import rehearse
 from guildfm.speech import MAX_TEXT, SpeechError, Voice, is_eleven
 from guildfm.spotify import SpotifyBusy
 from guildfm.talk import Host
-from guildfm.talkshow import together
+from guildfm.talkshow import suggest_dynamic, together
 
 router = APIRouter(prefix="/stations")
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -216,6 +216,18 @@ class TogetherIn(BaseModel):
         return self
 
 
+class DynamicIn(BaseModel):
+    """DJs as the editor has them, saved or not, for "Suggest one"."""
+
+    name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] = ""
+    djs: list[DJIn] = Field(min_length=2, max_length=MOST_DJS)
+    script_prompt: Prompt = ""
+
+
+class DynamicOut(BaseModel):
+    dynamic: str
+
+
 class PreviewIn(BaseModel):
     text: Words
     voice: Voice
@@ -382,6 +394,25 @@ async def hear_together(body: TogetherIn, _: Maker, request: Request, db: Db) ->
     except (AIError, SpeechError) as error:
         raise HTTPException(502, str(error)) from None
     return FileResponse(clip.path, media_type="audio/mpeg")
+
+
+@router.post("/dynamic")
+async def suggest(body: DynamicIn, _: Maker, request: Request) -> DynamicOut:
+    """How the editor's DJs might get on, written by the AI from their personalities and
+    hooks. A few seconds; nothing is kept."""
+    try:
+        dynamic = await suggest_dynamic(
+            request.app.state.ai,
+            station=body.name,
+            hosts=[
+                Host(dj.name, dj.personality, dj.pet_peeves, dj.soft_spots, dj.obsession)
+                for dj in body.djs
+            ],
+            prompt=body.script_prompt,
+        )
+    except AIError as error:
+        raise HTTPException(502, str(error)) from None
+    return DynamicOut(dynamic=dynamic)
 
 
 @router.post("/preview-hour")

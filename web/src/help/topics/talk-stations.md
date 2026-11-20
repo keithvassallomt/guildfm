@@ -10,49 +10,57 @@ A talk station is mostly its DJs talking, with songs in between. Two or more DJs
 
 ## Make one
 
-1. In the station's editor, add two or more DJs, each with an **ElevenLabs** voice. See [DJs](topic:djs).
-2. Under **Talk station**, turn on **Mostly talk**.
-3. Set how much of it is talk with the **Talk and music** slider.
-4. Write the **Script prompt**: what the show is about.
-5. Under **DJs**, say **How they get on**.
-6. Save the station.
+1. Go to **Radio**, tap **New station**, and pick **Talk show**. A talk show needs two or more DJs with **ElevenLabs** voices, and it says how many of the office's DJs have one.
+2. Name the show, and say what music plays between the talk.
+3. **Hosts**: tap two to six DJs, in the order you want them. Each shows their place on the show. A DJ with an OpenAI voice opens their details first, to choose an ElevenLabs one. **New DJ** makes one with an ElevenLabs voice. See [DJs](topic:djs).
+4. **The show**: how much talk, what it's about, and how they get on (below).
+5. The extras, then check it over and tap **Create station**. See [Making a station](topic:making-a-station).
 
-Until the station has two or more DJs with ElevenLabs voices, the switch stays off and says what's missing.
+![Picking Talk show](shot:wizard-talk)
 
-![The Talk station switch, before the DJs are ready](shot:talk-not-yet)
+If ElevenLabs isn't set up, **Talk show** can't be picked, and says why.
+
+## Turn a station into one
+
+On a station's page, tap **Change** on **Type** and pick **Talk show**. GuildFM walks you through the hosts, then the show, and saves. To change just the show later, tap **Change** on **The show**.
+
+![Turning a station into a talk show](shot:talk-turn-into)
 
 ## How much talk
 
-The slider runs from 20% talk to 100%. At 40%, there's a little over two minutes of talk between songs; at 60%, about five; at 70%, about eight. At 100% it's all talk, and only requests play. Above 70% the slider turns red: there's very little music, and it's costly.
+The slider runs from 20% talk to 100%. Under it, an hour shows as twelve blocks of five minutes, the talk in orange, with about how many minutes of each. At 40%, there's a little over two minutes of talk between songs; at 60%, about five; at 70%, about eight. At 100% it's all talk, and only requests play. Above 70% the slider turns red: there's very little music, and it's costly.
 
-Under it is about how many ElevenLabs credits an hour of it costs, and how many hours of it this month's allowance covers. A minute of talk is about 450 credits.
+Under that is about how many ElevenLabs credits an hour of it costs, and how many hours of it this month's allowance covers. A minute of talk is about 450 credits.
 
-![The talk and music slider](shot:talk-station)
+![How much talk](shot:talk-mix)
 
-## The script prompt
+## What it's about
 
 Say what the show is about, as you'd brief a presenter: the kind of chat, and what to draw on. How to sound like two people, the running bits and the surprises are GuildFM's job.
 
-The prompt is a guide, not a checklist. To keep shows varied, a show won't always use everything in it, and the DJs can wander onto other things.
+It's a guide, not a checklist. To keep shows varied, a show won't always use everything in it, and the DJs can wander onto other things.
 
-Fields in square brackets bring in what's going on today. They're picked out in the prompt and listed under it, and **Add** puts one where the cursor is:
+**Bring in what's going on today** adds a field to the prompt, where the cursor is, or takes it out again. Fields are picked out in the prompt, in square brackets:
 
-- **[news]**: light, odd and funny stories.
-- **[weather]**: the weather where the office is.
-- **[sports]**: British football: news, scores and results.
-- **[celebrities]**: birthdays, anniversaries and news.
-- **[lineup]**: what's on for the rest of the day.
-- **[djs]**: GuildFM's other DJs.
+- **Odd news** (`[news]`): light, odd and funny stories.
+- **Weather** (`[weather]`): the weather where the office is.
+- **Football** (`[sports]`): British football: news, scores and results.
+- **Birthdays and celebs** (`[celebrities]`): birthdays, anniversaries and news.
+- **What's on next** (`[lineup]`): what's on for the rest of the day.
+- **The other DJs** (`[djs]`): GuildFM's other DJs.
 
 GuildFM only looks up the fields the prompt uses, before each show.
 
-![The script prompt and its fields](shot:talk-prompt)
+![What it's about, and bringing in the day's news](shot:talk-prompt)
 
 ## How they get on
 
-Under **DJs**, **How they get on** says who winds whom up, and who interrupts whom. It belongs to this station, so the same DJs can get on differently somewhere else. Everything in it comes up in every show, so keep running jokes, such as a feud over the office fridge, in a DJ's hooks, which are shared out a show at a time. **Hear them together** writes and voices a half-minute exchange between them, and plays it on this device, not the office speakers. It costs about 200 credits.
+**How do they get on?** says who winds whom up, and who interrupts whom. It belongs to this station, so the same DJs can get on differently somewhere else. Everything in it comes up in every show, so keep running jokes, such as a feud over the office fridge, in a DJ's hooks, which are shared out a show at a time.
 
-![How they get on, and hearing them together](shot:talk-djs)
+- **Suggest one** has the AI write it from their personalities and hooks. If there's something there already, it says **Suggest another**, and **Put back what was there** undoes it.
+- **Hear them together** writes and voices a half-minute exchange between them, and plays it on this device, not the office speakers. It costs about 200 credits.
+
+![How they get on](shot:talk-get-on)
 
 ## On air
 

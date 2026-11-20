@@ -22,10 +22,11 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { QueuePage } from "./pages/QueuePage";
 import { RadioPage } from "./pages/RadioPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { StationEditor } from "./pages/StationEditor";
 import { StatusPage } from "./pages/StatusPage";
 import { UsersPage } from "./pages/UsersPage";
 import { WelcomePage } from "./pages/WelcomePage";
+import { NewStation } from "./station/NewStation";
+import { StationPage } from "./station/StationPage";
 
 function Shell() {
   const { can } = useAuth();
@@ -151,7 +152,7 @@ export function App() {
             path="radio/new"
             element={
               <Allowed permission="create_stations">
-                <StationEditor />
+                <NewStation />
               </Allowed>
             }
           />
@@ -159,7 +160,7 @@ export function App() {
             path="radio/:id"
             element={
               <Allowed permission="create_stations">
-                <StationEditor />
+                <StationPage />
               </Allowed>
             }
           />

@@ -15,7 +15,7 @@ An AI radio station picks its own songs from a description, such as "80s and 90s
 
 Tap **Switch to this station** under it, or pick it on Now Playing. It takes over from the next song, and requests still play first. The station that's on says **On air**, and **Take off**, at the top, takes it off.
 
-The tags under each station say what it's like: its DJ, how often they talk, and whether it follows the weather and the news (**Global awareness**).
+The tags under each station say what it's like: what kind of station it is, its DJ or hosts, how often they talk, and whether it follows the weather and the news (**Knows what's going on**).
 
 ## AI picks
 
@@ -29,5 +29,5 @@ The tags under each station say what it's like: its DJ, how often they talk, and
 - If the AI can't pick (the internet's down, say), the station plays songs from before so the music doesn't stop: its own first, then Best Voted, then anything else heard in the office, the ones not heard for longest first. Even a brand new station has something to play.
 
 ::: needs create_stations
-To make your own station, see [Making a station](topic:making-a-station).
+To make your own station, tap **New station**. Tap a station to open its page, where you can change it. See [Making a station](topic:making-a-station).
 :::

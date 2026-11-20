@@ -1,0 +1,889 @@
+/* The steps of making or changing a station: each one piece of UI, used by the wizard and by
+   the station page's Change dialogs. Fields sit on the page's ground, panels on a surface. */
+
+.step {
+  --field-bg: var(--surface);
+  container: step / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* In a dialog, which is a surface itself. */
+.inDialog {
+  --field-bg: var(--bg);
+  gap: 18px;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.hint {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.field,
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+legend.label {
+  margin-bottom: 8px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.textarea {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--field-bg);
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--faint);
+}
+
+.textarea:focus-visible,
+.number:focus-visible {
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+
+/* A box of its own on the step, such as the talk slider. */
+.panel {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  --field-bg: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inDialog .panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.inDialog .panel + .panel {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+/* A row with a switch at its end. */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rowHint {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* A list of switches, each on its own line. */
+.switches {
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.switches > * {
+  padding: 14px 16px;
+}
+
+.switches > * + * {
+  border-top: 1px solid var(--line);
+}
+
+.inDialog .switches {
+  border: 0;
+  background: transparent;
+}
+
+.inDialog .switches > * {
+  padding: 12px 0;
+}
+
+/* A switch on its own, in a box. */
+.boxed {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.inDialog .boxed {
+  padding: 18px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Cards to pick one from, or several: types, how often, voices. */
+.choices {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@container step (min-width: 520px) {
+  .twoWide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.choice {
+  min-height: 64px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.inDialog .choice {
+  background: var(--bg);
+}
+
+.choice:hover {
+  border-color: var(--line-strong);
+}
+
+.choice[aria-pressed="true"],
+.choice[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+
+.choiceLabel {
+  font-weight: 600;
+}
+
+.choiceHint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* The three kinds of station: side by side in the wizard on a wide screen. */
+.kinds {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container step (min-width: 600px) {
+  .kinds:not(.listed) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kinds:not(.listed) .kind {
+    flex-direction: column;
+  }
+}
+
+.kind {
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.listed .kind {
+  padding: 14px;
+  background: var(--bg);
+}
+
+.kind:hover {
+  border-color: var(--line-strong);
+}
+
+.kind[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+
+.kind[aria-disabled="true"] {
+  cursor: default;
+  border-style: dashed;
+}
+
+.kind[aria-disabled="true"] .kindIcon {
+  color: var(--faint);
+}
+
+.kindIcon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--surface-raised);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+.listed .kindIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.kind[aria-checked="true"] .kindIcon {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.kindText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.listed .kindText {
+  gap: 3px;
+}
+
+.kindTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.listed .kindTitle {
+  font-size: 17px;
+}
+
+.kindAbout {
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+
+.kindCost {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* A word about what was picked: what a talk show needs, or what a new type means. */
+.note {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+
+.inDialog .note {
+  background: var(--bg);
+}
+
+.noteIcon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+.warn {
+  background: var(--warn-soft);
+  border-color: transparent;
+  color: var(--text);
+}
+
+.inDialog .warn {
+  background: var(--warn-soft);
+}
+
+.warn .noteIcon {
+  background: transparent;
+  color: var(--warn);
+}
+
+/* "Try" and a few examples to start from. */
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  min-height: var(--touch);
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.chip:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.chip[aria-pressed="true"] svg {
+  color: var(--accent);
+}
+
+/* The DJs to pick from. */
+.djs {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container step (min-width: 560px) {
+  .djs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dj {
+  min-width: 0;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  overflow: hidden;
+}
+
+.inDialog .dj {
+  background: var(--bg);
+}
+
+.dj.on {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+
+.djPick {
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.djText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.djName {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.djAbout {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.djWhere {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.djProblem {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--warn);
+}
+
+/* Hear, and Change for a DJ on the station, down the card's side. */
+.djSide {
+  width: 64px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.djSide > * + * {
+  border-top: 1px solid var(--line);
+}
+
+.sideButton {
+  flex: 1;
+  min-height: var(--touch);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.sideButton:hover {
+  background: var(--accent-tint);
+}
+
+/* A DJ's initial, with their place on the show or a tick. */
+.avatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+}
+
+.small {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.newDJ {
+  min-height: 88px;
+  border-radius: var(--radius);
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.newDJ:hover {
+  border-color: var(--accent);
+}
+
+/* A DJ's details, new or changed, in place of the cards. */
+.form {
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  --field-bg: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.inDialog .form {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.formTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.formTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.close {
+  width: var(--touch);
+  height: var(--touch);
+  margin-right: -10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.close:hover {
+  color: var(--text);
+}
+
+.hooks {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.voiceKind {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.voice {
+  min-height: 56px;
+  background: var(--bg);
+}
+
+.voiceChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.voiceChip {
+  min-height: var(--touch);
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.voiceChip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.formFoot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.formFoot > p {
+  flex: 1 1 220px;
+}
+
+/* How often a DJ talks, by hand. */
+.every {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.number {
+  width: 76px;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--field-bg);
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+
+.sample {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inDialog .sample {
+  background: var(--bg);
+}
+
+.sampleLine {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.sampleFoot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+/* The talk slider, and an hour of talk and music under it. */
+.readout {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.range {
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.strip {
+  display: flex;
+  gap: 3px;
+}
+
+.strip > span {
+  flex: 1;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--line-strong);
+}
+
+.strip > .talking {
+  background: var(--accent);
+}
+
+.hot .readout,
+.hot .credits {
+  color: var(--hot-text);
+}
+
+.hot .range {
+  accent-color: var(--hot);
+}
+
+.hot .strip > .talking {
+  background: var(--hot);
+}
+
+.hourLine {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.hotLine {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hot-text);
+}
+
+.credits {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* The script prompt: a textarea over a copy of its text with the named fields picked out. The
+   two share one grid cell and the same type, so the copy grows the box with the text. */
+.prompt {
+  display: grid;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--field-bg);
+}
+
+.prompt:focus-within {
+  border-color: var(--accent);
+}
+
+.promptMirror,
+.promptArea {
+  grid-area: 1 / 1;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.promptMirror {
+  color: var(--text);
+  pointer-events: none;
+}
+
+.promptArea {
+  min-height: calc(5 * 1.45em + 24px);
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
+  resize: none;
+  overflow: hidden;
+}
+
+.promptArea::placeholder {
+  color: var(--faint);
+}
+
+.promptArea:focus-visible {
+  outline: none;
+}
+
+.promptArea::selection {
+  background: var(--accent-soft);
+  color: transparent;
+}
+
+.fieldMark {
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.coverRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.coverStandIn {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}

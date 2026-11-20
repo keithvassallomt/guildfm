@@ -12,6 +12,7 @@ router = APIRouter()
 class ElevenVoiceOut(BaseModel):
     id: str  # "elevenlabs:" and the voice's id, as stations and settings store it
     name: str
+    note: str  # what it sounds like, such as "British, middle aged, male"; may be empty
 
 
 class VoicesOut(BaseModel):
@@ -28,7 +29,7 @@ async def voices(_: ActiveUser, request: Request) -> VoicesOut:
     return VoicesOut(
         openai=list(VOICES),
         elevenlabs=[
-            ElevenVoiceOut(id=voice.voice, name=voice.name)
+            ElevenVoiceOut(id=voice.voice, name=voice.name, note=voice.note)
             for voice in await speech.eleven_voices()
         ],
         elevenlabs_ready=speech.eleven_ready,

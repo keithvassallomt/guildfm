@@ -9,10 +9,10 @@ needs: create_stations
 The jingle generator writes music to order. You describe each jingle, or have the AI describe it, and ElevenLabs makes them. You then listen, and keep or turn down each one.
 
 ::: lacks change_settings
-It's in each station's editor, under **Jingles**.
+It's on each station's page, under **Its own jingles**.
 :::
 ::: needs change_settings
-It's in each station's editor, under **Jingles**, for that station's own idents, and on **Admin**, **Jingles** for GuildFM's system idents.
+It's on each station's page, under **Its own jingles**, for that station's own idents, and on **Admin**, **Jingles** for GuildFM's system idents.
 :::
 
 ## Describe them
@@ -25,7 +25,7 @@ It's in each station's editor, under **Jingles**, for that station's own idents,
 
 ![Describing jingles](shot:generator-describe)
 
-The AI writes for the station from its name, description and DJ, as they are in the editor. For system idents, it reads **About GuildFM** instead. It also knows the jingles made here before, kept and turned down, so new ones come out different.
+The AI writes for the station from its name, description and DJ. For system idents, it reads **About GuildFM** instead. It also knows the jingles made here before, kept and turned down, so new ones come out different.
 
 ## Keep the best
 

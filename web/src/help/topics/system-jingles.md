@@ -19,4 +19,4 @@ pages: /admin/jingles
 
 **About GuildFM** tells the AI what GuildFM is, who listens and how it should sound. The AI reads it when it writes system idents. Change it, then tap **Save**.
 
-Each station's own idents are in its editor. See [A station's jingles](topic:station-jingles).
+Each station's own idents are on its page. See [A station's jingles](topic:station-jingles).

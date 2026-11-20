@@ -304,3 +304,25 @@ a.stationName:hover {
 .switch {
   align-self: flex-start;
 }
+
+/* A station whose card opens its page: the name's link covers the card, and Switch to this
+   station sits over it. */
+.opens {
+  position: relative;
+}
+
+.opens:hover {
+  border-color: var(--line-strong);
+}
+
+.cardLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.opens .switch {
+  position: relative;
+  z-index: 1;
+}

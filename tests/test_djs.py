@@ -346,3 +346,56 @@ def test_hearing_djs_together_before_saving(
     refused = client.post("/api/stations/together", json=body | {"djs": [GUILDBERT_TALKS, della]})
     assert refused.status_code == 422
     assert "Della has an OpenAI one" in refused.json()["detail"][0]["msg"]
+
+
+def test_suggesting_how_djs_get_on(client: TestClient, openai: FakeOpenAI) -> None:
+    sign_in(client, *ADMIN)
+    body = {
+        "name": "Lunch Break",
+        "djs": [GUILDBERT_TALKS, DEBBIE_TALKS],
+        "script_prompt": "Light chat about the [news].",
+    }
+    suggested = client.post("/api/stations/dynamic", json=body)
+    assert suggested.status_code == 200, suggested.text
+    assert suggested.json() == {"dynamic": openai.dynamic}
+    (asked,) = openai.asked_for("dynamic")
+    # From who they are, hooks and all, and what the show is about.
+    assert "Guildbert: Cheeky. Pet peeves: Songs that fade out." in asked["input"]
+    assert "Debbie: Bubbly." in asked["input"]
+    assert "Light chat about the [news]." in asked["input"]
+    # Nothing saved: no DJs made.
+    assert djs(client) == []
+
+    # One DJ has nobody to get on with.
+    alone = client.post("/api/stations/dynamic", json=body | {"djs": [GUILDBERT_TALKS]})
+    assert alone.status_code == 422
+    openai.down = True
+    failed = client.post("/api/stations/dynamic", json=body)
+    assert failed.status_code == 502
+
+
+def test_changing_a_stations_type(client: TestClient, people) -> None:
+    """The station page's Change for the type: a talk show to just music, to a station with a
+    DJ, and back to a talk show. Its DJs come off it, but stay as DJs for other stations."""
+    sign_in(client, *people["curator"])
+    show = make_station(client, "Lunch Break", djs=[GUILDBERT_TALKS, DEBBIE_TALKS], **TALK)
+    guildbert, debbie = show["djs"]
+
+    # As the editor sends it: the whole form, with the show's settings still in it.
+    off = TALK | {"talk_station": False}
+    music = edit(client, show, djs=[], **off).json()
+    assert (music["dj"], music["djs"], music["talk_station"]) == (False, [], False)
+    # The show's own settings stay for if it's a talk show again.
+    assert (music["talk_ratio"], music["dynamic"]) == (60, TALK["dynamic"])
+    assert sorted(dj["name"] for dj in djs(client)) == ["Debbie", "Guildbert"]
+
+    with_dj = edit(client, show, djs=[debbie], **off, talk_every=1).json()
+    assert [dj["name"] for dj in with_dj["djs"]] == ["Debbie"]
+    assert (with_dj["dj"], with_dj["dj_name"], with_dj["talk_station"]) == (True, "Debbie", False)
+
+    again = edit(client, show, djs=[debbie, guildbert], **TALK).json()
+    assert [dj["name"] for dj in again["djs"]] == ["Debbie", "Guildbert"]
+    assert again["talk_station"] is True
+    # Guildbert's hooks came back with him.
+    assert again["djs"][1]["obsession"] == "His marrows."
+    assert len(djs(client)) == 2

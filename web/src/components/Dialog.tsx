@@ -11,12 +11,24 @@ type Props = {
   tall?: boolean;
   /** On wide screens, sit in the bottom-right corner, by the button that opened it. */
   corner?: boolean;
-  /** Under a tall dialog's scrolling content, always in view: its main buttons. */
+  /** Full screen on phones, and a wide box on wider screens, its content scrolling between
+   * the title and the footer: for a step of a form, such as changing part of a station. */
+  full?: boolean;
+  /** Under a tall or full dialog's scrolling content, always in view: its main buttons. */
   footer?: ReactNode;
 };
 
 /** A modal: a sheet from the bottom on phones, a centred box on wider screens. */
-export function Dialog({ open, onClose, title, children, tall = false, corner = false, footer }: Props) {
+export function Dialog({
+  open,
+  onClose,
+  title,
+  children,
+  tall = false,
+  corner = false,
+  full = false,
+  footer,
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -30,7 +42,15 @@ export function Dialog({ open, onClose, title, children, tall = false, corner = 
   return (
     <dialog
       ref={ref}
-      className={`${styles.dialog} ${tall ? styles.tall : ""} ${corner ? styles.corner : ""} ${footer ? styles.withFooter : ""}`}
+      className={[
+        styles.dialog,
+        tall && styles.tall,
+        corner && styles.corner,
+        full && styles.full,
+        footer && styles.withFooter,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-labelledby={titleId}
       onClose={onClose}
       // A click on the dialog element itself is a click on the backdrop.
@@ -42,7 +62,7 @@ export function Dialog({ open, onClose, title, children, tall = false, corner = 
             <h2 id={titleId} className={styles.title}>
               {title}
             </h2>
-            {(tall || corner) && (
+            {(tall || corner || full) && (
               <button type="button" aria-label="Close" className={styles.close} onClick={onClose}>
                 <Icon name="close" size={20} />
               </button>

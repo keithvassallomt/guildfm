@@ -15,13 +15,13 @@ The AI that picks a station's songs also decides where a jingle goes: about one 
 
 ## Add a station's own idents
 
-Once a station's made, its editor lists its **Station idents**, under **Jingles**:
+Once a station's made, its page lists **Its own jingles**: beside its parts on a wide screen, and under them on a phone. **Give it its own jingles**, when you've just made a station, opens them with the jingle generator.
 
 - **Add MP3s** uploads your own: MP3s of up to a minute each.
 - **Generate jingles** has the AI make them for you. See [Making jingles with AI](topic:jingle-generator).
 - The play button plays one on this device, not on the speakers. **Remove** deletes it.
 
-Without station idents of its own, a station plays GuildFM's system idents. Turn off **Play jingles** for a station that shouldn't play any. Deleting a station deletes its station idents.
+Without station idents of its own, a station plays GuildFM's system idents. Turn off **Play jingles**, under **Extras**, for a station that shouldn't play any. Deleting a station deletes its station idents.
 
 ::: needs change_settings
 System idents are on **Admin**, **Jingles**. See [GuildFM's jingles](topic:system-jingles).

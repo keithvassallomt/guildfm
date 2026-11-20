@@ -125,12 +125,48 @@
    }
   }
  },
+ "dj-form": {
+  "phone": {
+   "curator": {
+    "w": 386,
+    "h": 1098,
+    "v": "8a51f059",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 640,
+    "h": 798,
+    "v": "c5525aa0",
+    "screen": false
+   }
+  }
+ },
+ "dj-hooks": {
+  "phone": {
+   "curator": {
+    "w": 358,
+    "h": 333,
+    "v": "e45342cb",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 590,
+    "h": 314,
+    "v": "066977db",
+    "screen": false
+   }
+  }
+ },
  "generator-describe": {
   "phone": {
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "d4b29fbe",
+    "v": "0f09b79f",
     "screen": true
    }
   },
@@ -138,7 +174,7 @@
    "curator": {
     "w": 760,
     "h": 688,
-    "v": "f7ecf398",
+    "v": "6ddea695",
     "screen": false
    }
   }
@@ -148,7 +184,7 @@
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "6c254583",
+    "v": "ab9df563",
     "screen": true
    }
   },
@@ -156,7 +192,7 @@
    "curator": {
     "w": 760,
     "h": 688,
-    "v": "afffa24e",
+    "v": "371ced2b",
     "screen": false
    }
   }
@@ -166,7 +202,7 @@
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "31acd9ff",
+    "v": "01c8f62c",
     "screen": true
    }
   },
@@ -174,7 +210,7 @@
    "curator": {
     "w": 760,
     "h": 688,
-    "v": "2a84315b",
+    "v": "341ac9fb",
     "screen": false
    }
   }
@@ -970,13 +1006,13 @@
    "curator": {
     "w": 390,
     "h": 844,
-    "v": "cc438791",
+    "v": "30de68bf",
     "screen": true
    },
    "admin": {
     "w": 390,
     "h": 844,
-    "v": "83a12563",
+    "v": "87c95b09",
     "screen": true
    }
   },
@@ -984,13 +1020,13 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "52bcc340",
+    "v": "f82626b2",
     "screen": true
    },
    "admin": {
     "w": 1280,
     "h": 800,
-    "v": "0eebe3f0",
+    "v": "1f9daa4e",
     "screen": true
    }
   }
@@ -1106,71 +1142,17 @@
  "station-cover": {
   "phone": {
    "curator": {
-    "w": 352,
-    "h": 171,
-    "v": "7c414f96",
+    "w": 386,
+    "h": 202,
+    "v": "082cfbb2",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 448,
-    "h": 153,
-    "v": "b5344660",
-    "screen": false
-   }
-  }
- },
- "station-dj": {
-  "phone": {
-   "curator": {
-    "w": 354,
-    "h": 408,
-    "v": "d2f8de78",
-    "screen": false
-   }
-  },
-  "desktop": {
-   "curator": {
-    "w": 454,
-    "h": 412,
-    "v": "7d01ae3f",
-    "screen": false
-   }
-  }
- },
- "station-editor": {
-  "phone": {
-   "curator": {
-    "w": 390,
-    "h": 844,
-    "v": "3f848da6",
-    "screen": true
-   }
-  },
-  "desktop": {
-   "curator": {
-    "w": 1280,
-    "h": 800,
-    "v": "4bf68613",
-    "screen": true
-   }
-  }
- },
- "station-hooks": {
-  "phone": {
-   "curator": {
-    "w": 322,
-    "h": 442,
-    "v": "705fb7ee",
-    "screen": false
-   }
-  },
-  "desktop": {
-   "curator": {
-    "w": 418,
-    "h": 424,
-    "v": "9264a1a8",
+    "w": 348,
+    "h": 416,
+    "v": "45f48772",
     "screen": false
    }
   }
@@ -1179,70 +1161,52 @@
   "phone": {
    "curator": {
     "w": 386,
-    "h": 652,
-    "v": "3f895f05",
+    "h": 532,
+    "v": "3d986646",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 490,
-    "h": 624,
-    "v": "f3400981",
+    "w": 348,
+    "h": 584,
+    "v": "96a9ef88",
     "screen": false
    }
   }
  },
- "station-switches": {
+ "station-page": {
   "phone": {
    "curator": {
-    "w": 352,
-    "h": 342,
-    "v": "7f5415fe",
-    "screen": false
+    "w": 390,
+    "h": 844,
+    "v": "528235a1",
+    "screen": true
    }
   },
   "desktop": {
    "curator": {
-    "w": 448,
-    "h": 324,
-    "v": "847569c8",
-    "screen": false
+    "w": 1280,
+    "h": 800,
+    "v": "6a0f350f",
+    "screen": true
    }
   }
  },
- "station-talk": {
+ "station-talking": {
   "phone": {
    "curator": {
-    "w": 352,
-    "h": 454,
-    "v": "d6751f78",
-    "screen": false
+    "w": 390,
+    "h": 844,
+    "v": "709d7152",
+    "screen": true
    }
   },
   "desktop": {
    "curator": {
-    "w": 448,
-    "h": 404,
-    "v": "059bb627",
-    "screen": false
-   }
-  }
- },
- "station-voice": {
-  "phone": {
-   "curator": {
-    "w": 322,
-    "h": 796,
-    "v": "e4bd8697",
-    "screen": false
-   }
-  },
-  "desktop": {
-   "curator": {
-    "w": 418,
-    "h": 656,
-    "v": "b68ab17a",
+    "w": 640,
+    "h": 704,
+    "v": "cee059d6",
     "screen": false
    }
   }
@@ -1265,38 +1229,38 @@
    }
   }
  },
- "talk-djs": {
+ "talk-get-on": {
   "phone": {
    "curator": {
-    "w": 369,
-    "h": 696,
-    "v": "f080d66e",
+    "w": 358,
+    "h": 346,
+    "v": "6d7fd981",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 469,
-    "h": 682,
-    "v": "89e34295",
+    "w": 590,
+    "h": 253,
+    "v": "7c0756c1",
     "screen": false
    }
   }
  },
- "talk-not-yet": {
+ "talk-mix": {
   "phone": {
    "curator": {
-    "w": 386,
-    "h": 203,
-    "v": "e5008e53",
+    "w": 358,
+    "h": 168,
+    "v": "7ec3538c",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 490,
-    "h": 190,
-    "v": "a485b806",
+    "w": 590,
+    "h": 148,
+    "v": "6ee44205",
     "screen": false
    }
   }
@@ -1304,35 +1268,35 @@
  "talk-prompt": {
   "phone": {
    "curator": {
-    "w": 352,
-    "h": 795,
-    "v": "80c66652",
+    "w": 358,
+    "h": 418,
+    "v": "88cffba3",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
-    "w": 448,
-    "h": 675,
-    "v": "ce55377e",
+    "w": 590,
+    "h": 327,
+    "v": "2d892428",
     "screen": false
    }
   }
  },
- "talk-station": {
+ "talk-turn-into": {
   "phone": {
    "curator": {
-    "w": 369,
-    "h": 330,
-    "v": "35576072",
-    "screen": false
+    "w": 390,
+    "h": 844,
+    "v": "6d0b610e",
+    "screen": true
    }
   },
   "desktop": {
    "curator": {
-    "w": 469,
-    "h": 334,
-    "v": "86cb17c5",
+    "w": 640,
+    "h": 704,
+    "v": "037ef6d5",
     "screen": false
    }
   }
@@ -1423,6 +1387,96 @@
     "w": 1280,
     "h": 800,
     "v": "0bc64f49",
+    "screen": true
+   }
+  }
+ },
+ "wizard-djs": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "2cdca6bc",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "e9aa0c0d",
+    "screen": true
+   }
+  }
+ },
+ "wizard-music": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "72ff8c7e",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "3f8f3e12",
+    "screen": true
+   }
+  }
+ },
+ "wizard-review": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "91107a55",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "bffa3ccc",
+    "screen": true
+   }
+  }
+ },
+ "wizard-talk": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "d7bb3bba",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "7a77e904",
+    "screen": true
+   }
+  }
+ },
+ "wizard-type": {
+  "phone": {
+   "curator": {
+    "w": 390,
+    "h": 844,
+    "v": "9a7318ed",
+    "screen": true
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 1280,
+    "h": 800,
+    "v": "dd7361a5",
     "screen": true
    }
   }

@@ -17,8 +17,9 @@ def test_openai_and_elevenlabs_voices_are_offered(client: TestClient) -> None:
     voices = client.get("/api/voices").json()
     assert "cedar" in voices["openai"]
     assert voices["elevenlabs"] == [
-        {"id": "elevenlabs:aurora02", "name": "aurora"},
-        {"id": GUILDBERT, "name": "Guildbert"},
+        {"id": "elevenlabs:aurora02", "name": "aurora", "note": ""},
+        # What it sounds like, from its labels in ElevenLabs.
+        {"id": GUILDBERT, "name": "Guildbert", "note": "British, middle aged, male"},
     ]
     assert voices["elevenlabs_ready"] is True
     # The account's credits a month, for a talk station's estimate.

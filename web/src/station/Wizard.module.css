@@ -1,0 +1,540 @@
+/* The new station wizard: a header with the steps, one step at a time, a "Your station" card
+   beside it on a wide screen, and Back and Next along the bottom. */
+
+.page {
+  container: wizard / inline-size;
+  /* Room for the footer, so the toast and the end of the page clear it. */
+  --fab-space: 76px;
+  min-height: calc(100dvh - var(--tab-bar-height));
+  padding-bottom: 96px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* On a phone: Close, the name of the step, and a bar for how far along. */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--bar);
+}
+
+.topRow {
+  min-height: 60px;
+  padding: 8px 8px 8px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.close,
+.close:hover {
+  width: var(--touch);
+  height: var(--touch);
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  display: grid;
+  place-items: center;
+}
+
+.topText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.topStep {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.progress {
+  height: 3px;
+  background: var(--surface-raised);
+}
+
+.progress > span {
+  display: block;
+  height: 3px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+/* On a wide screen: where it is, the title, Cancel, and the steps across. */
+.head {
+  display: none;
+}
+
+.crumbs {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.crumbs a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--text);
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.headEnd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.steps {
+  display: none;
+  margin: 0;
+  list-style: none;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepButton {
+  min-height: var(--touch);
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.stepButton:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.stepButton[aria-current="step"] {
+  color: var(--text);
+}
+
+.dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faint);
+}
+
+.done .dot {
+  border-color: rgba(255, 138, 61, 0.5);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.stepButton[aria-current="step"] .dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.line {
+  width: 22px;
+  height: 1.5px;
+  background: var(--line-strong);
+}
+
+.body {
+  flex: 1;
+  padding: 20px 16px 28px;
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  max-width: 660px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.question {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.questionWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* "Your station", filling in as it's made. */
+.aside {
+  display: none;
+}
+
+.asideTitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card {
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.cardTop {
+  position: relative;
+  height: 150px;
+  padding: 16px;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.rings {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgba(255, 138, 61, 0.28);
+  stroke-width: 1.5;
+}
+
+.kindChip {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cardName {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.cardBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardPlays {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
+.cardDJs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.faces {
+  display: flex;
+}
+
+.faces > * {
+  margin-right: -6px;
+  border: 2px solid var(--surface);
+}
+
+.cardNames {
+  margin-left: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cardTalk {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.cardExtras {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.asideNote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Back and Next: fixed over the tab bar on a phone, along the bottom on a wide screen. */
+.foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 10px 16px 12px;
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.why {
+  order: -1;
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.why:empty {
+  display: none;
+}
+
+.next {
+  flex: 1;
+}
+
+.nextLong {
+  display: none;
+}
+
+/* The review: every choice, each with Change. */
+.review {
+  margin: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewRow {
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 12px;
+}
+
+.reviewRow + .reviewRow {
+  border-top: 1px solid var(--line);
+}
+
+.reviewRow dt {
+  width: 100%;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.reviewRow dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.change {
+  min-height: var(--touch);
+  margin: -10px -8px -10px 0;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.change:hover {
+  color: var(--accent-hover);
+}
+
+.previewRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.hint {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Made: what to do next. */
+.ready {
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.readyIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+.readyText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+.readyButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .page {
+    min-height: 100dvh;
+    padding-bottom: 0;
+    --fab-space: 0px;
+  }
+
+  .top {
+    display: none;
+  }
+
+  .head {
+    padding: 28px 40px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .headText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .steps {
+    padding: 14px 40px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .body {
+    padding: 28px 40px 32px;
+  }
+
+  .question {
+    font-size: 30px;
+  }
+
+  .foot {
+    position: sticky;
+    bottom: 0;
+    padding: 16px 40px;
+    background: var(--bg);
+    flex-wrap: nowrap;
+    gap: 16px;
+  }
+
+  .why {
+    order: 0;
+    flex: 1;
+    text-align: right;
+  }
+
+  .why:empty {
+    display: block;
+  }
+
+  .next {
+    flex: none;
+  }
+
+  .nextLong {
+    display: inline;
+  }
+
+  .reviewRow {
+    flex-wrap: nowrap;
+  }
+
+  .reviewRow dt {
+    width: 130px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+}
+
+@container wizard (min-width: 1000px) {
+  .aside {
+    width: 300px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}

@@ -9,29 +9,26 @@ import { StationCover } from "../components/StationCover";
 import { FormError } from "../components/TextField";
 import { useToast } from "../components/Toast";
 import { useLiveEvent } from "../live/LiveProvider";
+import { kindOf, kindTitle, mixText, oftenText, saysText } from "../station/kinds";
 import { listed } from "./announcementText";
 import lib from "./Library.module.css";
 import styles from "./Page.module.css";
 import { usePlaylistPlayer } from "./PlaylistsPage";
 
-/** What a station is like, as short tags: "DJ Della", "Talks every 3 tracks"... */
+/** What a station is like, as short tags: "Music with a DJ", "DJ Della", "Every few songs"... */
 export function stationTags(station: Station): string[] {
   if (station.kind === "ai_picks") return ["Built in", "Follows what's been playing"];
-  const tags: string[] = [];
-  if (station.dj && station.talk_station) {
-    tags.push(`DJs ${listed(station.djs.map((dj) => dj.name))}`);
-    tags.push(station.talk_ratio >= 100 ? "All talk" : `${station.talk_ratio}% talk`);
-    if (station.announce_requests) tags.push("Announces requests");
-  } else if (station.dj) {
-    const unit = station.talk_unit === "tracks" ? "track" : "minute";
-    const every = station.talk_every === 1 ? unit : `${station.talk_every} ${unit}s`;
-    tags.push(`DJ ${station.dj_name}`, `Talks every ${every}`);
-    tags.push(station.style === "commentary" ? "Commentary" : "Just the songs");
-    if (station.announce_requests) tags.push("Announces requests");
-  } else {
-    tags.push("No DJ");
+  const kind = kindOf(station);
+  const tags = [kindTitle(kind)];
+  if (kind === "talk") {
+    tags.push(`Hosts ${listed(station.djs.map((dj) => dj.name))}`);
+    tags.push(mixText(station.talk_ratio));
+  } else if (kind === "dj") {
+    tags.push(`DJ ${station.dj_name}`, oftenText(station.talk_every, station.talk_unit));
+    tags.push(saysText(station.style));
   }
-  if (station.global_awareness) tags.push("Global awareness");
+  if (kind !== "music" && station.announce_requests) tags.push("Says who asked");
+  if (station.global_awareness) tags.push("Knows what's going on");
   return tags;
 }
 
@@ -97,12 +94,16 @@ export function RadioPage() {
       {stations && (
         <ul className={lib.stations}>
           {stations.map((station) => (
-            <li key={station.id} className={lib.station}>
+            <li
+              key={station.id}
+              className={`${lib.station} ${canMake && station.kind === "custom" ? lib.opens : ""}`}
+            >
               <div className={lib.stationTop}>
                 <StationCover url={station.art_url} className={lib.stationArt} iconSize={26} />
                 <span className={lib.text}>
                   {canMake && station.kind === "custom" ? (
-                    <Link to={`/radio/${station.id}`} className={lib.stationName}>
+                    // Its ::after covers the card, so the whole card opens the station's page.
+                    <Link to={`/radio/${station.id}`} className={`${lib.stationName} ${lib.cardLink}`}>
                       {station.name}
                     </Link>
                   ) : (
@@ -138,7 +139,7 @@ export function RadioPage() {
         <div className={lib.actions}>
           <ButtonLink to="/radio/new">
             <Icon name="plus" size={16} strokeWidth={2.6} />
-            New AI station
+            New station
           </ButtonLink>
         </div>
       )}

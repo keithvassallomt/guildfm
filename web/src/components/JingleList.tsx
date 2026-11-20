@@ -20,15 +20,17 @@ type Props = {
   empty: string;
   /** The station as its editor has it, for the jingle generator's AI. */
   station?: StationAsEdited;
+  /** Opens the jingle generator straight away. */
+  startGenerating?: boolean;
 };
 
 /** Jingles to listen to here, add and remove. Adding takes MP3s, several at once, or opens the
  * jingle generator. */
-export function JingleList({ stationId, empty, station }: Props) {
+export function JingleList({ stationId, empty, station, startGenerating = false }: Props) {
   const [jingles, setJingles] = useState<Jingle[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [generating, setGenerating] = useState(startGenerating);
   const [playing, setPlaying] = useState<number | null>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
   const files = useRef<HTMLInputElement>(null);

@@ -7,6 +7,35 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Making a station is now a few plain steps, starting with what kind of station it is: Just
+  music, Music with a DJ, or a Talk show. The type decides the steps after it, so a music
+  station never sees DJ settings and a talk show asks for its hosts and the show. Next says
+  what's missing, a review lists every choice with Change, and once it's made it can be put on,
+  given its own jingles, or left for later. On a wide screen, a card beside the steps fills in
+  as you go.
+- Each station has its own page, with a card for each part: its type, name and music, DJ or
+  hosts, how the DJ talks or the show, and the extras. Change opens just that part and saves it
+  on its own. A new type walks through what it needs: turning a station with a DJ into a talk
+  show asks for its hosts, then the show. Its cover, its own jingles and Delete are there too.
+- DJs are picked from cards that say who they are and which stations they host, with Hear for a
+  line in their voice. New DJs are made in place, and a talk show offers only ElevenLabs voices.
+- "Suggest one" has the AI write how a talk show's hosts get on, from their personalities and
+  hooks.
+- A talk show's slider shows an hour as blocks of talk and music, and "Bring in" chips add the
+  day's news, weather, football and more to what the show's about, or take them out.
+- ElevenLabs voices say what they sound like, such as "British, middle aged, male", when
+  ElevenLabs has that.
+
+### Changed
+
+- The station editor is gone: New station opens the steps, and a station's card on Radio opens
+  its page. A DJ's pet peeves, soft spots and running obsession are only asked for on talk
+  shows, which are the only stations that use them.
+- New stations know what's going on (the time, the weather and music news) unless that's
+  turned off.
+
 ## [0.1.10] - 2026-11-20
 
 ### Changed
