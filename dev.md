@@ -31,6 +31,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 19: After hours
 - [ ] Stage 20: Talk stations
 - [ ] Stage 21: Making and editing stations
+- [ ] Stage 22: Just a name
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -365,3 +366,25 @@ Goal: making a station is a few plain steps that start with what kind of station
 - [ ] Deploy to office box
 
 Done when: at the office, someone makes a music station, a station with a DJ and a talk show through the wizard without meeting a greyed-out control, changes The Squawk Box's mix from its page with one Change, and turns a station with a DJ into a talk show by being walked through its hosts and the show.
+
+## Stage 22: Just a name
+Goal: the display-name check turns down a name with a description added, such as "Gary from Nottingham", every time, however it's written and however often it's tried. Asked for by Keith on 2026-11-20. That morning the sign-up form turned "Gary from Nottingham" down, he signed up as "Gary Nottingham", and Profile then took "GARY FROM NOTTIGHAM". The check ran both times; its verdict on names like these is close to a coin toss, so trying again, or changing the capitals or the spelling, gets through. Five checks of each, with today's wording:
+
+| Name | Turned down | Allowed |
+|---|---|---|
+| Gary from Nottingham | 4 | 1 |
+| GARY FROM NOTTINGHAM | 3 | 2 |
+| Gary from Nottigham | 4 | 1 |
+| GARY FROM NOTTIGHAM | 1 | 4 |
+| Gary Nottingham | 0 | 5 |
+| Sam in Accounts | 5 | 0 |
+
+- [ ] The rule said plainly: the AI is told that a name with something added to describe the person (where they're from, their job, their team, a title or a tag line) is not a name, with examples ("Gary from Nottingham", "Sam in Accounts", "Dave the plumber", "Priya (marketing)"), and that capitals, spacing and misspellings don't change the answer. Real names that look a little like that stay fine, such as "Ahmed bin Rashid", "Jan van der Berg" and "Leonardo da Vinci", and so do everyday nicknames like "Big Mike" (`names.py`)
+- [ ] Its own message: a third verdict for a described name, so the form can say what to change ("Just your name, please: leave out where you're from or what you do.") instead of "That doesn't look like a name"
+- [ ] Measured before it ships: `tools/name_check.py` runs the check five times on each of a list of names that should be turned down (the table's, misspelt and in capitals, plus others) and a list that must stay fine (the examples above and every display name at the office today), with today's wording and the new one. The new wording ships when it turns every described name down five times in five and allows every real name five times in five
+- [ ] Steady answers: if the wording alone doesn't get there, the check asks three times at once and turns a name down if any answer does. A name check is one small call and names change rarely, so three cost next to nothing. Rude names, which the AI already calls consistently, stay as they are
+- [ ] Names already taken aren't checked again. Gary's (user 20, "GARY FROM NOTTIGHAM") is changed by an admin with Rename (Stage 17), not by this stage
+- [ ] Tests (the new verdict and its message on sign-up and Profile, and three answers with one turning the name down), the changelog, and the Profile help topic if its wording changes
+- [ ] Deploy to office box
+
+Done when: at the office, "Gary from Nottingham", in any capitals or spelling, is turned down on the sign-up form and on Profile however many times it's tried, with a message that says to leave the description out, and everyone else's names still go through.
