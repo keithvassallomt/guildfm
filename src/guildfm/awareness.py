@@ -4,7 +4,8 @@ stations don't ask again for every song. The news takes up to a minute to gather
 the DJ has, so it's gathered in the background and used once it's in.
 
 Talk stations' DJs have more to talk about, gathered the same way when their script prompt asks
-for it (fields.py): light news, British football, and celebrities' birthdays and news. What's
+for it (fields.py): a week of light news, odd facts and funny true stories from this day in past
+years, British football, and celebrities' birthdays and news. What's
 found is kept in a file too, so a restart doesn't lose the day's news, and a talk show planned
 just after one has it."""
 
@@ -55,12 +56,22 @@ NEWS_PROMPT = (
     "gossip. If nothing notable happened, say so."
 )
 LIGHT_NEWS_PROMPT = (
-    "Search the web for light news from the last day or two that two radio DJs could chat "
+    "Search the web for light news from the last seven days that two radio DJs could chat "
     "about: odd, funny, surprising or heart-warming stories, from the UK or anywhere. Leave out "
     "politics, elections, wars, crime, court cases, disasters, accidents, deaths, illness and "
-    "anything else sad or divisive. Give at most five short, factual bullet points, each with "
-    "its date and where it happened, in plain text with no links or formatting. If nothing "
-    "suitable happened, say so."
+    "anything else sad or divisive. Give at most ten short, factual bullet points, newest first, "
+    "each with its date and where it happened, in plain text with no links or formatting. If "
+    "nothing suitable happened, say so."
+)
+ODDITIES_PROMPT = (
+    "Today is {date}. Search the web for odd, funny and surprising true stories from the past "
+    "that two radio DJs could chat about: things that happened on this day in past years, such "
+    "as hoaxes, mix-ups, strange records and inventions, and animals turning up where they "
+    "shouldn't. Add a few odd facts most people won't have heard, about anything from animals "
+    "to everyday life. Leave out politics, wars, crime, disasters, deaths, illness and anything "
+    "else sad or divisive, and anything a reliable source doesn't confirm. Give at most eight "
+    "short, factual bullet points, each story with its year and where it happened, in plain "
+    "text with no links or formatting."
 )
 FOOTBALL_PROMPT = (
     "Search the web for British football from the last few days: results and scores in the "
@@ -93,6 +104,7 @@ class Topic:
 TOPICS = {
     "music": Topic(NEWS_PROMPT, NEWS_SECONDS),
     "news": Topic(LIGHT_NEWS_PROMPT, 6 * 60 * 60),
+    "oddities": Topic(ODDITIES_PROMPT, 12 * 60 * 60, daily=True),
     "sports": Topic(FOOTBALL_PROMPT, 3 * 60 * 60),
     "celebrities": Topic(CELEBRITIES_PROMPT, 12 * 60 * 60, daily=True),
 }

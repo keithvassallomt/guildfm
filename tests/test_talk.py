@@ -2,16 +2,16 @@
 
 import importlib.util
 import random
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 
 from guildfm.ai import AIClient
 from guildfm.db import MIGRATIONS
 from guildfm.talk import (
+    BITS_SHOWN,
     BY_NAME,
     SHOWS_KEPT,
-    TOPICS_SHOWN,
     Host,
     deal_bits,
     deal_hooks,
@@ -160,7 +160,8 @@ async def test_a_show_is_planned_from_what_it_was_dealt() -> None:
     assert "- the bet: Stakes are set early" in prompt
     assert "- 2026-11-13: the challenge, No rain." in prompt
     # What the last shows talked about, so it isn't planned again.
-    assert "Listeners have heard these, so don't plan them again." in prompt
+    assert "Listeners have heard these, so don't plan them again" in prompt
+    assert "don't retell a story from the news they've had" in prompt
     assert "- 2026-11-13: the goat mayor; Debbie's bees" in prompt
     assert "Name each segment's topic in a few words" in prompt
     assert "leave the happening's idea empty" in prompt
@@ -213,12 +214,12 @@ def test_the_log_keeps_the_last_few_shows() -> None:
     bit = {"move": "the bet", "idea": "Biscuits.", "ending": "Debbie won.", "setup": 1, "payoff": 4}
     plan = {"bits": [bit], "topics": ["the goat mayor"], "hooks": {"Debbie": ["obsession"]}}
     log: list[dict] = []
-    for day in range(1, 20):
-        log = logged(log, plan, f"2026-11-{day:02d}")
+    for day in range(SHOWS_KEPT + 5):
+        log = logged(log, plan, (date(2026, 9, 1) + timedelta(days=day)).isoformat())
     assert len(log) == SHOWS_KEPT
     # Its bits with how they ended, for calling back to, its topics and the hooks it had.
     assert log[-1] == show(
-        "2026-11-19",
+        "2026-11-04",
         ["the goat mayor"],
         [("the bet", "Biscuits. Debbie won.")],
         {"Debbie": ["obsession"]},
@@ -226,13 +227,20 @@ def test_the_log_keeps_the_last_few_shows() -> None:
 
 
 @pytest.mark.asyncio
-async def test_only_the_last_few_shows_topics_are_shown() -> None:
+async def test_a_weeks_topics_are_shown_so_the_weeks_news_isnt_told_twice() -> None:
     openai = FakeOpenAI()
-    log = [show(f"2026-11-{day:02d}", [f"topic from the {day}th"]) for day in range(10, 15)]
+    # Shows from the 1st to the 15th, and the show being planned is on the 16th.
+    log = [
+        show(f"2026-11-{day:02d}", [f"topic from the {day}th"], [("the bet", f"Bet {day}.")])
+        for day in range(1, 16)
+    ]
     await _plan(openai, log=log)
     prompt = openai.asked_for("show_plan")[0]["input"]
-    shown = [day for day in range(10, 15) if f"topic from the {day}th" in prompt]
-    assert shown == list(range(15 - TOPICS_SHOWN, 15))
+    shown = [day for day in range(1, 16) if f"topic from the {day}th" in prompt]
+    assert shown == list(range(9, 16))  # the week before the 16th
+    bets = [day for day in range(1, 16) if f"Bet {day}." in prompt]
+    assert bets == list(range(16 - BITS_SHOWN, 16))  # bits from the last few shows only
+    assert "newest first" in prompt  # the news goes back a week
 
 
 def test_each_show_has_a_hook_or_two_of_each_djs_resting_the_last() -> None:

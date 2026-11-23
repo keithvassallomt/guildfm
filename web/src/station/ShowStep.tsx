@@ -12,6 +12,7 @@ import s from "./Steps.module.css";
 /** The named fields a script prompt can use, as fields.py has them. */
 export const FIELDS = [
   { name: "news", label: "Odd news" },
+  { name: "oddities", label: "Odd facts and history" },
   { name: "weather", label: "Weather" },
   { name: "sports", label: "Football" },
   { name: "celebrities", label: "Birthdays and celebs" },

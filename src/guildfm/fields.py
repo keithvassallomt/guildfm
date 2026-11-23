@@ -1,10 +1,10 @@
 """The named fields a talk station's script prompt can use, such as [news] or [weather], and
 what's behind each, for its DJs to talk about. Only the fields a prompt uses are gathered.
 
-[news], [sports] and [celebrities] are looked up on the web by the AI and kept a while, through
-Global Awareness (awareness.py), which also has the weather where the office is for [weather].
-[lineup] and [djs] come from the database: what's on for the rest of the day, and GuildFM's
-other DJs."""
+[news], [oddities], [sports] and [celebrities] are looked up on the web by the AI and kept a
+while, through Global Awareness (awareness.py), which also has the weather where the office is
+for [weather]. [lineup] and [djs] come from the database: what's on for the rest of the day, and
+GuildFM's other DJs."""
 
 import re
 from datetime import datetime
@@ -18,14 +18,15 @@ from guildfm.playlists import current_source
 
 # Each field, with what it brings in, as the station editor lists them.
 FIELDS = {
-    "news": "Light, odd and funny stories",
+    "news": "Light, odd and funny stories from the past week",
+    "oddities": "Odd facts, and funny true stories from this day in past years",
     "weather": "The weather where the office is",
     "sports": "British football: news, scores and results",
     "celebrities": "Birthdays, anniversaries and news",
     "lineup": "What's on for the rest of the day",
     "djs": "GuildFM's other DJs",
 }
-FROM_THE_WEB = ("news", "sports", "celebrities")  # topics in awareness.TOPICS
+FROM_THE_WEB = ("news", "oddities", "sports", "celebrities")  # topics in awareness.TOPICS
 _FIELD = re.compile(r"\[(" + "|".join(FIELDS) + r")\]", re.IGNORECASE)
 
 

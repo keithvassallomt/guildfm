@@ -42,7 +42,8 @@ It's a guide, not a checklist. To keep shows varied, a show won't always use eve
 
 **Bring in what's going on today** adds a field to the prompt, where the cursor is, or takes it out again. Fields are picked out in the prompt, in square brackets:
 
-- **Odd news** (`[news]`): light, odd and funny stories.
+- **Odd news** (`[news]`): light, odd and funny stories from the past week, newest first.
+- **Odd facts and history** (`[oddities]`): odd facts, and funny true stories from this day in past years.
 - **Weather** (`[weather]`): the weather where the office is.
 - **Football** (`[sports]`): British football: news, scores and results.
 - **Birthdays and celebs** (`[celebrities]`): birthdays, anniversaries and news.

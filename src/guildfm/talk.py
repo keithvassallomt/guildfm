@@ -16,7 +16,7 @@ hooks it had, so a daily show doesn't repeat itself and can call back."""
 import math
 import random
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from guildfm.ai import AIClient, object_schema
@@ -26,8 +26,9 @@ SEGMENT_SECONDS = 120  # talk written and voiced in one go, at most
 LONGEST = 30 * 60  # seconds of talk between two songs at most
 SONG_SECONDS = 210  # a song, about, for sizing links
 HAPPENING_CHANCE = 0.4  # of a show having a happening
-SHOWS_KEPT = 6  # shows kept in a station's log
-TOPICS_SHOWN = 3  # recent shows whose topics the planner is shown, so it doesn't repeat them
+SHOWS_KEPT = 60  # shows kept in a station's log: a week's, outside a line-up an hour is one
+TOPIC_DAYS = 7  # days of shows whose topics the planner is shown: [news] goes back a week
+BITS_SHOWN = 6  # recent shows whose running bits the planner is shown, for calling back to
 HOOKS = ("pet_peeves", "soft_spots", "obsession")  # a DJ's hooks, as Host has them
 MOVES_KEPT = 2  # a link's move is never one of the last this many
 
@@ -300,13 +301,18 @@ async def plan_show(
         "it doesn't all have to be used. Listeners know only what's said on air, so the first "
         "segment to bring up one of a DJ's hooks, such as a hobby or a rival, explains it. "
         'Name each segment\'s topic in a few words, such as "the goat elected mayor" or '
-        "\"Debbie's yoghurt thief\": it goes in the station's log, so later shows know what's "
+        "\"the stolen garden gnome\": it goes in the station's log, so later shows know what's "
         "been covered."
     )
     if material:
         parts.append(
             "What's going on, for the segments to draw on:\n"
             + "\n\n".join(f"[{name}]\n{text}" for name, text in material.items())
+        )
+    if "news" in material:
+        parts.append(
+            "The news goes back a week, newest first: favour the newest stories, and leave out "
+            "any the last week's shows have had."
         )
     dealt = "\n".join(f"- {name}: {BY_NAME[name].does}" for name in bits)
     parts.append(
@@ -325,18 +331,21 @@ async def plan_show(
         )
     else:
         parts.append("This show has no happening: leave the happening's idea empty.")
-    bits_lately = [(show["on"], bit) for show in log for bit in show["bits"]]
+    bits_lately = [(show["on"], bit) for show in log[-BITS_SHOWN:] for bit in show["bits"]]
     if bits_lately:
         parts.append(
             "Running bits from the last few shows, oldest first. Don't repeat them, but you can "
             "call back to one:\n"
             + "\n".join(f"- {on}: {bit['move']}, {bit['idea']}" for on, bit in bits_lately)
         )
-    covered = [(show["on"], show["topics"]) for show in log[-TOPICS_SHOWN:] if show["topics"]]
+    week = (starts.date() - timedelta(days=TOPIC_DAYS)).isoformat()
+    covered = [(show["on"], show["topics"]) for show in log if show["on"] >= week]
+    covered = [(on, topics) for on, topics in covered if topics]
     if covered:
         parts.append(
-            "What the last few shows talked about, oldest first. Listeners have heard these, so "
-            "don't plan them again. A DJ's hook can come back, with something new about it:\n"
+            "What the last week's shows talked about, oldest first. Listeners have heard these, "
+            "so don't plan them again, and don't retell a story from the news they've had. A "
+            "DJ's hook can come back, with something new about it:\n"
             + "\n".join(f"- {on}: {'; '.join(topics)}" for on, topics in covered)
         )
     parts.append(

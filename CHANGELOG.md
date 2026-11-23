@@ -7,6 +7,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Talk shows can bring in odd facts and funny true stories from this day in past years, with
+  the new "Odd facts and history" chip (`[oddities]`), for when the news runs dry.
+
+### Changed
+
+- A talk show's odd news now goes back a week instead of a day or two, up to ten stories, newest
+  first, so the DJs have more to talk about.
+- A talk show remembers what it talked about for a week rather than for its last three shows, so
+  a story from earlier in the week isn't told again.
+
 ## [0.1.11] - 2026-11-20
 
 ### Added
