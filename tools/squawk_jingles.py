@@ -73,55 +73,6 @@ JINGLES = {
             Turn("Guildbert", "[deadpan] She's very proud of that."),
         ],
     ),
-    2: Jingle(
-        name="Yoghurt suspects",
-        styles=[
-            "90s TV detective theme",
-            "95 BPM",
-            "plucked strings",
-            "creeping walking bass",
-            "muted brass",
-            "tense and sneaky",
-            "radio jingle",
-        ],
-        intro=["one suspenseful chord", "a creeping bass line starts"],
-        groove=["quiet sneaky groove", "sparse", "leaves room for talking"],
-        tag=["sharp brass sting", "choir vocals", "a choir sings the station name"],
-        words="The Squawk Box",
-        lines=[
-            Turn("Debbie", "Someone's had my yoghurt again."),
-            Turn("Guildbert", "It wasn't me."),
-            Turn("Debbie", "That's exactly what a suspect would say."),
-        ],
-    ),
-    3: Jingle(
-        name="Quiz night",
-        styles=[
-            "cheesy 80s TV quiz-show theme",
-            "120 BPM",
-            "synth brass",
-            "ticking clock",
-            "radio jingle",
-        ],
-        intro=["short quiz-show fanfare"],
-        groove=["quiet ticking clock over a soft synth pad", "sparse", "leaves room for talking"],
-        tag=[
-            "game-show buzzer",
-            "triumphant fanfare",
-            "choir vocals",
-            "a choir sings the station name",
-        ],
-        words="The Squawk Box",
-        lines=[
-            Turn(
-                "Guildbert",
-                "Question one. Where can you hear the best of the eighties, nineties and "
-                "noughties?",
-            ),
-            Turn("Debbie", "The Squawk Box! Do I win?"),
-            Turn("Guildbert", "You come second. We always come second."),
-        ],
-    ),
     4: Jingle(
         name="Same song twice",
         styles=[

@@ -12,6 +12,7 @@ from guildfm.talk import (
     BITS_SHOWN,
     BY_NAME,
     SHOWS_KEPT,
+    TOLD_SHOWN,
     Host,
     deal_bits,
     deal_hooks,
@@ -22,7 +23,9 @@ from guildfm.talk import (
     roll_happening,
     segment_count,
     segment_lengths,
+    told_lately,
     with_hooks,
+    with_told,
 )
 from tests.conftest import fake
 from tests.fakes import FakeOpenAI
@@ -33,14 +36,16 @@ def show(
     topics: list[str] | None = None,
     bits: list[tuple[str, str]] = (),
     hooks: dict[str, list[str]] | None = None,
+    told: list[str] | None = None,
 ) -> dict:
     """A show in a station's log."""
-    return {
+    logged = {
         "on": on,
         "bits": [{"move": move, "idea": idea} for move, idea in bits],
         "topics": topics or [],
         "hooks": hooks or {},
     }
+    return logged if told is None else logged | {"told": told}
 
 
 GUILDBERT = Host("Guildbert", "Cheeky.", pet_peeves="Songs that fade out.")
@@ -223,6 +228,7 @@ def test_the_log_keeps_the_last_few_shows() -> None:
         ["the goat mayor"],
         [("the bet", "Biscuits. Debbie won.")],
         {"Debbie": ["obsession"]},
+        told=[],
     )
 
 
@@ -263,7 +269,9 @@ def test_each_show_has_a_hook_or_two_of_each_djs_resting_the_last() -> None:
         if log:  # none she had last time, while she has others
             assert not set(had) & set(log[-1]["hooks"]["Debbie"])
         obsessed += "obsession" in had
-        log = logged(log, {"bits": [], "hooks": hooks}, str(day))
+        log = logged(
+            log, {"bits": [], "hooks": hooks}, (date(2026, 1, 1) + timedelta(days=day)).isoformat()
+        )
     assert counts == {1, 2}
     assert 0.25 < obsessed / 200 < 0.6  # the yoghurts come up in some shows, not every one
 
@@ -293,3 +301,68 @@ def test_a_log_kept_by_bit_is_kept_by_show() -> None:
     ]
     assert migration._by_show(by_bit) == by_show
     assert migration._by_bit(by_show) == by_bit
+
+
+FEATURES = [
+    {"name": "Real or Fake?", "does": "One reads an odd headline; the other guesses if it's real."},
+    {"name": "Joke of the Day", "does": "One tells a joke; the other rates it out of ten."},
+]
+
+
+def test_a_show_with_features_deals_them_in_place_of_banter() -> None:
+    rng = random.Random(1)
+    dealt: list[str] = []
+    for _ in range(300):
+        dealt.append(deal_move(rng, [GUILDBERT, DEBBIE], True, dealt, features=FEATURES))
+    # A guest drops in as often as any one feature, and none comes twice running.
+    assert set(dealt) == {"Real or Fake?", "Joke of the Day", "the guest"}
+    assert all(a != b for a, b in zip(dealt, dealt[1:], strict=False))
+    assert 70 < dealt.count("the guest") < 130
+    # With no other DJ to drop in, just the features, in no fixed order.
+    alone = [deal_move(rng, PLAIN, False, [], features=FEATURES) for _ in range(50)]
+    assert set(alone) == {"Real or Fake?", "Joke of the Day"}
+
+
+def test_a_show_with_features_only_has_guests_drop_in() -> None:
+    rng = random.Random(3)
+    rolls = [roll_happening(rng, guests=True, banter=False) for _ in range(500)]
+    assert set(rolls) == {None, "a surprise guest"}
+    assert not any(roll_happening(rng, guests=False, banter=False) for _ in range(100))
+
+
+@pytest.mark.asyncio
+async def test_the_planner_hears_of_the_features_and_whats_been_told() -> None:
+    openai = FakeOpenAI()
+    log = [
+        show("2026-11-02", told=["joke: far too old"]),
+        show("2026-11-13", ["the goat mayor"], told=["joke: the goat at the polls"]),
+    ]
+    await _plan(openai, log=log, features=FEATURES)
+    prompt = openai.asked_for("show_plan")[0]["input"]
+    assert "- Real or Fake?: One reads an odd headline" in prompt
+    assert "Keep each segment to one topic, so there's room for a feature in it." in prompt
+    assert "- 2026-11-13: joke: the goat at the polls" in prompt
+    assert "far too old" not in prompt  # more than a week before the 16th
+
+
+def test_what_was_told_is_kept_with_todays_show_for_a_week() -> None:
+    log = logged([], {"bits": [], "topics": []}, "2026-11-10")
+    log = with_told(log, "2026-11-10", ["joke: the peahen", " "])
+    assert with_told(log, "2026-11-11", ["story: another day's"]) == log  # not today's show
+    assert log[-1]["told"] == ["joke: the peahen"]
+    log = logged(log, {"bits": [], "topics": []}, "2026-11-17")
+    assert log[0]["told"] == ["joke: the peahen"]  # a week on, still kept
+    assert told_lately(log, date(2026, 11, 17)) == "- 2026-11-10: joke: the peahen"
+    log = logged(log, {"bits": [], "topics": []}, "2026-11-18")
+    assert "told" not in log[0]  # over a week old
+    assert told_lately(log, date(2026, 11, 18)) == ""
+
+
+def test_only_the_newest_of_whats_been_told_is_shown() -> None:
+    log = [
+        show(f"2026-11-{day}", told=[f"joke {day}-{n}" for n in range(100)]) for day in (14, 15, 16)
+    ]
+    shown = told_lately(log, date(2026, 11, 16))
+    assert shown.count("joke") == TOLD_SHOWN
+    assert "joke 16-99" in shown and "joke 15-0;" in shown and "joke 14-" not in shown
+    assert shown.index("2026-11-15") < shown.index("2026-11-16")  # oldest first

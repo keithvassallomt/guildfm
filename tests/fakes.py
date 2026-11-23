@@ -275,6 +275,7 @@ class FakeOpenAI:
                  "together": False},
             ],
             "notes": "Debbie has won the biscuit.",
+            "told": ["story: Priya asks for ABBA"],
         }  # fmt: skip
         self.segments_in_turn: list[dict] = []  # for the next few asks, before `segment`
         # Its edit of a segment: problems found and the turns fixed. None finds nothing.
@@ -291,6 +292,8 @@ class FakeOpenAI:
         self.names: dict[str, str] = {}
         # How DJs get on, as it suggests for the station editor.
         self.dynamic = "Guildbert is dry. Debbie is loud, and laughs at her own jokes."
+        # A DJ's new hook, as it writes them, in turn; then the last one again.
+        self.hooks = ["Pigeons on the office window ledge."]
         # Jingle descriptions it writes, in the generator, handed out in turn.
         self.ideas = [
             {"name": f"Idea {n}", "description": f"Bright sting number {n}.", "seconds": 6 + n}
@@ -325,6 +328,9 @@ class FakeOpenAI:
             text = json.dumps(self.edit or {"problems": [], "turns": draft})
         elif name == "dynamic":
             text = json.dumps({"dynamic": self.dynamic})
+        elif name == "dj_hook":
+            hook = self.hooks.pop(0) if len(self.hooks) > 1 else self.hooks[0]
+            text = json.dumps({"hook": hook})
         elif name == "jingle_ideas":
             asked = body["input"].count("Write this one")
             text = json.dumps({"jingles": self.ideas[:asked]})

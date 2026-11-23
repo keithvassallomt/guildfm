@@ -48,6 +48,8 @@ On a talk show, a DJ's details also ask for **Something to talk about**: three t
 
 All three are optional, and music stations don't use them. Each show uses one or two of each DJ's hooks, different from the last show's, so the same ones don't come up every day. The first time one does, the DJs explain it, so nobody's left out of the joke.
 
+**New hooks every month** keeps them fresh. Overnight, the AI rewrites one hook at a time: any left blank first, then the oldest once it's a month old, so each lasts about a month. It never brings back one they've had before. The switch says which is next, and when. Change a hook yourself and its month starts again. Turn it off to keep their hooks as they are.
+
 ![A DJ's hooks](shot:dj-hooks)
 
 ## How often, and what they say

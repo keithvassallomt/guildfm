@@ -660,6 +660,7 @@ async def stations(office: Office) -> None:
             "talk_ratio": station.talk_ratio,
             "dynamic": station.dynamic,
             "script_prompt": station.script_prompt,
+            "features": [{"name": name, "does": does} for name, does in station.features],
         }
         made = await maker.call("POST", "/stations", fields)
         office.stations[station.name] = made["id"]

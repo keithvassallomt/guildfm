@@ -147,16 +147,16 @@
   "phone": {
    "curator": {
     "w": 358,
-    "h": 333,
-    "v": "e45342cb",
+    "h": 423,
+    "v": "77ea6352",
     "screen": false
    }
   },
   "desktop": {
    "curator": {
     "w": 590,
-    "h": 314,
-    "v": "066977db",
+    "h": 385,
+    "v": "dabe2990",
     "screen": false
    }
   }
@@ -1188,7 +1188,7 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "6a0f350f",
+    "v": "4fd02697",
     "screen": true
    }
   }
@@ -1229,12 +1229,30 @@
    }
   }
  },
+ "talk-features": {
+  "phone": {
+   "curator": {
+    "w": 153,
+    "h": 551,
+    "v": "efcf21f9",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "curator": {
+    "w": 153,
+    "h": 533,
+    "v": "f10ca0b7",
+    "screen": false
+   }
+  }
+ },
  "talk-get-on": {
   "phone": {
    "curator": {
     "w": 358,
     "h": 346,
-    "v": "6d7fd981",
+    "v": "df465939",
     "screen": false
    }
   },
@@ -1242,7 +1260,7 @@
    "curator": {
     "w": 590,
     "h": 253,
-    "v": "7c0756c1",
+    "v": "70106a5f",
     "screen": false
    }
   }
@@ -1269,8 +1287,8 @@
   "phone": {
    "curator": {
     "w": 358,
-    "h": 418,
-    "v": "88cffba3",
+    "h": 467,
+    "v": "394cf562",
     "screen": false
    }
   },
@@ -1278,7 +1296,7 @@
    "curator": {
     "w": 590,
     "h": 327,
-    "v": "2d892428",
+    "v": "ece649ef",
     "screen": false
    }
   }
@@ -1404,7 +1422,7 @@
    "curator": {
     "w": 1280,
     "h": 800,
-    "v": "e9aa0c0d",
+    "v": "9e9103cd",
     "screen": true
    }
   }

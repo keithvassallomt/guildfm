@@ -184,6 +184,12 @@ class DJProfile(Base):
     pet_peeves: Mapped[str] = mapped_column(String(300), default="")
     soft_spots: Mapped[str] = mapped_column(String(300), default="")
     obsession: Mapped[str] = mapped_column(String(200), default="")
+    # The AI rewrites the hooks one at a time, so each lasts about a month (hooks.py), unless
+    # this is off. When each was written, by hook, and the hooks they've had before, so they
+    # don't come back.
+    fresh_hooks: Mapped[bool] = mapped_column(default=True)
+    hooks_at: Mapped[dict[str, float]] = mapped_column(JSON, default=dict)
+    old_hooks: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[float]
 
 
@@ -224,6 +230,9 @@ class Station(Base):
     talk_station: Mapped[bool] = mapped_column(default=False)
     talk_ratio: Mapped[int] = mapped_column(default=40)
     script_prompt: Mapped[str] = mapped_column(String(4000), default="")
+    # A talk station's own recurring features, each {"name", "does"}: dealt a link at a time in
+    # place of the banter moves (talk.py).
+    features: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
     # A talk station's last few shows, oldest first, so a daily show doesn't repeat itself and
     # can call back: each its day, running bits, topics and the hooks it had (see talk.py).
     talk_log: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)

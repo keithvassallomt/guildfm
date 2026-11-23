@@ -21,6 +21,7 @@ from guildfm.config import Settings, get_settings
 from guildfm.covers import Painter
 from guildfm.db import make_engine, upgrade_to_head
 from guildfm.dj import DJ
+from guildfm.hooks import FreshHooks
 from guildfm.housekeeping import Housekeeping
 from guildfm.jingles import JinglePlayer
 from guildfm.live import LiveHub, live_socket
@@ -112,7 +113,11 @@ def create_app(
         )
         await app.state.composer.recover()
         app.state.housekeeping = Housekeeping(
-            app.state.speech, settings.data_dir, settings.backups, app.state.composer
+            app.state.speech,
+            settings.data_dir,
+            settings.backups,
+            app.state.composer,
+            fresh_hooks=FreshHooks(app.state.sessionmaker, app.state.ai),
         )
         app.state.announcer = Announcer(
             app.state.sessionmaker,

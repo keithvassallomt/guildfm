@@ -11,12 +11,18 @@ The code also deals each DJ one or two of their hooks for the show, resting the 
 last time: left to itself, the AI brings every hook into every show, and the same few stories
 come round each day. The plan is kept with the show's state in the source's dj_memory. Each
 show goes in a short log on the station, with its running bits, what it talked about and the
-hooks it had, so a daily show doesn't repeat itself and can call back."""
+hooks it had, so a daily show doesn't repeat itself and can call back. Each segment adds what
+it told, a few words for each story, fact and joke, kept a week: the planner and the writer are
+told it, so nothing is told twice in a week.
+
+A station can have features of its own, such as Joke of the Day. On a show with them, each link
+gets one of those in place of a banter move, with a guest dropping in as often as any one of
+them, and the only happening is a guest dropping in."""
 
 import math
 import random
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from guildfm.ai import AIClient, object_schema
@@ -29,6 +35,7 @@ HAPPENING_CHANCE = 0.4  # of a show having a happening
 SHOWS_KEPT = 60  # shows kept in a station's log: a week's, outside a line-up an hour is one
 TOPIC_DAYS = 7  # days of shows whose topics the planner is shown: [news] goes back a week
 BITS_SHOWN = 6  # recent shows whose running bits the planner is shown, for calling back to
+TOLD_SHOWN = 200  # of the stories, facts and jokes told in the last week, the newest shown
 HOOKS = ("pet_peeves", "soft_spots", "obsession")  # a DJ's hooks, as Host has them
 MOVES_KEPT = 2  # a link's move is never one of the last this many
 
@@ -177,29 +184,60 @@ def with_hooks(hosts: list[Host], hooks: dict[str, list[str]] | None) -> list[Ho
 
 
 def deal_move(
-    rng: random.Random, hosts: list[Host], guests: bool, last: list[str], song: bool = True
+    rng: random.Random,
+    hosts: list[Host],
+    guests: bool,
+    last: list[str],
+    song: bool = True,
+    features: list[dict[str, str]] = (),
 ) -> str:
     """A move for one link: not a running bit, one the DJs have the hooks for, a guest only if
     there's another DJ to drop in, one about the last song only if one just played (`song`),
-    and none of the last few."""
-    allowed = [
-        move.name
-        for move in MOVES
-        if not move.running
-        and _hooked(move, hosts)
-        and (guests or not move.guest)
-        and (song or not move.after_song)
-    ]
-    fresh = [name for name in allowed if name not in last[-MOVES_KEPT:]] or allowed
+    and none of the last few. A show with `features` of its own deals those instead of the
+    banter moves, with a guest dropping in as often as any one of them."""
+    if features:
+        allowed = [feature["name"] for feature in features]
+        if guests and "the guest" not in allowed:
+            allowed.append("the guest")
+    else:
+        allowed = [
+            move.name
+            for move in MOVES
+            if not move.running
+            and _hooked(move, hosts)
+            and (guests or not move.guest)
+            and (song or not move.after_song)
+        ]
+    # Resting so many that one is left would deal them in a fixed order.
+    resting = max(0, min(MOVES_KEPT, len(allowed) - 2))
+    fresh = [name for name in allowed if name not in (last[-resting:] if resting else [])]
+    fresh = fresh or allowed
     return rng.choice(fresh)
 
 
-def roll_happening(rng: random.Random, guests: bool) -> str | None:
-    """Whether a show has a happening, four times in ten, and which."""
+def roll_happening(rng: random.Random, guests: bool, banter: bool = True) -> str | None:
+    """Whether a show has a happening, four times in ten, and which. A show without `banter`,
+    one with features of its own, only ever has a guest drop in."""
     if rng.random() >= HAPPENING_CHANCE:
         return None
-    kinds = [kind for kind in HAPPENINGS if guests or kind != "a surprise guest"]
-    return rng.choice(kinds)
+    kinds = [
+        kind
+        for kind in HAPPENINGS
+        if (guests or kind != "a surprise guest") and (banter or kind == "a surprise guest")
+    ]
+    return rng.choice(kinds) if kinds else None
+
+
+def does(move: str, features: list[dict[str, str]]) -> str:
+    """What happens in a move or one of the show's features, for the AI."""
+    feature = next((f for f in features if f["name"] == move), None)
+    if feature:
+        return feature["does"]
+    return BY_NAME[move].does if move in BY_NAME else ""
+
+
+def is_feature(move: str | None, features: list[dict[str, str]]) -> bool:
+    return any(feature["name"] == move for feature in features)
 
 
 def link_seconds(ratio: int) -> int | None:
@@ -278,6 +316,7 @@ async def plan_show(
     happening: str | None,
     log: list[dict[str, Any]],
     until: str | None = None,
+    features: list[dict[str, str]] = (),
 ) -> dict[str, Any]:
     """A show's plan: what each segment is about, and where its running bits and happening
     fall. `until` is when a show in a line-up ends, such as "13:00"; without it, the plan is
@@ -308,6 +347,13 @@ async def plan_show(
         parts.append(
             "What's going on, for the segments to draw on:\n"
             + "\n\n".join(f"[{name}]\n{text}" for name, text in material.items())
+        )
+    if features:
+        parts.append(
+            "The show has features of its own, which come round one a link in place of the "
+            "usual banter, dealt as the show goes, so don't place them:\n"
+            + "\n".join(f"- {f['name']}: {f['does']}" for f in features)
+            + "\nKeep each segment to one topic, so there's room for a feature in it."
         )
     if "news" in material:
         parts.append(
@@ -347,6 +393,11 @@ async def plan_show(
             "so don't plan them again, and don't retell a story from the news they've had. A "
             "DJ's hook can come back, with something new about it:\n"
             + "\n".join(f"- {on}: {'; '.join(topics)}" for on, topics in covered)
+        )
+    if told := told_lately(log, starts.date()):
+        parts.append(
+            "The stories, facts and jokes the last week's shows told, oldest first. Don't plan "
+            "any of them again:\n" + told
         )
     parts.append(
         "No politics, religion or tragedy, and no made-up facts about real people or songs. "
@@ -413,7 +464,8 @@ def _dealt(said: str, names: list[str]) -> bool:
 
 def logged(log: list[dict[str, Any]], plan: dict[str, Any], day: str) -> list[dict[str, Any]]:
     """The station's log with a show added, keeping the last few: its running bits with how
-    they ended, for calling back to, what it talked about, and the hooks it had."""
+    they ended, for calling back to, what it talked about, the hooks it had, and what it told
+    (with_told), which is kept for a week."""
     show = {
         "on": day,
         "bits": [
@@ -422,5 +474,40 @@ def logged(log: list[dict[str, Any]], plan: dict[str, Any], day: str) -> list[di
         ],
         "topics": plan.get("topics", []),
         "hooks": plan.get("hooks", {}),
+        "told": [],
     }
-    return [*log, show][-SHOWS_KEPT:]
+    week = _week_before(date.fromisoformat(day))
+    kept = [
+        old if old["on"] >= week else {k: v for k, v in old.items() if k != "told"} for old in log
+    ]
+    return [*kept, show][-SHOWS_KEPT:]
+
+
+def with_told(log: list[dict[str, Any]], day: str, items: list[str]) -> list[dict[str, Any]]:
+    """The station's log with what a segment told added to today's show, its last. Unchanged if
+    the last show isn't today's."""
+    items = [item.strip() for item in items if item.strip()]
+    if not log or log[-1]["on"] != day or not items:
+        return log
+    last = log[-1]
+    return [*log[:-1], {**last, "told": [*last.get("told", []), *items]}]
+
+
+def told_lately(log: list[dict[str, Any]], today: date) -> str:
+    """The stories, facts and jokes told in the last week, a line a show, oldest first, as many
+    of the newest as TOLD_SHOWN allows. Empty if there are none."""
+    week = _week_before(today)
+    shows = [(show["on"], show.get("told", [])) for show in log if show["on"] >= week]
+    left, lines = TOLD_SHOWN, []
+    for on, told in reversed(shows):
+        if left <= 0:
+            break
+        told = told[-left:]
+        left -= len(told)
+        if told:
+            lines.append(f"- {on}: {'; '.join(told)}")
+    return "\n".join(reversed(lines))
+
+
+def _week_before(day: date) -> str:
+    return (day - timedelta(days=TOPIC_DAYS)).isoformat()

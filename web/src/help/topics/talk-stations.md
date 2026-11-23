@@ -54,6 +54,18 @@ GuildFM only looks up the fields the prompt uses, before each show.
 
 ![What it's about, and bringing in the day's news](shot:talk-prompt)
 
+## Features
+
+**Features** are bits of the show that come round, the way a radio show has its regulars: one each time the DJs talk, in place of the usual banter. Give each a name and say how it works. The DJs say its name on air, so listeners know it's back.
+
+- **Ideas to start from** adds one of GuildFM's, such as **Real or Fake?** or **Joke of the Day**, or takes it out again. Change its name or how it works as you like.
+- **Add your own** adds a blank one. A show can have up to eight.
+- **×** takes one off.
+
+GuildFM picks a feature each time, never the same one twice running when there's another. Other DJs still drop in now and then. A show with features has no arguments or pranks, only guests dropping in; its running bits, such as a bet or a score, stay. With no features, it's banter as before.
+
+![A show's features](shot:talk-features)
+
 ## How they get on
 
 **How do they get on?** says who winds whom up, and who interrupts whom. It belongs to this station, so the same DJs can get on differently somewhere else. Everything in it comes up in every show, so keep running jokes, such as a feud over the office fridge, in a DJ's hooks, which are shared out a show at a time.
@@ -66,7 +78,7 @@ GuildFM only looks up the fields the prompt uses, before each show.
 ## On air
 
 - The show is planned an hour at a time, or the whole show in a line-up, with running bits set up early and paid off later. The first talk comes after the first song.
-- Each show remembers what the last few talked about, so a daily show doesn't keep coming back to the same stories.
+- Every story, fact and joke told on air is remembered for a week, and nothing is told again in that time, though the DJs can call back to one.
 - The talk stops for each song: the DJs wrap up before it, and pick up again after it.
 - Requests still play, and the DJs bring them in.
 - In a line-up, the show opens at the start of its slot and signs off at the end.

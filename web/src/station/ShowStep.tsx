@@ -1,11 +1,22 @@
 import { Fragment, type ReactNode, useId, useRef, useState } from "react";
-import { api, errorText, type Voices } from "../api";
+import { api, errorText, type Feature, type Voices } from "../api";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { usePreview } from "../components/PreviewButton";
-import { FormError } from "../components/TextField";
+import { FormError, TextField } from "../components/TextField";
 import { listed } from "../pages/announcementText";
-import { creditsAnHour, type Draft, HOT, hostsOf, hourText, LEAST_TALK, lead, mixText } from "./kinds";
+import {
+  creditsAnHour,
+  type Draft,
+  FEATURE_IDEAS,
+  HOT,
+  hostsOf,
+  hourText,
+  LEAST_TALK,
+  lead,
+  MOST_FEATURES,
+  mixText,
+} from "./kinds";
 import { Area, type Place, StepBox, SwitchRow } from "./parts";
 import s from "./Steps.module.css";
 
@@ -37,6 +48,9 @@ export function ShowStep({ draft, place, change, voices, onError }: Props) {
       <Mix ratio={draft.talk_ratio} credits={voices?.credits_limit ?? null} onChange={(talk_ratio) => change({ talk_ratio })} />
       <div className={s.panel}>
         <Prompt value={draft.script_prompt} onChange={(script_prompt) => change({ script_prompt })} />
+      </div>
+      <div className={s.panel}>
+        <Features features={draft.features} onChange={(features) => change({ features })} />
       </div>
       <div className={s.panel}>
         <GetOn draft={draft} change={change} onError={onError} />
@@ -221,6 +235,94 @@ function Prompt({ value, onChange }: { value: string; onChange: (value: string) 
         strays from this now and then for variety. It looks up only what the prompt brings in,
         before each show.
       </p>
+    </>
+  );
+}
+
+/** The show's own features: bits that come round, one a link, in place of the banter. */
+function Features({ features, onChange }: { features: Feature[]; onChange: (features: Feature[]) => void }) {
+  const full = features.length >= MOST_FEATURES;
+  const has = (name: string) => features.some((f) => f.name.trim().toLowerCase() === name.toLowerCase());
+  const set = (index: number, changes: Partial<Feature>) =>
+    onChange(features.map((feature, at) => (at === index ? { ...feature, ...changes } : feature)));
+
+  return (
+    <>
+      <div className={s.labelRow}>
+        <span className={s.label}>Features</span>
+        <span className={s.count}>
+          {features.length} of {MOST_FEATURES}
+        </span>
+      </div>
+      <p className={s.hint}>
+        Bits that come round, one each time they talk, in place of the usual banter. Other DJs
+        still drop in now and then. With none, it's banter, bets and the odd argument.
+      </p>
+      {features.length > 0 && (
+        <ol className={s.features}>
+          {features.map((feature, index) => (
+            // Features have no ids, and a name can be changed, so they're known by their place.
+            <li key={index} className={s.feature}>
+              <div className={s.featureTop}>
+                <TextField
+                  label="Name"
+                  value={feature.name}
+                  maxLength={40}
+                  placeholder="Joke of the Day"
+                  onChange={(event) => set(index, { name: event.target.value })}
+                />
+                <button
+                  type="button"
+                  className={s.close}
+                  aria-label={`Take off ${feature.name.trim() || "this feature"}`}
+                  onClick={() => onChange(features.filter((_, at) => at !== index))}
+                >
+                  <Icon name="close" size={20} />
+                </button>
+              </div>
+              <Area
+                label="How it works"
+                value={feature.does}
+                rows={2}
+                maxLength={300}
+                placeholder="One tells a proper joke, and the other rates it out of ten."
+                onChange={(does) => set(index, { does })}
+              />
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className={s.field}>
+        <span className={s.rowHint}>Ideas to start from</span>
+        <div className={s.examples}>
+          {FEATURE_IDEAS.map((idea) => (
+            <button
+              key={idea.name}
+              type="button"
+              aria-pressed={has(idea.name)}
+              disabled={!has(idea.name) && full}
+              className={s.chip}
+              title={idea.does}
+              onClick={() =>
+                onChange(
+                  has(idea.name)
+                    ? features.filter((f) => f.name.trim().toLowerCase() !== idea.name.toLowerCase())
+                    : [...features, idea],
+                )
+              }
+            >
+              <Icon name={has(idea.name) ? "check" : "plus"} size={14} strokeWidth={2.6} />
+              {idea.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className={s.buttons}>
+        <Button variant="secondary" disabled={full} onClick={() => onChange([...features, { name: "", does: "" }])}>
+          <Icon name="plus" size={16} />
+          Add your own
+        </Button>
+      </div>
     </>
   );
 }

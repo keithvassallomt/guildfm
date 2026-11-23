@@ -336,13 +336,22 @@ export type Hooks = {
   pet_peeves: string;
   soft_spots: string;
   obsession: string;
+  /** The AI rewrites one hook at a time, so each lasts about a month. */
+  fresh_hooks: boolean;
 };
+
+export type HookName = "pet_peeves" | "soft_spots" | "obsession";
+
+/** The hook the AI rewrites next, and the morning it's new by ("2026-12-03"). */
+export type NextHook = { hook: HookName; on: string };
 
 export type DJProfile = Hooks & {
   id: number;
   name: string;
   personality: string;
   voice: string;
+  /** With fresh hooks on. */
+  next_hook: NextHook | null;
   /** The stations they host, by name. */
   stations: { id: number; name: string }[];
 };
@@ -354,7 +363,12 @@ export type StationDJ = Hooks & {
   name: string;
   personality: string;
   voice: string;
+  /** As saved, with fresh hooks on; not sent back. */
+  next_hook?: NextHook | null;
 };
+
+/** One of a talk show's own recurring features: its name, and how it works. */
+export type Feature = { name: string; does: string };
 
 export type SourceKind = "queue" | "library" | "radio" | "lineups";
 
@@ -539,6 +553,8 @@ export type StationFields = {
   /** Percent of a talk station's time that's talk, 20 to 100. */
   talk_ratio: number;
   script_prompt: string;
+  /** A talk show's own features, one a link in place of the banter. */
+  features: Feature[];
 };
 
 export type Station = StationFields & {

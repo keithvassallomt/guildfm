@@ -5,8 +5,8 @@ import { Icon } from "../components/Icon";
 import { TextField } from "../components/TextField";
 import { isEleven, voiceName } from "../components/useVoices";
 import { listed } from "../pages/announcementText";
-import { elsewhere, sampleLine } from "./kinds";
-import { Area, hearLabel, useHear } from "./parts";
+import { elsewhere, freshHooksText, sampleLine } from "./kinds";
+import { Area, hearLabel, SwitchRow, useHear } from "./parts";
 import s from "./Steps.module.css";
 
 type Props = {
@@ -186,6 +186,12 @@ export function DJForm({
             maxLength={200}
             placeholder="Building a shed. Has been for eleven years."
             onChange={(event) => change({ obsession: event.target.value })}
+          />
+          <SwitchRow
+            label="New hooks every month"
+            hint={freshHooksText(dj.fresh_hooks, initial.next_hook ?? profile?.next_hook)}
+            checked={dj.fresh_hooks}
+            onChange={(fresh_hooks) => change({ fresh_hooks })}
           />
         </div>
       )}

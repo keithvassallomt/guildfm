@@ -267,6 +267,11 @@ function Review({ draft, onChange, onPreview }: { draft: Draft; onChange: (step:
       step: "show",
     });
     rows.push({ label: "About", value: draft.script_prompt.trim() || "Left to them", step: "show" });
+    rows.push({
+      label: "Features",
+      value: draft.features.length ? listed(draft.features.map((f) => f.name.trim())) : "None, so banter",
+      step: "show",
+    });
     rows.push({ label: "How they get on", value: draft.dynamic.trim() || "Left to them", step: "show" });
   }
   const extras = extrasOn(draft);

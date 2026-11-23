@@ -426,3 +426,51 @@ async def test_a_segment_is_voiced_turn_by_turn_and_mixed(tmp_path: Path) -> Non
         assert mp3_seconds(again.path.read_bytes()) == pytest.approx(clip.seconds)
     finally:
         await speech.close()
+
+
+def test_the_writer_is_told_the_weeks_stories_and_the_shows_feature() -> None:
+    moment = Moment(
+        number=2,
+        count=4,
+        clock=CLOCK,
+        move="Joke of the Day",
+        does="One tells a joke; the other rates it out of ten.",
+        feature=True,
+    )
+    told = brief(PLAN, moment, {}, "", [], 60, "- 2026-11-16: joke: the peahen")
+    assert "one of the show's own features, Joke of the Day: One tells a joke" in told
+    assert "Say its name on air" in told
+    assert "Listeners have heard these: don't tell any of them again" in told
+    assert "- 2026-11-16: joke: the peahen" in told
+    # A banter move is put as ever.
+    moment = Moment(number=2, count=4, clock=CLOCK, move="the aside")
+    assert "Somewhere in this link, within what it's about, the aside: One DJ whispers" in brief(
+        PLAN, moment, {}, "", [], 60
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_segment_says_what_it_told() -> None:
+    openai = FakeOpenAI()
+    ai = AIClient("test", "gpt-6-astra", "low", http=fake(openai))
+    try:
+        segment = await write_segment(
+            ai,
+            station="The Lunch Break",
+            hosts=[Host("Guildbert", "Cheeky."), Host("Debbie", "Bubbly.")],
+            dynamic="",
+            prompt="Odd news and jokes.",
+            plan=PLAN,
+            moment=Moment(number=1, count=4, clock=CLOCK),
+            material={},
+            notes="",
+            said=[],
+            seconds=60,
+            lately="- 2026-11-16: joke: the peahen",
+        )
+    finally:
+        await ai.close()
+    assert segment.told == ["story: Priya asks for ABBA"]
+    (asked,) = openai.asked_for("talk_segment")
+    assert "- 2026-11-16: joke: the peahen" in asked["input"]
+    assert "list what this segment told, for the station's log" in asked["instructions"]

@@ -639,6 +639,43 @@ legend.label {
   color: var(--text);
 }
 
+/* A talk show's features, each a name and how it works. */
+.features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feature {
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  --field-bg: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.featureTop {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.featureTop > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .hooks {
   padding-top: 16px;
   border-top: 1px solid var(--line);

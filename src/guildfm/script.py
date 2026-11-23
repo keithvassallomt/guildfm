@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from guildfm.ai import AIClient, AIError, object_schema
-from guildfm.talk import BY_NAME, Host
+from guildfm.talk import Host, does
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +111,12 @@ stage directions, sound effects or emoji.
 
 Also keep the show's notes: in a line or two, the state of its running bits after this \
 segment, such as the score, the stakes, who owes whom, and what listeners have been told. \
-No segment numbers."""
+No segment numbers.
+
+Last, list what this segment told, for the station's log, so no show tells it again for a \
+week: each story, fact and joke, a few words each that say which one it was, such as "story: \
+the shortbread world champion", "fact: wombats' cube-shaped droppings" or "joke: the peahen \
+playing hide-and-seek". Leave out the chat around them."""
 
 
 EDIT = """You're the editor on {station}, a radio station playing over the speakers in an \
@@ -159,7 +164,9 @@ class Moment:
     straight_on: bool = False  # follows the segment before it with no song between
     before: str | None = None  # the song that just played, such as '"Dreams" by Fleetwood Mac'
     up_next: str | None = None  # the song it brings in, with any shout-out, at the link's end
-    move: str | None = None  # the move dealt for this link, on its first segment
+    move: str | None = None  # the move or feature dealt for this link, on its first segment
+    does: str = ""  # what happens in it, if it's one of the show's own features
+    feature: bool = False  # the move is one of the show's own features
     mention: str = "name"  # how it treats the song before it, if one played: MENTIONS
     skipped: int | None = None  # a segment listeners didn't hear, skipped by a curator
     until: str | None = None  # when the show ends, in a line-up
@@ -177,6 +184,7 @@ class Segment:
     marks: list[str] = field(default_factory=list)  # marks taken off, and why
     fixed: list[str] = field(default_factory=list)  # what the edit found, and fixed
     draft: list[Turn] = field(default_factory=list)  # before the edit, if it changed anything
+    told: list[str] = field(default_factory=list)  # each story, fact and joke, in a few words
 
 
 def _turn_schema(names: list[str]) -> dict[str, Any]:
@@ -191,7 +199,8 @@ def _turn_schema(names: list[str]) -> dict[str, Any]:
 def _schema(names: list[str]) -> dict[str, Any]:
     """A segment, as the writer answers: its turns, by DJs named in `names`, and the notes."""
     turns = {"type": "array", "items": _turn_schema(names)}
-    return object_schema(turns=turns, notes={"type": "string"})
+    told = {"type": "array", "items": {"type": "string"}}
+    return object_schema(turns=turns, notes={"type": "string"}, told=told)
 
 
 def _edit_schema(names: list[str]) -> dict[str, Any]:
@@ -278,8 +287,10 @@ def brief(
     notes: str,
     said: list[list[Turn]],
     seconds: int,
+    lately: str = "",
 ) -> str:
-    """What the writer is told for one segment. Segment numbers stay out of it, so they can't
+    """What the writer is told for one segment. `lately` is what the last week's shows told, a
+    line a show (talk.told_lately). Segment numbers stay out of it, so they can't
     end up on air."""
     parts = [moment.clock]
     if moment.until:
@@ -303,10 +314,16 @@ def brief(
             "something new."
         )
     parts.extend(_due(plan, moment.number))
-    if moment.move:
+    if moment.move and moment.feature:
+        parts.append(
+            f"This link has one of the show's own features, {moment.move}: {moment.does} Make "
+            "room for it: it can take up most of the segment, or come out of what it's about. "
+            "Say its name on air, as a show does, so listeners know it's coming round."
+        )
+    elif moment.move:
         parts.append(
             f"Somewhere in this link, within what it's about, {moment.move}: "
-            f"{BY_NAME[moment.move].does}"
+            f"{moment.does or does(moment.move, [])}"
         )
     if moment.guest:
         parts.append(
@@ -325,6 +342,12 @@ def brief(
             "What's going on today, for reference. Use what this segment is about, and leave the "
             "rest for other segments:\n"
             + "\n\n".join(f"[{name}]\n{text}" for name, text in material.items())
+        )
+    if lately:
+        parts.append(
+            "The stories, facts and jokes told on air in the last week, today's among them, "
+            "oldest first. Listeners have heard these: don't tell any of them again, though a DJ "
+            "can call back to one in a line.\n" + lately
         )
     if said:
         parts.append(
@@ -365,21 +388,23 @@ async def write_segment(
     said: list[list[Turn]],
     seconds: int,
     edit: bool = True,
+    lately: str = "",
 ) -> Segment:
     """A segment, written, edited (unless `edit` is False), and with its marks checked. `said`
-    is the show's segments so far, the last few of which the writer reads."""
+    is the show's segments so far, the last few of which the writer reads; `lately` is what the
+    last week's shows told."""
     instructions = INSTRUCTIONS.format(
         station=station,
         hosts="\n".join(host.described() for host in hosts),
         dynamic=dynamic or "They're old friends.",
         prompt=prompt or "Light chat between the DJs.",
     )
-    told = brief(plan, moment, material, notes, said[-SAID_KEPT:], seconds)
+    told = brief(plan, moment, material, notes, said[-SAID_KEPT:], seconds, lately)
     names = [host.name for host in hosts]
-    turns, after = await _written(ai, instructions, told, names)
+    turns, after, items = await _written(ai, instructions, told, names)
     if any(_SEGMENT.search(turn.text) for turn in turns):
         # Once more: the plan talks in segments, and a model sometimes copies it.
-        turns, after = await _written(ai, instructions, f"{told}\n\n{AGAIN}", names)
+        turns, after, items = await _written(ai, instructions, f"{told}\n\n{AGAIN}", names)
     draft, fixed = turns, []
     if edit and turns:
         turns, fixed = await _edited(
@@ -388,14 +413,16 @@ async def write_segment(
     kept, marks = checked(turns)
     if any(_SEGMENT.search(turn.text) for turn in kept):
         marks.append('It still says "segment" on air.')
-    return Segment(kept, after, marks, fixed, draft if fixed else [])
+    return Segment(kept, after, marks, fixed, draft if fixed else [], items)
 
 
 async def _written(
     ai: AIClient, instructions: str, told: str, names: list[str]
-) -> tuple[list[Turn], str]:
+) -> tuple[list[Turn], str, list[str]]:
+    """The turns, the show's notes, and what the segment told."""
     answer = await ai.json(instructions, told, "talk_segment", _schema(names))
-    return _turns(answer["turns"], names), answer["notes"].strip()
+    items = [str(item).strip() for item in answer.get("told", []) if str(item).strip()]
+    return _turns(answer["turns"], names), answer["notes"].strip(), items
 
 
 def _turns(answered: list[dict[str, Any]], names: list[str]) -> list[Turn]:

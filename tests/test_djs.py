@@ -399,3 +399,53 @@ def test_changing_a_stations_type(client: TestClient, people) -> None:
     # Guildbert's hooks came back with him.
     assert again["djs"][1]["obsession"] == "His marrows."
     assert len(djs(client)) == 2
+
+
+def test_a_talk_show_has_features_of_its_own(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
+    joke = {"name": "Joke of the Day", "does": "One tells a joke; the other rates it."}
+    lunch = make_station(
+        client, "Lunch Break", djs=[GUILDBERT_TALKS, DEBBIE_TALKS], features=[joke], **TALK
+    )
+    assert lunch["features"] == [joke]
+    fake = {"name": "Real or Fake?", "does": "One reads a headline; the other guesses."}
+    changed = edit(client, lunch, djs=lunch["djs"], features=[fake, joke], **TALK).json()
+    assert changed["features"] == [fake, joke]
+
+    def refused(features) -> str:
+        response = edit(client, lunch, djs=lunch["djs"], features=features, **TALK)
+        assert response.status_code == 422, response.text
+        return response.json()["detail"][0]["msg"]
+
+    assert refused([joke, joke | {"name": "joke of the day"}]) == (
+        "Each feature needs a name of its own."
+    )
+    refused([{"name": f"Feature {n}", "does": "Something."} for n in range(9)])
+    refused([{"name": "", "does": "Something."}])
+
+
+def test_a_talk_show_djs_hooks_are_freshened_unless_turned_off(client: TestClient) -> None:
+    sign_in(client, *ADMIN)
+    lunch = make_station(client, "Lunch Break", djs=[GUILDBERT_TALKS, DEBBIE_TALKS], **TALK)
+    guildbert, debbie = lunch["djs"]
+    # Debbie has no hooks, so the AI writes her pet peeves first, tonight or the night after.
+    assert guildbert["fresh_hooks"] and debbie["fresh_hooks"]
+    assert debbie["next_hook"]["hook"] == "pet_peeves"
+    assert guildbert["next_hook"]["hook"] in ("pet_peeves", "soft_spots", "obsession")
+
+    # His hooks changed by hand start their month again, and the old one's kept.
+    guildbert = guildbert | {"obsession": "His leeks.", "fresh_hooks": False}
+    changed = edit(client, lunch, djs=[guildbert, debbie], **TALK).json()
+    assert changed["djs"][0]["fresh_hooks"] is False
+    assert changed["djs"][0]["next_hook"] is None
+    assert {dj["name"]: dj["fresh_hooks"] for dj in djs(client)} == {
+        "Debbie": True,
+        "Guildbert": False,
+    }
+    old = client.portal.call(_old_hooks, client.app.state.sessionmaker, "Guildbert")
+    assert old == ["His marrows."]
+
+
+async def _old_hooks(sessionmaker, name: str) -> list[str]:
+    async with sessionmaker() as db:
+        return (await db.scalar(select(DJProfile).where(DJProfile.name == name))).old_hooks

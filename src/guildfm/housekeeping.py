@@ -1,6 +1,7 @@
 """Daily chores, since GuildFM runs for weeks without a restart: clearing out speech clips nobody
-has used for a while and the jingle generator's day-old drafts, and making a backup. They happen
-at startup too, the backup only if the last one is over a day old."""
+has used for a while and the jingle generator's day-old drafts, making a backup, and at night,
+rewriting talk show DJs' hooks that are due (hooks.py). They happen at startup too, the backup
+only if the last one is over a day old."""
 
 import asyncio
 import logging
@@ -12,6 +13,7 @@ from pathlib import Path
 
 from guildfm.backups import back_up, backups, made_at
 from guildfm.composer import Composer
+from guildfm.hooks import FreshHooks
 from guildfm.speech import SpeechClient
 
 log = logging.getLogger(__name__)
@@ -28,9 +30,11 @@ class Housekeeping:
         backup_dir: Path,
         composer: Composer | None = None,
         clock: Callable[[], float] = time.time,
+        fresh_hooks: FreshHooks | None = None,
     ) -> None:
         self._speech = speech
         self._composer = composer
+        self._fresh_hooks = fresh_hooks
         self._data_dir = data_dir
         self.backup_dir = backup_dir
         self.clock = clock
@@ -57,6 +61,11 @@ class Housekeeping:
                 except Exception:
                     log.exception("Clearing out the jingle generator's old drafts failed")
             self._pruned_at = now
+        if self._fresh_hooks is not None:
+            try:
+                await self._fresh_hooks.tick(now)
+            except Exception:
+                log.exception("Rewriting DJs' hooks failed")
         made = backups(self.backup_dir)
         if made and now - made_at(made[-1]).timestamp() < DAY:
             return

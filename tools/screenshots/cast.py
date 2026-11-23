@@ -140,8 +140,8 @@ DJS = {
         "calls a barm cake a bread roll. Radio edits that cut the best bit.",
         soft_spots="A proper key change. Chips and gravy. Any song that namechecks a northern "
         "town.",
-        obsession="His pub quiz team, the Quizteama Aguileras, who have come second six years "
-        "running.",
+        obsession="Growing the biggest marrow in Cumbria for the village show. He talks to it "
+        "every morning.",
     ),
     "Debbie": DJ(
         "Debbie",
@@ -151,8 +151,7 @@ DJS = {
         pet_peeves="Whoever takes the last biscuit and leaves the empty packet. Fish in the "
         "office microwave.",
         soft_spots="A proper chip butty. Power ballads at a work do.",
-        obsession="Finding out who keeps nicking her yoghurts from the office fridge. She has a "
-        "list of suspects.",
+        obsession="Getting her video of a seagull stealing a pasty to go viral. It's on 312 views.",
     ),
     "Della": DJ(
         "Della",
@@ -182,6 +181,7 @@ class Station:
     talk_ratio: int = 40
     dynamic: str = ""
     script_prompt: str = ""
+    features: tuple[tuple[str, str], ...] = ()  # its own, each its name and how it works
 
 
 STATIONS = [
@@ -223,12 +223,25 @@ STATIONS = [
         talk_station=True,
         talk_ratio=60,
         dynamic="Guildbert is dry and deadpan; Debbie is fast and loud, and can't let him "
-        "finish a bit of trivia. She has him on her list of yoghurt suspects and won't say why. "
-        "They bicker like an old married couple, but gang up on anyone who requests the same "
-        "song twice.",
-        script_prompt="Light chat between the two of them, to get the office through lunch. "
-        "Draw on the day's odd and funny news [news], the weather [weather] and what it's doing "
-        "to everyone's plans, and last night's football [sports].",
+        "finish a bit of trivia. He reads out the oddest stories completely straight, which "
+        "sets her off. They bicker like an old married couple, but gang up on anyone who "
+        "requests the same song twice.",
+        script_prompt="A comedy news show to get the office through lunch, fast and punchy. "
+        "Mostly the week's odd and funny news [news], with odd facts and funny true stories "
+        "from the past [oddities] when it runs out, the weather [weather], and last night's "
+        "football [sports].",
+        features=(
+            (
+                "Real or Fake?",
+                "One reads out an odd headline, either a real one from the news "
+                "or one they've made up, and the other guesses which. Then they say which it was.",
+            ),
+            (
+                "Joke of the Day",
+                "One tells a proper joke, with a setup and a punchline, and the "
+                "other rates it out of ten.",
+            ),
+        ),
     ),
     Station(
         "Deep Focus",

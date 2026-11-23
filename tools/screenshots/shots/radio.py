@@ -179,10 +179,21 @@ async def talk_mix(s: Scene) -> Frame:
 @shot("talk-prompt", ("curator",))
 async def talk_prompt(s: Scene) -> Frame:
     dialog = await change(s, "The Lunch Break", "Change the show")
-    await s.ring(dialog.get_by_role("button", name="Birthdays and celebs"))
+    await s.ring(dialog.get_by_role("button", name="Odd facts and history"))
     return [
         dialog.get_by_label("What's it about?"),
         dialog.get_by_text("A guide, not a script."),
+    ]
+
+
+@shot("talk-features", ("curator",))
+async def talk_features(s: Scene) -> Frame:
+    dialog = await change(s, "The Lunch Break", "Change the show")
+    idea = dialog.get_by_role("button", name="Would You Rather")
+    await s.ring(idea)
+    return [
+        dialog.get_by_text("Features", exact=True),
+        dialog.get_by_role("button", name="Add your own"),
     ]
 
 

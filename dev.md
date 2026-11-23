@@ -30,8 +30,9 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 18: Fewer repeats
 - [x] Stage 19: After hours
 - [ ] Stage 20: Talk stations
-- [ ] Stage 21: Making and editing stations
-- [ ] Stage 22: Just a name
+- [x] Stage 21: Making and editing stations
+- [x] Stage 22: Just a name
+- [ ] Stage 23: Radio One, not Radio Four
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -363,7 +364,7 @@ Goal: making a station is a few plain steps that start with what kind of station
 - [x] Change opens that one step, as a dialog on a desktop and a full-screen sheet on a phone, on a copy of the station, with its own Save and Cancel. Save saves the station straight away (`PUT /stations/{id}` as today) and says so. A new type chains the steps it needs: to Music with a DJ, then which DJ and how they talk; to Talk show, then the hosts and the show; to Just music, saved straight away, saying the DJs come off this station but stay for others. Picking the station's own type again puts its DJs back as they were
 - [x] The Radio page: New station opens the wizard, and a station's card opens its page
 - [x] Tests (the Suggest one endpoint; a type change saved through the API), build and typecheck, the changelog, the help (Making a station, The DJ, Talk stations, the station's own jingles) and their screenshots, and a What's new note. Built 2026-11-20 in `web/src/station/`: the steps share `kinds.ts` and `StepView.tsx`, the wizard is `NewStation.tsx`, the page `StationPage.tsx` with `ChangeDialog.tsx`. Also: ElevenLabs voices carry a note from their labels ("British, middle aged, male") for the voice cards, new stations start with Knows what's going on on, and a DJ with an OpenAI voice picked for a talk show opens their details to choose an ElevenLabs one rather than being greyed out. The help's shots, taken through the new pages, are the end-to-end check: every step, the review, the station page and each kind of Change
-- [ ] Deploy to office box
+- [x] Deploy to office box. 0.1.11, on 2026-11-20
 
 Done when: at the office, someone makes a music station, a station with a DJ and a talk show through the wizard without meeting a greyed-out control, changes The Squawk Box's mix from its page with one Change, and turns a station with a DJ into a talk show by being walked through its hosts and the show.
 
@@ -385,6 +386,18 @@ Goal: the display-name check turns down a name with a description added, such as
 - [x] Steady answers: if the wording alone doesn't get there, the check asks three times at once and turns a name down if any answer does. A name check is one small call and names change rarely, so three cost next to nothing. Rude names, which the AI already calls consistently, stay as they are Not needed: the wording alone got there, so the check still asks once
 - [x] Names already taken aren't checked again. Gary's (user 20, "GARY FROM NOTTIGHAM") is changed by an admin with Rename (Stage 17), not by this stage Already so: Profile only checks a name that's changed, as `test_renaming_yourself_is_checked_too` shows
 - [x] Tests (the new verdict and its message on sign-up and Profile, and three answers with one turning the name down), the changelog, and the Profile help topic if its wording changes The new verdict on sign-up and Profile, and a described username going through. No test for three answers, since the check asks once. The help's Signing in and Profile topics say the rule
-- [ ] Deploy to office box
+- [x] Deploy to office box. 0.1.11, on 2026-11-20
 
 Done when: at the office, "Gary from Nottingham", in any capitals or spelling, is turned down on the sign-up form and on Profile however many times it's tried, with a message that says to leave the description out, and everyone else's names still go through.
+
+## Stage 23: Radio One, not Radio Four
+Goal: The Squawk Box is short, punchy and never the same twice: odd news, odd facts and jokes rather than the DJs bickering, its own features coming round, guests dropping in, and nothing told twice in a week. Asked for by Keith on 2026-11-23, after a morning of two two-minute segments before every song, mostly about Debbie's yoghurts and Guildbert's pub quiz team.
+- [x] On the box that morning: The Squawk Box at 30% and then 20% talk (one segment of about 50 seconds a song; 45% had been two of about 90), a comedy-news script prompt "at the pace of a Radio One breakfast show" and a "double act" dynamic, and the rest of the day's plan rewritten as odd news and jokes. Guildbert's and Debbie's running obsessions (the pub quiz team, the yoghurt thief) cleared for good, the station's log scrubbed of them, and their "Yoghurt suspects" and "Quiz night" jingles deleted. The planner's example topic is no longer Debbie's yoghurt thief
+- [x] A week of material (06629eb): `[news]` looks back seven days, up to ten stories, newest first, and the planner is told to favour the newest. A new field, `[oddities]` ("Odd facts and history"): odd facts, and funny true stories from this day in past years, looked up on the web like the news so the writer still only uses facts it's given. The planner sees the topics of every show in the last week, not just the last three
+- [x] What was told: after each segment the writer lists what it told, a few words for each story, fact and joke, kept with its show in the station's log for a week. The writer and the planner get the week's list and are told not to tell any of it again, though a DJ can call back to one. Not the past scripts themselves: a week of them is about 100,000 characters, read before every segment
+- [x] Features: a talk show's own recurring features, each a name and how it works (up to eight), made on the show step with ideas to start from, such as Real or Fake?, Joke of the Day and Would You Rather. On a show with features, each link gets one in place of a banter move, never one of the last two, with a guest dropping in as often as any one feature; its surprises are only guests dropping in, never an argument, a prank or a bet; the running bits stay. The planner hears about them too. Listed on the station's page and the wizard's review. Migration 0027
+- [x] Fresh hooks: a DJ who hosts a talk show has their hooks rewritten by the AI one at a time, so each lasts about a month: a blank one first, then the oldest once it's 30 days old, one a night at most, between midnight and six. Never one they've had before: the old ones are kept and the AI is told them. A switch on the DJ's form, on to start with, says which is next and when. A hook changed by hand starts its month again. Existing hooks are spread out so they don't all change on the same night. Migration 0027
+- [x] Tests, the changelog, the help (Talk stations for features and the new field, The DJ for fresh hooks) and their screenshots, the prompt's chips among them. Built 2026-11-23: `hooks.py` (run from Housekeeping's hourly tick), migration 0027, features on the show step (`ShowStep.tsx`) with five ideas, the switch on the DJ's form. With fewer than four features and guests to deal from, fewer are rested, so they don't come round in a fixed order. The demo office's Guildbert and Debbie have new obsessions too, and its talk show has two features. `tools/squawk_jingles.py` no longer has the two deleted jingles
+- [ ] Deploy to office box, with the yoghurt thief and the pub quiz team put among Guildbert's and Debbie's old hooks so they never come back
+
+Done when: at the office, The Squawk Box plays one short segment a song, its features come round, guests still drop in, no story or joke is told twice in a week, and Guildbert and Debbie have new obsessions the morning after it's deployed.

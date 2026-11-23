@@ -6,7 +6,7 @@ DJ, on every station they host. The form takes a list of DJs, for a talk station
 the one DJ the editor had before."""
 
 import time
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
@@ -24,6 +24,7 @@ from guildfm.auth import require
 from guildfm.covers import painted_from
 from guildfm.db import get_session
 from guildfm.dj import voice_instructions
+from guildfm.hooks import changed_hooks, hooks_of, next_fresh
 from guildfm.jingles import forget
 from guildfm.models import (
     DJProfile,
@@ -61,7 +62,24 @@ Hook = Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)]
 Obsession = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
 Dynamic = Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)]
 Prompt = Annotated[str, StringConstraints(strip_whitespace=True, max_length=4000)]
+FeatureName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+FeatureDoes = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
 MOST_DJS = 6
+MOST_FEATURES = 8
+
+
+class Feature(BaseModel):
+    """One of a talk show's own recurring features: its name, and how it works."""
+
+    name: FeatureName
+    does: FeatureDoes
+
+
+class NextHook(BaseModel):
+    """The hook the AI rewrites next, and the morning it's new by."""
+
+    hook: str  # "pet_peeves", "soft_spots" or "obsession"
+    on: date
 
 
 class DJIn(BaseModel):
@@ -74,6 +92,7 @@ class DJIn(BaseModel):
     pet_peeves: Hook = ""
     soft_spots: Hook = ""
     obsession: Obsession = ""
+    fresh_hooks: bool = True  # the AI rewrites a hook about monthly
 
 
 class StationDJOut(BaseModel):
@@ -84,6 +103,8 @@ class StationDJOut(BaseModel):
     pet_peeves: str
     soft_spots: str
     obsession: str
+    fresh_hooks: bool
+    next_hook: NextHook | None  # with fresh hooks on
 
 
 class StationIn(BaseModel):
@@ -108,9 +129,13 @@ class StationIn(BaseModel):
     talk_station: bool = False
     talk_ratio: int = Field(40, ge=20, le=100)  # percent of its time that's talk
     script_prompt: Prompt = ""
+    features: list[Feature] = Field(default_factory=list, max_length=MOST_FEATURES)
 
     @model_validator(mode="after")
     def djs_make_sense(self) -> StationIn:
+        names = [feature.name.lower() for feature in self.features]
+        if len(set(names)) < len(names):
+            raise PydanticCustomError("features", "Each feature needs a name of its own.")
         if self.djs is None and self.dj and not self.dj_name:
             raise PydanticCustomError("dj_name", "Give the DJ a name.")
         hosts = self.hosts()
@@ -165,6 +190,7 @@ class StationOut(BaseModel):
     talk_station: bool
     talk_ratio: int
     script_prompt: str
+    features: list[Feature]
     art_url: str | None  # its cover, once OpenAI has painted one
     made_by: str | None
     playing: bool  # the station filling the gaps between requests
@@ -235,8 +261,28 @@ class PreviewIn(BaseModel):
     personality: Personality = ""
 
 
+def dj_out(dj: DJProfile, zone: ZoneInfo, now: float) -> StationDJOut:
+    """A station's DJ, as the editor shows them, with the hook the AI rewrites next."""
+    upcoming = None
+    if dj.fresh_hooks:
+        hook, on = next_fresh(dj, now, zone)
+        upcoming = NextHook(hook=hook, on=on)
+    return StationDJOut(
+        id=dj.id,
+        name=dj.name,
+        personality=dj.personality,
+        voice=dj.voice,
+        pet_peeves=dj.pet_peeves,
+        soft_spots=dj.soft_spots,
+        obsession=dj.obsession,
+        fresh_hooks=dj.fresh_hooks,
+        next_hook=upcoming,
+    )
+
+
 async def _out(db: AsyncSession, station: Station) -> StationOut:
     source = await current_source(db)
+    zone, now = ZoneInfo(await get_pref(db, "timezone")), time.time()
     last = await db.scalar(select(func.max(Play.played_at)).where(Play.station_id == station.id))
     return StationOut(
         id=station.id,
@@ -255,22 +301,12 @@ async def _out(db: AsyncSession, station: Station) -> StationOut:
         announce_requests=station.announce_requests,
         jingles=station.jingles,
         crossfade=station.crossfade,
-        djs=[
-            StationDJOut(
-                id=dj.id,
-                name=dj.name,
-                personality=dj.personality,
-                voice=dj.voice,
-                pet_peeves=dj.pet_peeves,
-                soft_spots=dj.soft_spots,
-                obsession=dj.obsession,
-            )
-            for dj in station.hosts
-        ],
+        djs=[dj_out(dj, zone, now) for dj in station.hosts],
         dynamic=station.dynamic,
         talk_station=station.talk_station,
         talk_ratio=station.talk_ratio,
         script_prompt=station.script_prompt,
+        features=[Feature(**feature) for feature in station.features or []],
         art_url=station.art_url,
         made_by=station.creator.display_name if station.creator else None,
         playing=bool(source and source.station_id == station.id),
@@ -308,6 +344,7 @@ STATION_FIELDS = (
 async def _apply(db: AsyncSession, station: Station, body: StationIn) -> None:
     for field in STATION_FIELDS:
         setattr(station, field, getattr(body, field))
+    station.features = [feature.model_dump() for feature in body.features]
     # The one-DJ form has no hooks, so it leaves the DJ's alone.
     hooks = body.djs is not None
     station.set_hosts([await _host(db, dj, hooks) for dj in body.hosts()])
@@ -332,11 +369,11 @@ async def _host(db: AsyncSession, dj: DJIn, hooks: bool) -> DJProfile:
         db.add(host)
     host.name, host.personality, host.voice = dj.name, dj.personality, dj.voice
     if hooks:
-        host.pet_peeves, host.soft_spots, host.obsession = (
-            dj.pet_peeves,
-            dj.soft_spots,
-            dj.obsession,
-        )
+        given = hooks_of(dj)
+        host.hooks_at, host.old_hooks = changed_hooks(host, given, time.time())
+        for hook, text in given.items():
+            setattr(host, hook, text)
+        host.fresh_hooks = dj.fresh_hooks
     return host
 
 

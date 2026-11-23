@@ -353,6 +353,12 @@ function Show({ station, change, onError }: { station: Station; change?: () => v
         <span className={`${p.text} ${p.clamp3}`}>{station.script_prompt || "Left to them."}</span>
       </div>
       <div className={p.pair}>
+        <span className={p.small}>Features</span>
+        <span className={`${p.text} ${p.clamp2}`}>
+          {station.features.length ? `${listed(station.features.map((f) => f.name))}.` : "None: banter, bets and the odd argument."}
+        </span>
+      </div>
+      <div className={p.pair}>
         <span className={p.small}>How they get on</span>
         <span className={`${p.text} ${p.clamp2}`}>{station.dynamic || "Left to them."}</span>
       </div>

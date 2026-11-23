@@ -1,4 +1,4 @@
-import type { DJProfile, StationDJ, StationFields, Voices } from "../api";
+import type { DJProfile, Feature, HookName, NextHook, StationDJ, StationFields, Voices } from "../api";
 import { isEleven } from "../components/useVoices";
 import { listed } from "../pages/announcementText";
 
@@ -62,6 +62,7 @@ export const BLANK: StationFields = {
   talk_station: false,
   talk_ratio: 45,
   script_prompt: "",
+  features: [],
 };
 
 export const blankDraft = (): Draft => ({ ...BLANK, kind: null, spare: [] });
@@ -210,6 +211,8 @@ export function missing(step: Step, draft: Draft, voices: Voices | null): string
       }
       return null;
     }
+    case "show":
+      return featuresMissing(draft.features);
     default:
       return null;
   }
@@ -312,6 +315,8 @@ export const asStationDJ = (dj: DJProfile): StationDJ => ({
   pet_peeves: dj.pet_peeves,
   soft_spots: dj.soft_spots,
   obsession: dj.obsession,
+  fresh_hooks: dj.fresh_hooks,
+  next_hook: dj.next_hook,
 });
 
 /** A phrase to hear a DJ by, with tags for an ElevenLabs voice to act out. */
@@ -325,4 +330,63 @@ export function sampleLine(voice: string, style: "announce" | "commentary" = "an
   return tags
     ? "That was Stevie Wonder. [excited] Next up, a bit of Aretha to keep things moving."
     : "That was Stevie Wonder. Next up, a bit of Aretha to keep things moving.";
+}
+
+const HOOK_NAMES: Record<HookName, string> = {
+  pet_peeves: "pet peeves",
+  soft_spots: "soft spots",
+  obsession: "running obsession",
+};
+
+/** What "New hooks every month" says: how it works, and which hook is next and when, as saved. */
+export function freshHooksText(on: boolean, next: NextHook | null | undefined, now = new Date()): string {
+  if (!on) return "Off: they keep these until you change them.";
+  const how = "The AI rewrites one at a time, so each lasts about a month. Blank ones first.";
+  if (!next) return how;
+  const day = new Date(`${next.on}T12:00:00`);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  tomorrow.setHours(23, 59, 59);
+  const when =
+    day <= tomorrow
+      ? "tonight"
+      : `by ${day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}`;
+  return `${how} Next: their ${HOOK_NAMES[next.hook]}, ${when}.`;
+}
+
+/** As many features as a talk show can have (MOST_FEATURES in api/stations.py). */
+export const MOST_FEATURES = 8;
+
+/** Features to start from, on the show step. */
+export const FEATURE_IDEAS: Feature[] = [
+  {
+    name: "Real or Fake?",
+    does: "One reads out an odd headline, either a real one from the news or one they've made up, and the other guesses which. Then they say which it was.",
+  },
+  {
+    name: "Joke of the Day",
+    does: "One tells a proper joke, with a setup and a punchline, and the other rates it out of ten.",
+  },
+  {
+    name: "Would You Rather",
+    does: "One asks the other a daft would-you-rather, and they each make their case.",
+  },
+  {
+    name: "Odd One Out",
+    does: "One names three things, and the other has to spot the odd one out and say why.",
+  },
+  {
+    name: "Fact Off",
+    does: "Each brings an odd fact from what's going on, and they agree whose was better.",
+  },
+];
+
+/** Why the features can't be saved yet, or null. */
+export function featuresMissing(features: Feature[]): string | null {
+  if (features.some((f) => !f.name.trim() || !f.does.trim())) {
+    return "Give each feature a name, and say how it works.";
+  }
+  const names = features.map((f) => f.name.trim().toLowerCase());
+  if (new Set(names).size < names.length) return "Each feature needs a name of its own.";
+  return null;
 }

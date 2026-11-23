@@ -1,16 +1,21 @@
 """DJs, for the station editor to choose from: each can host any number of stations."""
 
+import time
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm.api.stations import NextHook
 from guildfm.auth import require
 from guildfm.db import get_session
+from guildfm.hooks import next_fresh
 from guildfm.models import DJProfile, Station, StationDJ, User
 from guildfm.permissions import Permission
+from guildfm.prefs import get_pref
 
 router = APIRouter(prefix="/djs")
 Db = Annotated[AsyncSession, Depends(get_session)]
@@ -30,6 +35,8 @@ class DJOut(BaseModel):
     pet_peeves: str
     soft_spots: str
     obsession: str
+    fresh_hooks: bool  # the AI rewrites a hook about monthly
+    next_hook: NextHook | None  # with fresh hooks on
     stations: list[HostedOut]  # the stations they host, by name
 
 
@@ -45,6 +52,14 @@ async def djs(_: Maker, db: Db) -> list[DJOut]:
     stations: dict[int, list[HostedOut]] = {}
     for dj_id, station_id, name in hosting:
         stations.setdefault(dj_id, []).append(HostedOut(id=station_id, name=name))
+    zone, now = ZoneInfo(await get_pref(db, "timezone")), time.time()
+
+    def upcoming(host: DJProfile) -> NextHook | None:
+        if not host.fresh_hooks:
+            return None
+        hook, on = next_fresh(host, now, zone)
+        return NextHook(hook=hook, on=on)
+
     return [
         DJOut(
             id=host.id,
@@ -54,6 +69,8 @@ async def djs(_: Maker, db: Db) -> list[DJOut]:
             pet_peeves=host.pet_peeves,
             soft_spots=host.soft_spots,
             obsession=host.obsession,
+            fresh_hooks=host.fresh_hooks,
+            next_hook=upcoming(host),
             stations=stations.get(host.id, []),
         )
         for host in hosts

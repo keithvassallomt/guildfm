@@ -11,13 +11,20 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Talk shows can bring in odd facts and funny true stories from this day in past years, with
   the new "Odd facts and history" chip (`[oddities]`), for when the news runs dry.
+- Talk shows can have features of their own, such as Real or Fake? or Joke of the Day: one comes
+  round each time the DJs talk, in place of the usual banter, with other DJs still dropping in
+  now and then. A show with features has no arguments or pranks. Start from GuildFM's ideas or
+  write your own, on the show's settings.
+- "New hooks every month" on a talk show DJ: overnight, the AI rewrites one of their hooks at a
+  time, blank ones first, so each lasts about a month and never comes back. On to start with;
+  the switch says which is next and when.
 
 ### Changed
 
 - A talk show's odd news now goes back a week instead of a day or two, up to ten stories, newest
   first, so the DJs have more to talk about.
-- A talk show remembers what it talked about for a week rather than for its last three shows, so
-  a story from earlier in the week isn't told again.
+- A talk show remembers every story, fact and joke it told for a week, not just what its last
+  three shows were about, so nothing is told twice in that time.
 
 ## [0.1.11] - 2026-11-20
 

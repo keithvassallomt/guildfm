@@ -125,6 +125,7 @@ export function DJStep({ draft, place, change, voices, known, stationId, onError
       pet_peeves: "",
       soft_spots: "",
       obsession: "",
+      fresh_hooks: true,
     };
   };
 

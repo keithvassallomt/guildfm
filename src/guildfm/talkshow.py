@@ -60,12 +60,16 @@ from guildfm.talk import (
     deal_bits,
     deal_hooks,
     deal_move,
+    does,
+    is_feature,
     logged,
     plan_show,
     roll_happening,
     segment_lengths,
     talks,
+    told_lately,
     with_hooks,
+    with_told,
 )
 
 log = logging.getLogger(__name__)
@@ -102,6 +106,7 @@ class Show:
     prompt: str
     ratio: int
     log: list[dict[str, Any]]  # the station's last few shows
+    features: list[dict[str, str]]  # its own recurring features, in place of banter moves
 
     @classmethod
     def of(cls, station: Station) -> Show:
@@ -115,6 +120,7 @@ class Show:
             station.script_prompt,
             station.talk_ratio,
             list(station.talk_log),
+            list(station.features or []),
         )
 
     @property
@@ -589,7 +595,7 @@ class TalkShow:
         """A move for a link, or a stretch of talk at 100%, remembered so it rests. `song` is
         whether a song just played, for the talk to be about."""
         moves = list(air.memory.get("moves", []))
-        move = deal_move(self.rng, air.hosts, bool(air.guests), moves, song)
+        move = deal_move(self.rng, air.hosts, bool(air.guests), moves, song, air.show.features)
         air.memory["moves"] = [*moves, move][-MOVES_REMEMBERED:]
         return move
 
@@ -634,6 +640,8 @@ class TalkShow:
             before=before,
             up_next=up_next,
             move=move,
+            does=does(move, show.features) if move else "",
+            feature=is_feature(move, show.features),
             mention=mention,
             skipped=_either(self._skips.pop(show.station_id, None), memory.pop("skipped", None)),
             until=clock(air.until) if air.until is not None else None,
@@ -658,6 +666,7 @@ class TalkShow:
                 notes=memory.get("notes", ""),
                 said=said,
                 seconds=seconds,
+                lately=told_lately(show.log, air.now.date()),
             )
             turns, notes = segment.turns, segment.notes
             if segment.fixed:
@@ -682,6 +691,7 @@ class TalkShow:
             said=[*memory.get("said", []), *kept][-SAID_KEPT:],
         )
         await self._remember(show.station_id, memory)
+        await self._log_told(show.station_id, _day(air.now), segment.told)
         # What it cost, to compare with the talk slider's estimate after a day at the office.
         log.info(
             "%s: segment %d of %d, %.0f seconds of talk, %d turns, %d characters, %d credits; "
@@ -732,7 +742,7 @@ class TalkShow:
             found = await material(db, self._awareness, station, location, now) if station else {}
         bits = deal_bits(self.rng, show.log)
         hooks = deal_hooks(self.rng, show.hosts, show.log)
-        happening = roll_happening(self.rng, bool(air.guests))
+        happening = roll_happening(self.rng, bool(air.guests), banter=not show.features)
         plan = await plan_show(
             self._ai,
             station=show.name,
@@ -747,6 +757,7 @@ class TalkShow:
             happening=happening,
             log=show.log,
             until=clock(until) if until is not None else None,
+            features=show.features,
         )
         plan["hooks"] = hooks
         log.info(
@@ -762,6 +773,17 @@ class TalkShow:
             or "none",
         )
         return plan
+
+    async def _log_told(self, station_id: int, day: str, items: list[str]) -> None:
+        """What a segment told, kept with today's show in the station's log for a week, so no
+        show tells it again."""
+        if not items:
+            return
+        async with self._sessions() as db:
+            station = await db.get(Station, station_id)
+            if station:
+                station.talk_log = with_told(station.talk_log, day, items)
+                await db.commit()
 
     async def _remember(self, station_id: int, memory: dict[str, Any]) -> None:
         """Keep the show's memory on the source, so a restart doesn't lose it. Let go if the

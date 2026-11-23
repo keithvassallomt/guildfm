@@ -539,3 +539,54 @@ def test_all_talk_talks_on_and_still_plays_requests(
     said = told.split("the songs that played between.", 1)[1]
     assert '[A song played: "Dreams" by Fleetwood Mac]\n' in said
     assert "It has just finished" not in said
+
+
+def test_what_a_segment_told_is_logged_and_the_next_is_told_it(
+    client: TestClient, openai: FakeOpenAI, speakers: FakeSpeakers
+) -> None:
+    sign_in(client, *ADMIN)
+    station = on_air(client, openai)
+    line_up_next(client, speakers)
+    (logged,) = client.portal.call(_log, client.app.state.sessionmaker, station)
+    assert logged["told"] == ["story: Priya asks for ABBA"]
+
+    next_song(client, speakers)
+    line_up_next(client, speakers)
+    assert "story: Priya asks for ABBA" in segments(openai)[1]
+    assert "don't tell any of them again" in segments(openai)[1]
+
+
+async def _features(sessionmaker, station_id: int) -> None:
+    async with sessionmaker() as db:
+        station = await db.get(Station, station_id)
+        station.features = [
+            {"name": "Joke of the Day", "does": "One tells a joke; the other rates it."},
+            {"name": "Real or Fake?", "does": "One reads a headline; the other guesses."},
+        ]
+        await db.commit()
+
+
+def test_a_show_with_features_has_one_a_link(
+    client: TestClient, openai: FakeOpenAI, speakers: FakeSpeakers
+) -> None:
+    sign_in(client, *ADMIN)
+    openai.picks = FLEETWOOD
+    sessionmaker = client.app.state.sessionmaker
+    station = client.portal.call(_station, sessionmaker, 30)
+    client.portal.call(_features, sessionmaker, station)
+    client.post(f"/api/stations/{station}/play").raise_for_status()
+    client.portal.call(client.app.state.radio.settle)
+    client.post("/api/playback/play").raise_for_status()
+    line_up_next(client, speakers)
+    next_song(client, speakers)
+    line_up_next(client, speakers)
+
+    (plan,) = openai.asked_for("show_plan")
+    assert "- Joke of the Day: One tells a joke; the other rates it." in plan["input"]
+    # Each link has one of them, and no guest: there's no other DJ to drop in.
+    for told in segments(openai):
+        dealt = [
+            name for name in ("Joke of the Day", "Real or Fake?") if f"features, {name}:" in told
+        ]
+        assert len(dealt) == 1
+        assert "Somewhere in this link" not in told  # no banter move
