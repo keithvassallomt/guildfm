@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-11-23
+
 ### Added
 
 - Talk shows can bring in odd facts and funny true stories from this day in past years, with
