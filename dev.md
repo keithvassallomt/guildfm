@@ -32,7 +32,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [ ] Stage 20: Talk stations
 - [x] Stage 21: Making and editing stations
 - [x] Stage 22: Just a name
-- [ ] Stage 23: Radio One, not Radio Four
+- [x] Stage 23: Radio One, not Radio Four
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -398,6 +398,6 @@ Goal: The Squawk Box is short, punchy and never the same twice: odd news, odd fa
 - [x] Features: a talk show's own recurring features, each a name and how it works (up to eight), made on the show step with ideas to start from, such as Real or Fake?, Joke of the Day and Would You Rather. On a show with features, each link gets one in place of a banter move, never one of the last two, with a guest dropping in as often as any one feature; its surprises are only guests dropping in, never an argument, a prank or a bet; the running bits stay. The planner hears about them too. Listed on the station's page and the wizard's review. Migration 0027
 - [x] Fresh hooks: a DJ who hosts a talk show has their hooks rewritten by the AI one at a time, so each lasts about a month: a blank one first, then the oldest once it's 30 days old, one a night at most, between midnight and six. Never one they've had before: the old ones are kept and the AI is told them. A switch on the DJ's form, on to start with, says which is next and when. A hook changed by hand starts its month again. Existing hooks are spread out so they don't all change on the same night. Migration 0027
 - [x] Tests, the changelog, the help (Talk stations for features and the new field, The DJ for fresh hooks) and their screenshots, the prompt's chips among them. Built 2026-11-23: `hooks.py` (run from Housekeeping's hourly tick), migration 0027, features on the show step (`ShowStep.tsx`) with five ideas, the switch on the DJ's form. With fewer than four features and guests to deal from, fewer are rested, so they don't come round in a fixed order. The demo office's Guildbert and Debbie have new obsessions too, and its talk show has two features. `tools/squawk_jingles.py` no longer has the two deleted jingles
-- [ ] Deploy to office box, with the yoghurt thief and the pub quiz team put among Guildbert's and Debbie's old hooks so they never come back
+- [x] Deploy to office box, with the yoghurt thief and the pub quiz team put among Guildbert's and Debbie's old hooks so they never come back. 0.1.12, on 2026-11-23, with The Squawk Box given four features: Real or Fake?, Joke of the Day, Fact Off and Odd One Out
 
 Done when: at the office, The Squawk Box plays one short segment a song, its features come round, guests still drop in, no story or joke is told twice in a week, and Guildbert and Debbie have new obsessions the morning after it's deployed.
