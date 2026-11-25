@@ -1,6 +1,6 @@
 ---
 title: Settings
-summary: The voting rules, Best Voted, what plays when the queue runs out, the voice and the connections.
+summary: The voting rules, Best Voted, what plays when the queue runs out, the voice, the office location and the connections.
 area: running
 order: 4
 needs: change_settings
