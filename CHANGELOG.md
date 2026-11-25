@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-11-25
+
 ### Added
 
 - Other ways in for people in the office whose address GuildFM can't see, such as iPhones with
