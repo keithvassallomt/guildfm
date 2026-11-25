@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-11-25
+
 ### Added
 
 - A "Request a song" button on Now Playing (top right on a desktop, under the song on a
