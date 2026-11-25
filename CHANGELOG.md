@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-11-25
+
 ### Changed
 
 - The "Connect to TJardinePrivate" page tells iPhone users already on the Wi-Fi to turn off
