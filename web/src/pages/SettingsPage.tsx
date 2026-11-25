@@ -9,6 +9,7 @@ import {
   type SettingsValues,
   VOICES,
 } from "../api";
+import { Button } from "../components/Button";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { HelpLink } from "../components/HelpLink";
 import { Icon } from "../components/Icon";
@@ -310,6 +311,7 @@ export function SettingsPage() {
               <VoicePreview voice={values.announcement_voice} />
             </Section>
 
+            <OfficeLocation place={values.office_location} onChange={setSettings} />
             <SpotifyConnection />
             <SonosStatus />
             <MonitorMode />
@@ -431,6 +433,95 @@ function SaveOnLeave({ label, value, hint, onSave }: SaveOnLeaveProps) {
       onBlur={commit}
       onKeyDown={(event) => event.key === "Enter" && commit()}
     />
+  );
+}
+
+type Place = SettingsValues["office_location"];
+
+/** Where the office is, so people whose address isn't the office's (iPhones with iCloud Private
+ * Relay, say) can confirm they're in it. It's set from this browser's own location, so it doesn't
+ * go through the settings' save. */
+function OfficeLocation({ place, onChange }: { place: Place; onChange: (s: SettingsState) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const change = async (method: "PUT" | "DELETE", body?: object) => {
+    try {
+      onChange(await api<SettingsState>(method, "/settings/office-location", body));
+    } catch (caught) {
+      setError(errorText(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const useHere = () => {
+    if (!navigator.geolocation) {
+      setError("This browser can't share its location.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) =>
+        change("PUT", {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: coords.accuracy,
+        }),
+      (failure) => {
+        setBusy(false);
+        setError(
+          failure.code === failure.PERMISSION_DENIED
+            ? "This browser isn't allowed to share your location. Allow it for this site and try again."
+            : "This browser couldn't work out where you are. Try again.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+    );
+  };
+
+  const remove = () => {
+    setBusy(true);
+    setError(null);
+    change("DELETE");
+  };
+
+  const map =
+    place &&
+    `https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=18/${place.latitude}/${place.longitude}`;
+
+  return (
+    <Section title="Office location">
+      <p className={styles.muted}>
+        Someone in the office whose address GuildFM can't see, such as an iPhone with iCloud
+        Private Relay, can confirm their location instead, within 150 m of here. Set it while
+        you're in the office.
+      </p>
+      <p className={styles.muted}>
+        {place && map ? (
+          <>
+            Set to {place.latitude.toFixed(5)}, {place.longitude.toFixed(5)}.{" "}
+            <a href={map} target="_blank" rel="noreferrer" className={s.link}>
+              Show on a map
+            </a>
+          </>
+        ) : (
+          "Not set, so nobody can get in by their location."
+        )}
+      </p>
+      <div className={s.buttons}>
+        <Button variant={place ? "secondary" : "primary"} onClick={useHere} disabled={busy}>
+          {busy ? "Finding you..." : "Use where I am now"}
+        </Button>
+        {place && (
+          <Button variant="ghost" onClick={remove} disabled={busy}>
+            Remove
+          </Button>
+        )}
+      </div>
+      <FormError message={error} />
+    </Section>
   );
 }
 

@@ -286,6 +286,8 @@ export type SettingsValues = {
   schedule: Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", Hours>;
   timezone: string;
   weather_location: string;
+  /** Where the office is, for people to confirm they're in it. */
+  office_location: { latitude: number; longitude: number } | null;
   announcement_voice: string;
   /** What GuildFM is, for the AI writing system idents. */
   about: string;

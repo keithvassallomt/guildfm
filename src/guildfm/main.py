@@ -258,5 +258,10 @@ def create_app(
     if settings.public_url:
         send_browsers_to(app, settings.public_url)
     # Outermost, so visitors from outside the office get no further.
-    app.add_middleware(OfficeOnly, office=office or Office())
+    app.add_middleware(
+        OfficeOnly,
+        office=office or Office(),
+        secret=settings.guildfm_secret_key.get_secret_value(),
+        **({"now": now} if now else {}),
+    )
     return app

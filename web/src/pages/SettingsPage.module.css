@@ -149,3 +149,13 @@
     width: 100%;
   }
 }
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link {
+  color: var(--accent);
+}

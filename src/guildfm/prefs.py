@@ -31,6 +31,8 @@ DEFAULTS: dict[str, Any] = {
     },
     "timezone": "Europe/London",
     "weather_location": "Carlisle, Cumbria, UK",
+    # Where the office is, {"latitude", "longitude"}, for people to confirm they're in it.
+    "office_location": None,
     "announcement_voice": "cedar",
     "monitor": False,  # monitor mode: playing in browsers instead of on the speakers
     "monitor_skip_music": False,  # in monitor mode, songs only play until the talk is ready

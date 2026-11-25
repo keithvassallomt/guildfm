@@ -34,6 +34,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 22: Just a name
 - [x] Stage 23: Radio One, not Radio Four
 - [x] Stage 24: Request from Now Playing
+- [ ] Stage 25: Other ways in
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -412,3 +413,14 @@ Goal: anyone can request a song straight from Now Playing, without looking for t
 - [x] Deploy to office box. 0.1.14, on 2026-11-25, with a What's new note
 
 Done when: at the office, someone on Now Playing can see how to request a song at a glance, on a phone and a desktop, and request one without leaving the page.
+
+## Stage 25: Other ways in
+Goal: someone in the office whose address isn't the office's still gets in, without being told to join a Wi-Fi they're already on. Asked for by Keith on 2026-11-25, after an iPhone on TJardinePrivate was turned away: iCloud Private Relay sent Safari out through Apple's relay (104.28.86.58, a Manchester exit), so GuildFM saw the relay, not the office.
+- [x] Office location: a new admin setting, set with **Use where I am now** while in the office (the browser's own location), shown with a map link, and turned off again with **Remove**. Nothing changes on the Connect page until it's set
+- [x] **Confirm my location** on the Connect page, when the office location is set: the browser's precise location, let in within 150 m of the office. A reading only good to more than 500 m (Precise Location off) is turned down with how to turn it on; a far one says how far. The journal notes each check's distance and accuracy, not where anyone was
+- [x] A day pass: getting in by location leaves a signed cookie that lets the browser in until midnight, office time, whatever its address
+- [x] Private Relay, in Safari on an iPhone, iPad or Mac only: how to let GuildFM see the address (the page menu's **Show IP Address** on an iPhone or iPad, **View › Reload and Show IP Address** on a Mac), with a GuildFM screenshot of each (made from Keith's downloads with GPT Image 2.6). Safari only shows the address until the tab reloads, so a browser turned away in the last half hour that comes back from the office's address gets the day pass too. On an iPhone, also how to stop it for good (Limit IP Address Tracking off for TJardinePrivate). Not on Android or other browsers
+- [x] The help (Settings gets Office location and its shot) and the changelog
+- [ ] Deploy to office box
+
+Done when: an iPhone with Private Relay on, on TJardinePrivate, gets in either way and stays in for the day, and a phone on mobile data away from the office still sees the Wi-Fi page.

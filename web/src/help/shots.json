@@ -1127,6 +1127,24 @@
    }
   }
  },
+ "settings-office": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 274,
+    "v": "355a3984",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 261,
+    "v": "61728781",
+    "screen": false
+   }
+  }
+ },
  "settings-runs-out": {
   "phone": {
    "admin": {

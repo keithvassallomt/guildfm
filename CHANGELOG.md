@@ -7,6 +7,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Other ways in for people in the office whose address GuildFM can't see, such as iPhones with
+  iCloud Private Relay. The "Connect to TJardinePrivate" page now offers **Confirm my
+  location**, which lets them in within 150 m of the office. In Safari on an iPhone, iPad or
+  Mac, it also shows how to let GuildFM see the address (Show IP Address), with a picture.
+  Either way, that browser gets in until midnight.
+- Office location, a new setting: admins set it with **Use where I am now** while in the
+  office. Until it's set, nobody gets in by location.
+
 ## [0.1.14] - 2026-11-25
 
 ### Added

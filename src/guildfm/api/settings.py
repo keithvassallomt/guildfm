@@ -74,6 +74,18 @@ class SettingsIn(BaseModel):
     about: About | None = None
 
 
+class Place(BaseModel):
+    """Where an admin is, from their browser, to set as the office."""
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    accuracy: float = Field(ge=0)
+
+
+# An admin's reading has to be precise: people are let in within 150 m of it.
+PLACE_METRES = 100
+
+
 class StationChoice(BaseModel):
     id: int
     name: str
@@ -118,4 +130,22 @@ async def change(body: SettingsIn, _: Admin, request: Request, db: Db) -> Settin
     await request.app.state.queue.changed()
     await request.app.state.schedule.tick()
     await request.app.state.live.broadcast("playback", request.app.state.playback.state())
+    return await settings_out(db, request)
+
+
+@router.put("/office-location")
+async def set_office(body: Place, _: Admin, request: Request, db: Db) -> SettingsOut:
+    if body.accuracy > PLACE_METRES:
+        raise HTTPException(
+            422,
+            f"Your location only came through to within {round(body.accuracy)} m. Turn on "
+            "precise location for this browser, or try again nearer a window.",
+        )
+    await set_pref(db, "office_location", {"latitude": body.latitude, "longitude": body.longitude})
+    return await settings_out(db, request)
+
+
+@router.delete("/office-location")
+async def remove_office(_: Admin, request: Request, db: Db) -> SettingsOut:
+    await set_pref(db, "office_location", None)
     return await settings_out(db, request)

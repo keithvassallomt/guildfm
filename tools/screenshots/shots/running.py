@@ -84,6 +84,13 @@ async def settings_voice(s: Scene) -> Frame:
     return section(s, "AI and voice")
 
 
+@shot("settings-office", ADMINS)
+async def settings_office(s: Scene) -> Frame:
+    await open_settings(s)
+    await s.ring(section(s, "Office location").get_by_role("button", name="Use where I am now"))
+    return section(s, "Office location")
+
+
 @shot("settings-connections", ADMINS)
 async def settings_connections(s: Scene) -> Frame:
     await open_settings(s)

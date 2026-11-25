@@ -42,6 +42,18 @@ Choosing **Requests only** on Now Playing is different: then nothing takes over.
 
 ![AI and voice](shot:settings-voice)
 
+## Office location
+
+GuildFM lets people in when they're on the office Wi-Fi, but some phones hide that: an iPhone with iCloud Private Relay, for example, reaches GuildFM through Apple. Once the office's location is set here, the page that turns them away offers **Confirm my location**, which lets them in if they're within 150 m of it.
+
+- **Use where I am now**: makes where this device is the office's location. Do it in the office, with precise location allowed. A location that's only rough is turned down.
+- **Show on a map**: to check it's in the right place.
+- **Remove**: turns location checks off.
+
+Confirming their location, or letting Safari show their address, lets that browser in until midnight.
+
+![Office location](shot:settings-office)
+
 ## Connections
 
 - **Spotify account**: the account curators import playlists from. Spotify asks for it to be connected again every six months, and the page says by when. It can only be connected from the GuildFM computer itself, so open GuildFM there, sign in, and tap **Reconnect** (or ask whoever set GuildFM up).
