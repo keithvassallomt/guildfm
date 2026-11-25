@@ -33,6 +33,7 @@ import { useHistory } from "../live/useHistory";
 import { useNow } from "../live/useNow";
 import { usePlayback } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
+import { RequestDialog } from "../search/RequestDialog";
 import n from "./NowPlaying.module.css";
 import { Bands, OnAirBars, type Sources, SourceTabs } from "./NowSources";
 import styles from "./Page.module.css";
@@ -58,6 +59,7 @@ export function NowPlayingPage() {
   const { show, toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [announcing, setAnnouncing] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const playing = playback?.status === "playing";
 
   const send: Send = async (method, path, body) => {
@@ -147,6 +149,7 @@ export function NowPlayingPage() {
     pickStation,
     pickLineup,
     requestsOnly,
+    request: can("add_tracks") ? () => setRequesting(true) : null,
   };
   const card = (
     <NowCard
@@ -161,14 +164,22 @@ export function NowPlayingPage() {
       transport={can("transport")}
       office={can("control_playback")}
       onAnnounce={can("announce") ? () => setAnnouncing(true) : null}
+      // On desktops it's in the header instead, where the controls can't push it out of sight.
+      onRequest={wide ? null : sources.request}
+      outlined={can("transport")}
     />
   );
-
   return (
     <div className={`${styles.page} ${n.page}`} data-paused={!playing}>
       <header className={styles.header}>
         <h1 className={styles.title}>Now Playing</h1>
         <div className={n.headerEnd}>
+          {wide && sources.request && (
+            <Button className={`${n.requestTop} ${n.nudge}`} onClick={sources.request}>
+              <Icon name="plus" size={18} strokeWidth={2.6} />
+              Request a song
+            </Button>
+          )}
           {playback && (
             <StatusChip tone={statusTones[playback.status]}>{chipLabel(playback)}</StatusChip>
           )}
@@ -196,6 +207,12 @@ export function NowPlayingPage() {
       )}
 
       <HistoryList {...history} />
+      <RequestDialog
+        open={requesting}
+        onClose={() => setRequesting(false)}
+        queue={queue}
+        onQueue={applyQueue}
+      />
       <QuickAnnouncement
         open={announcing}
         onClose={() => setAnnouncing(false)}
@@ -218,6 +235,10 @@ type NowCardProps = {
   transport: boolean;
   office: boolean;
   onAnnounce: (() => void) | null;
+  /** On phones: a request button above the controls, so it's on screen as the page opens. */
+  onRequest: (() => void) | null;
+  /** Outlined rather than orange, for those whose card already has an orange Play button. */
+  outlined: boolean;
 };
 
 function NowCard({
@@ -232,6 +253,8 @@ function NowCard({
   transport,
   office,
   onAnnounce,
+  onRequest,
+  outlined,
 }: NowCardProps) {
   const track = playback?.track;
   // Spotify's details for GuildFM's own songs, the speakers' for anything else.
@@ -294,6 +317,17 @@ function NowCard({
         </>
       ) : (
         <p className={n.nothing}>Nothing playing right now.</p>
+      )}
+      {onRequest && (
+        <Button
+          block
+          variant={outlined ? "secondary" : "primary"}
+          className={n.nudge}
+          onClick={onRequest}
+        >
+          <Icon name="plus" size={18} strokeWidth={2.6} />
+          Request a song
+        </Button>
       )}
       {playback && transport && <Transport playback={playback} busy={busy} send={send} />}
       {playback && office && (

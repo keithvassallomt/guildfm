@@ -7,6 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A "Request a song" button on Now Playing (top right on a desktop, under the song on a
+  phone) opens the same search as the Queue page, so you can request without leaving the page. When nobody has requested
+  anything, the Queue band and tab offer it too.
+
 ## [0.1.13] - 2026-11-25
 
 ### Changed

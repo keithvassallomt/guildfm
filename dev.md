@@ -33,6 +33,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 21: Making and editing stations
 - [x] Stage 22: Just a name
 - [x] Stage 23: Radio One, not Radio Four
+- [ ] Stage 24: Request from Now Playing
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -401,3 +402,13 @@ Goal: The Squawk Box is short, punchy and never the same twice: odd news, odd fa
 - [x] Deploy to office box, with the yoghurt thief and the pub quiz team put among Guildbert's and Debbie's old hooks so they never come back. 0.1.12, on 2026-11-23, with The Squawk Box given four features: Real or Fake?, Joke of the Day, Fact Off and Odd One Out
 
 Done when: at the office, The Squawk Box plays one short segment a song, its features come round, guests still drop in, no story or joke is told twice in a week, and Guildbert and Debbie have new obsessions the morning after it's deployed.
+
+## Stage 24: Request from Now Playing
+Goal: anyone can request a song straight from Now Playing, without looking for the way in. Suggested by someone at the office and asked for by Keith on 2026-11-25. Now Playing had no way to request: only the small "Open the queue" link in the Queue band, then the search on the Queue page. On a phone, the Sources tabs open on whatever's on air, so with a playlist or station on, the link wasn't on screen at all.
+- [x] One request dialog: the Queue page's search-and-request dialog moved into `search/RequestDialog.tsx`, used by both pages
+- [x] A **Request a song** button for anyone who can add songs, always on screen as the page opens: on desktops, orange in the page header beside the status chip; on phones, full width in the now-playing card between the votes and the controls, orange for listeners and outlined for curators and admins, whose card already has an orange Play button. First built under the card, where a curator's or admin's controls pushed it below the fold on a 1280×800 screen. It gives a little shake every six seconds, keeps still under the pointer, and not at all for anyone who has asked for reduced motion. Requesting doesn't leave the page, and the Queue band updates as usual
+- [x] An empty queue says how to fill it: "No requests waiting" in the Queue band and tab has a **Request a song** link to the same dialog
+- [x] The help (Now Playing gets a Request a song section and a new `now-request` shot; Requesting starts from Now Playing) and the Now Playing shots retaken, and the changelog
+- [ ] Deploy to office box
+
+Done when: at the office, someone on Now Playing can see how to request a song at a glance, on a phone and a desktop, and request one without leaving the page.

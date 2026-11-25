@@ -25,6 +25,19 @@ The bar shows how far through the song it is. The badge at the top right says wh
 
 Under the bar are thumbs for voting on the song while it plays. Thumbs down never stop it, but the votes count: see [Requesting songs and voting](topic:requesting).
 
+## Request a song
+
+::: desktop
+At the top right, click **Request a song** to ask for something you'd like to hear.
+:::
+::: phone
+Under the song, tap **Request a song** to ask for something you'd like to hear.
+:::
+
+You search and add it without leaving Now Playing, and it joins the **Queue**. See [Requesting songs and voting](topic:requesting).
+
+![Request a song](shot:now-request)
+
 ## Where the music comes from
 
 Requests always play first. Between them, a playlist, a radio station or a line-up fills the gaps.

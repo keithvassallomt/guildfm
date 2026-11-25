@@ -90,7 +90,8 @@
   .glow,
   .needle,
   .timeNeedle,
-  .dayNeedle {
+  .dayNeedle,
+  .nudge {
     animation: none;
   }
 
@@ -105,6 +106,45 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Desktops: the request button, top right where it's always in view. */
+.requestTop {
+  margin-right: 10px;
+}
+
+/* The request button gives a little shake every few seconds, so it's noticed, and keeps still
+   while the pointer's on it. */
+.nudge {
+  animation: nudge 6s ease-in-out 1.5s infinite;
+}
+
+.nudge:hover,
+.nudge:focus-visible {
+  animation: none;
+}
+
+@keyframes nudge {
+  0%,
+  12%,
+  100% {
+    transform: translateX(0);
+  }
+  2% {
+    transform: translateX(-5px);
+  }
+  4% {
+    transform: translateX(5px);
+  }
+  6% {
+    transform: translateX(-4px);
+  }
+  8% {
+    transform: translateX(3px);
+  }
+  10% {
+    transform: translateX(-1px);
+  }
 }
 
 .avatar,
@@ -618,7 +658,34 @@
   line-height: 1.45;
   color: var(--muted);
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.emptyTile p,
+.emptyRow p {
+  margin: 0;
+}
+
+/* Under "No requests waiting": straight to the request dialog. */
+.emptyAction {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
+  gap: 6px;
+}
+
+.emptyAction:hover {
+  text-decoration: underline;
 }
 
 /* Phones: the sources as tabs */
@@ -712,6 +779,15 @@
   font-size: 14px;
   line-height: 1.45;
   color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.emptyRow .emptyAction {
+  min-height: var(--touch);
+  font-size: 14px;
 }
 
 .listFoot {

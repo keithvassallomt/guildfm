@@ -38,6 +38,15 @@ async def now_vote(s: Scene) -> Frame:
     return card
 
 
+@shot("now-request")
+async def now_request(s: Scene) -> Frame:
+    await open_now(s)
+    page = s.page
+    await s.ring(page.get_by_role("button", name="Request a song", exact=True).first)
+    # In the card on phones; at the top right on desktops.
+    return page.get_by_role("region", name="Now playing") if s.phone else None
+
+
 @shot("now-takeover", EVERYONE, phase="takeover")
 async def now_takeover(s: Scene) -> Frame:
     page = s.page

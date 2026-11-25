@@ -12,10 +12,9 @@ There's one queue for the whole office. Anyone can ask for a song, and everyone 
 
 ## Request a song
 
-1. Go to **Queue**.
-2. Tap **Search for a song to request**.
-3. Type the name of a song or an artist.
-4. Tap **Add** beside the song you want.
+1. On **Now Playing**, tap **Request a song**. Or go to **Queue** and tap **Search for a song to request**.
+2. Type the name of a song or an artist.
+3. Tap **Add** beside the song you want.
 
 ![Searching for Fleetwood Mac](shot:queue-search)
 

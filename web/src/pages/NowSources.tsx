@@ -28,6 +28,8 @@ export type Sources = {
   pickStation: (station: StationTile) => void;
   pickLineup: (lineup: LineupTile) => void;
   requestsOnly: () => void;
+  /** Opens the request dialog, for those who can request. */
+  request: (() => void) | null;
 };
 
 const NAMES: Record<SourceKind, string> = {
@@ -182,6 +184,21 @@ function Band({ id, label, note, onAir, link, children }: BandProps) {
   );
 }
 
+/** An empty queue, with a way to fill it. */
+function EmptyQueue({ className, onRequest }: { className: string; onRequest: (() => void) | null }) {
+  return (
+    <div className={className}>
+      <p>No requests waiting. A request always plays first.</p>
+      {onRequest && (
+        <button type="button" className={n.emptyAction} onClick={onRequest}>
+          <Icon name="plus" size={14} strokeWidth={2.6} />
+          Request a song
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Requester({ entry }: { entry: QueueEntry }) {
   const person = entry.requested_by;
   return person ? (
@@ -268,7 +285,7 @@ export function Bands(sources: Sources) {
           />
         ))}
         {count === 0 && !playing && (
-          <p className={n.emptyTile}>No requests waiting. A request always plays first.</p>
+          <EmptyQueue className={n.emptyTile} onRequest={sources.request} />
         )}
         {canSwitch && (
           <button
@@ -433,7 +450,7 @@ export function SourceTabs(sources: Sources) {
             ))}
           </ol>
           {count === 0 && !playing && (
-            <p className={n.emptyRow}>No requests waiting. A request always plays first.</p>
+            <EmptyQueue className={n.emptyRow} onRequest={sources.request} />
           )}
           <div className={n.listFoot}>
             {canSwitch && (

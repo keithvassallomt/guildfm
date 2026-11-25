@@ -2,7 +2,6 @@ import { useState } from "react";
 import { api, errorText, type PlaybackState, type QueueEntry, type QueueState } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
-import { Dialog } from "../components/Dialog";
 import { HelpLink } from "../components/HelpLink";
 import { Credit } from "../components/Credit";
 import { Icon } from "../components/Icon";
@@ -15,7 +14,7 @@ import { Votes } from "../components/Votes";
 import { ago, chipLabel, ownClip, statusTones } from "../live/status";
 import { usePlayback } from "../live/usePlayback";
 import { useQueue } from "../live/useQueue";
-import { type SearchChanges, SongSearch } from "../search/SongSearch";
+import { RequestDialog } from "../search/RequestDialog";
 import styles from "./Page.module.css";
 import q from "./QueuePage.module.css";
 import { type Act, Requests, Upcoming } from "./QueueRequests";
@@ -128,47 +127,9 @@ export function QueuePage() {
           </ul>
         </section>
       </div>
-      <QuickSearch open={searching} onClose={() => setSearching(false)} queue={queue} onQueue={apply} />
+      <RequestDialog open={searching} onClose={() => setSearching(false)} queue={queue} onQueue={apply} />
       {toast}
     </div>
-  );
-}
-
-type QuickSearchProps = {
-  open: boolean;
-  onClose: () => void;
-  queue: QueueState | null;
-  onQueue: (queue: QueueState) => void;
-};
-
-/** Search and request without leaving the queue. Each time it opens, it starts afresh. */
-function QuickSearch({ open, onClose, queue, onQueue }: QuickSearchProps) {
-  const [search, setSearch] = useState<{ q: string; artist: string | null }>({
-    q: "",
-    artist: null,
-  });
-
-  const close = () => {
-    setSearch({ q: "", artist: null });
-    onClose();
-  };
-
-  const update = (changes: SearchChanges) =>
-    setSearch((current) => ({
-      q: changes.q === undefined ? current.q : (changes.q ?? ""),
-      artist: changes.artist === undefined ? current.artist : changes.artist,
-    }));
-
-  return (
-    <Dialog open={open} onClose={close} title="Request a song" tall>
-      <SongSearch
-        query={search.q}
-        artist={search.artist}
-        onChange={update}
-        addTo={{ to: "queue", queue, onQueue }}
-        autoFocus
-      />
-    </Dialog>
   );
 }
 
