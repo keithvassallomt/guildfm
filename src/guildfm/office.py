@@ -114,6 +114,8 @@ ELSEWHERE = """<!doctype html>
   <h1>Connect to TJardinePrivate</h1>
   <p>GuildFM only works inside the office, on the TJardinePrivate Wi-Fi.</p>
   <p>Join it, turn mobile data off if it keeps getting used, and open this page again.</p>
+  <p>Already on it with an iPhone? Go to Settings, Wi-Fi, tap &#9432; next to TJardinePrivate
+     and turn off Limit IP Address Tracking. It hides where you are, even from GuildFM.</p>
 </main>
 </body>
 </html>

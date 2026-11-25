@@ -7,6 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The "Connect to TJardinePrivate" page tells iPhone users already on the Wi-Fi to turn off
+  Limit IP Address Tracking for it. iCloud Private Relay hides their address, so GuildFM
+  couldn't tell they were in the office.
+
 ## [0.1.12] - 2026-11-23
 
 ### Added
