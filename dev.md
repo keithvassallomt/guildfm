@@ -34,7 +34,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 22: Just a name
 - [x] Stage 23: Radio One, not Radio Four
 - [x] Stage 24: Request from Now Playing
-- [ ] Stage 25: Other ways in
+- [x] Stage 25: Other ways in
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -421,6 +421,6 @@ Goal: someone in the office whose address isn't the office's still gets in, with
 - [x] A day pass: getting in by location leaves a signed cookie that lets the browser in until midnight, office time, whatever its address
 - [x] Private Relay, in Safari on an iPhone, iPad or Mac only: how to let GuildFM see the address (the page menu's **Show IP Address** on an iPhone or iPad, **View › Reload and Show IP Address** on a Mac), with a GuildFM screenshot of each (made from Keith's downloads with GPT Image 2.6). Safari only shows the address until the tab reloads, so a browser turned away in the last half hour that comes back from the office's address gets the day pass too. On an iPhone, also how to stop it for good (Limit IP Address Tracking off for TJardinePrivate). Not on Android or other browsers
 - [x] The help (Settings gets Office location and its shot) and the changelog
-- [ ] Deploy to office box
+- [x] Deploy to office box. 0.1.15, on 2026-11-25, without a What's new note
 
 Done when: an iPhone with Private Relay on, on TJardinePrivate, gets in either way and stays in for the day, and a phone on mobile data away from the office still sees the Wi-Fi page.
