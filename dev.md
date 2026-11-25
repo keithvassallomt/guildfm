@@ -33,7 +33,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 21: Making and editing stations
 - [x] Stage 22: Just a name
 - [x] Stage 23: Radio One, not Radio Four
-- [ ] Stage 24: Request from Now Playing
+- [x] Stage 24: Request from Now Playing
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -409,6 +409,6 @@ Goal: anyone can request a song straight from Now Playing, without looking for t
 - [x] A **Request a song** button for anyone who can add songs, always on screen as the page opens: on desktops, orange in the page header beside the status chip; on phones, full width in the now-playing card between the votes and the controls, orange for listeners and outlined for curators and admins, whose card already has an orange Play button. First built under the card, where a curator's or admin's controls pushed it below the fold on a 1280×800 screen. It gives a little shake every six seconds, keeps still under the pointer, and not at all for anyone who has asked for reduced motion. Requesting doesn't leave the page, and the Queue band updates as usual
 - [x] An empty queue says how to fill it: "No requests waiting" in the Queue band and tab has a **Request a song** link to the same dialog
 - [x] The help (Now Playing gets a Request a song section and a new `now-request` shot; Requesting starts from Now Playing) and the Now Playing shots retaken, and the changelog
-- [ ] Deploy to office box
+- [x] Deploy to office box. 0.1.14, on 2026-11-25, with a What's new note
 
 Done when: at the office, someone on Now Playing can see how to request a song at a glance, on a phone and a desktop, and request one without leaving the page.
