@@ -7,6 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A room taken out of the group in the Sonos app stays out. GuildFM used to put it back within
+  about 10 seconds, so the Downstairs Arc kept coming back from the TV to GuildFM. It now puts
+  rooms back only when the whole group has come apart, as Sonos sometimes does by itself.
+
 ## [0.1.15] - 2026-11-25
 
 ### Added

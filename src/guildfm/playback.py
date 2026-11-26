@@ -359,12 +359,15 @@ class PlaybackController:
 
     async def _bring_back(self, snapshot: Snapshot) -> None:
         """While driving, put rooms back in the group once they've sat stopped outside it for a
-        few seconds. Sonos sometimes splits the group up by itself, which leaves those rooms
-        silent. Rooms on the TV or playing something else are left alone. Only full readings
-        have the rooms."""
+        few seconds, but only when the group has come apart, leaving the room GuildFM plays to
+        on its own. Sonos sometimes splits the group up like that by itself, which leaves the
+        other rooms silent. A room taken out while the rest stay together was someone's choice,
+        such as a soundbar on its way to the TV, so it stays out. Rooms on the TV or
+        playing something else are left alone either way. Only full readings have the rooms."""
         if not snapshot.rooms:
             return
-        if not self._in_control:
+        apart = sum(room.in_group for room in snapshot.rooms) == 1
+        if not self._in_control or not apart:
             self._dropped = {}
             return
         out = [room for room in snapshot.rooms if room.idle and not room.on_tv]

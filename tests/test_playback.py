@@ -236,6 +236,18 @@ async def test_rooms_that_drop_out_of_the_group_are_put_back(controller, speaker
     assert controller.status == Status.PLAYING
 
 
+async def test_a_room_someone_takes_out_stays_out(controller, speakers, steady) -> None:
+    """The building owner took the Downstairs Arc out for the TV, and GuildFM kept putting it
+    back (2026-11-26)."""
+    await controller.play_now(TRACK)
+    steady.advance(5)
+    speakers.someone_takes_out("RINCON_ARC")
+    for _ in range(3):
+        await controller.poll(full=True)
+    assert speakers.rejoined == []
+    assert controller.status == Status.PLAYING
+
+
 async def test_a_room_playing_something_else_stays_out(controller, speakers, steady) -> None:
     await controller.play_now(TRACK)
     steady.advance(5)

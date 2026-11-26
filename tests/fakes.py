@@ -88,6 +88,11 @@ class FakeSpeakers:
             if uid != COORDINATOR:
                 self.rooms[uid] = replace(room, in_group=False, idle=True)
 
+    def someone_takes_out(self, uid: str) -> None:
+        """Someone takes one room out of the group in the Sonos app and leaves it stopped, as
+        on the way to the TV, or to keep it quiet."""
+        self.rooms[uid] = replace(self.rooms[uid], in_group=False, idle=True)
+
     def someone_plays_in(self, uid: str) -> None:
         """Someone takes one room out of the group to play something else there."""
         self.rooms[uid] = replace(self.rooms[uid], in_group=False, idle=False)
