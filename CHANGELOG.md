@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-11-26
+
 ### Fixed
 
 - A room taken out of the group in the Sonos app stays out. GuildFM used to put it back within
