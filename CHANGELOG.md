@@ -7,6 +7,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.17] - 2026-11-27
+
 ### Changed
 
 - The DJ now announces requests from people who turned off Announce my requests too, saying
