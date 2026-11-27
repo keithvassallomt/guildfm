@@ -20,3 +20,8 @@
   background: var(--accent);
   color: var(--on-accent);
 }
+
+.kiosk {
+  background: var(--warn-soft);
+  color: var(--warn);
+}

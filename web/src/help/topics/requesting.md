@@ -49,7 +49,7 @@ Each request has a thumbs up and a thumbs down. Tap one to vote, and tap it agai
 
 The number between the thumbs is the song's score: its thumbs up minus its thumbs down.
 
-- The queue keeps itself in order, highest score first. With equal scores, the one asked for first goes first.
+- The queue keeps itself in order, highest score first. With equal scores, requests take turns: everyone's first request plays before anyone's second, then seconds before thirds. Among those, the one asked for first goes first.
 - A song that gets too many thumbs down is taken out of the queue. That's a score of -3, unless an admin has changed it.
 
 ## Vote on the song that's playing

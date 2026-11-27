@@ -35,6 +35,7 @@ From Stage 14 on, any change people can see also updates its help topics and tak
 - [x] Stage 23: Radio One, not Radio Four
 - [x] Stage 24: Request from Now Playing
 - [x] Stage 25: Other ways in
+- [ ] Stage 26: Kiosk
 
 ## Stage 0: Feasibility and design
 - [x] Prove a chosen Spotify track can be queued and played on the office Sonos speakers
@@ -424,3 +425,24 @@ Goal: someone in the office whose address isn't the office's still gets in, with
 - [x] Deploy to office box. 0.1.15, on 2026-11-25, without a What's new note
 
 Done when: an iPhone with Private Relay on, on TJardinePrivate, gets in either way and stays in for the day, and a phone on mobile data away from the office still sees the Wi-Fi page.
+
+## Stage 26: Kiosk
+Goal: a portrait touchscreen in the office where anyone walking past can see what's on, vote and add songs with a tap, without a phone or an account, and without one person taking over the queue. Asked for by Keith on 2026-11-09; the rules were settled and the look picked on 2026-11-27: Cover Wall on the [kiosk canvas](https://claude.ai/artifact/6Usctd6yV3vEzTLZXuXf3u), dark and light, with the Vinyl background and the whole cover on the label.
+- [x] Taking turns: at equal votes, each person's first waiting request plays before anyone's second, then seconds before thirds. Votes still come first, requests a curator placed keep their places, and an album a curator queues counts as one turn. For everyone, not only the kiosk (`queue.in_order`)
+- [x] A kiosk account: a fourth role, Kiosk, that only an admin gives (Users). It requests and votes by the kiosk's rules below and does nothing else, has no request cap, and stays signed in. Its requests say "Added at the kiosk"
+- [x] Kiosk votes: each tap is a new vote, and none shows as the kiosk's own. The kiosk counts as at most two voters each way on a request or the song that's playing, so on its own it can never remove a request (two is one short of the thumbs-down limit of 3). Kept apart from people's votes, and counted with them everywhere: the order, the thumbs-down limit, Best Voted
+- [x] Kiosk places: 8 (a setting). Each request takes one, and one that starts playing or leaves the queue gives it back. Taking the 8th starts a 3-minute break (a setting) when the kiosk can't add or vote; after it, all 8 are free again. Enforced by the server
+- [x] Undo: the kiosk can take back a request for 10 seconds after adding it, and not after. Taking back the one that started a break ends the break
+- [x] Settings: a Kiosk section with the places, the break's length and the look (dark or light)
+- [x] The kiosk screen, shown to a kiosk account instead of the app: the song that's playing on a spinning record (the whole cover on the label, its edges fading into a blur of itself, a turn every 3.6 s) with round thumbs either side; the queue as a wall of covers with thumbs and places, the kiosk's own marked; one big Add a song button with the places as dots, and the QR code for https://guildfm.com beside it
+- [x] Adding: a full-screen picker with the office favourites (Best Voted) and search, typed on the kiosk's own on-screen keyboard. The picked cover flies into the Add button, then drops into the wall with a 10-second Undo
+- [x] The break: the wall dims, a big countdown, the Add button becomes a bar that runs down, and the QR code says to use your phone
+- [x] Animation: buttons press in, a ripple on Add, covers cascade in, bursts on votes and adds, the wall glides when votes reorder it, a shine when the kiosk comes back from a break. When a song changes, the next one's cover lifts off the wall onto the record. When a song makes Best Voted, gold rings, confetti and a banner. All off for reduced motion
+- [x] Fits any portrait screen: laid out for the 22-inch (1080×1920) and scaled to others
+- [x] While the DJ, a jingle or an announcement is on, the record shows GuildFM's logo, as Now Playing does
+- [x] The picker closes by itself after a minute without a touch, so the next person finds the wall (my addition)
+- [x] Tests: the turn order, kiosk votes and their limits, places and the break, the undo window, what a kiosk account can't do
+- [x] The help (a Kiosk topic: making the account and setting up the screen), its screenshots, and the changelog. Built 2026-11-27: `kiosk.py`, migration 0028 (the role, `users.kiosk_since` and `kiosk_break_until`, `kiosk_votes`), `GET /queue/favourites`, the screen in `web/src/kiosk/`. A headless run at 1080×1920 in the staged office voted, searched on the kiosk's keyboard and added a song with no errors. No shot of the kiosk's own screen yet: the screenshot tool has no portrait size or kiosk account. The round thumbs beside the record have no blur behind them, since the record turns under them and that's heavy for the kiosk's Raspberry Pi 4
+- [ ] Deploy to office box
+
+Done when: at the office, on the 22-inch portrait touchscreen, someone can vote and add songs with a tap, sees their song land in the queue taking turns with everyone else's, and the kiosk takes a three-minute break after eight songs.

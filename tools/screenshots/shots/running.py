@@ -72,6 +72,12 @@ async def settings_runs_out(s: Scene) -> Frame:
     return section(s, "When the queue runs out")
 
 
+@shot("settings-kiosk", ADMINS)
+async def settings_kiosk(s: Scene) -> Frame:
+    await open_settings(s)
+    return section(s, "Kiosk")
+
+
 @shot("settings-hours", ADMINS)
 async def settings_hours(s: Scene) -> Frame:
     await open_settings(s)

@@ -10,13 +10,14 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from guildfm import kiosk
 from guildfm.api.playlists import AlbumIn, album_songs
 from guildfm.api.schemas import PersonOut, TrackOut
 from guildfm.auth import ActiveUser, require
 from guildfm.db import get_session
-from guildfm.models import EntryState, QueueEntry, Role, Track, User, Vote
+from guildfm.models import EntryState, PlaylistTrack, QueueEntry, Role, Track, User, Vote
 from guildfm.permissions import Permission, can
-from guildfm.playlists import current_source
+from guildfm.playlists import best_voted, current_source, tracks_of
 from guildfm.playlists import upcoming as upcoming_songs
 from guildfm.prefs import get_pref
 from guildfm.queue import QueueEngine, Tally, in_order, recent_plays, tallies, waiting
@@ -45,6 +46,23 @@ class EntryOut(BaseModel):
     pinned: bool  # placed by a curator, so votes don't move it
     played_at: datetime | None  # when it last played before this request, if recently
     album: str | None  # the album's name, for a song queued with the rest of its album
+    # For the kiosk: its own thumbs on the song, and until when it can take its request back.
+    kiosk_up: int = 0
+    kiosk_down: int = 0
+    undo_until: datetime | None = None
+    # For the song that's playing: when it joined Best Voted, if it's in it.
+    best_voted_at: datetime | None = None
+
+
+class KioskOut(BaseModel):
+    places: int
+    used: int
+    break_until: datetime | None  # while it's on a break
+    break_seconds: int  # how long a break lasts
+    votes: int  # the most it counts for each way on a song
+    undo_seconds: int
+    theme: Literal["dark", "light"]
+    now: datetime  # the server's time, so the screen's countdowns don't rely on its own clock
 
 
 class ActivityOut(BaseModel):
@@ -74,6 +92,7 @@ class QueueOut(BaseModel):
     activity: list[ActivityOut]
     mine: int  # how many requests the viewer has in the queue
     request_cap: int
+    kiosk: KioskOut | None = None  # where the kiosk stands, when the viewer is one
 
 
 def engine(request: Request) -> QueueEngine:
@@ -91,12 +110,23 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
     my_votes = dict(
         (await db.execute(select(Vote.entry_id, Vote.value).where(Vote.user_id == viewer.id))).all()
     )
-    since = time.time() - await get_pref(db, "recently_played_hours") * 3600
+    now = time.time()
+    since = now - await get_pref(db, "recently_played_hours") * 3600
     plays = await recent_plays(db, since, [entry.track_id for entry in entries])
+    is_kiosk = kiosk.is_kiosk(viewer)
+    kiosk_votes = await kiosk.votes_of(db, viewer) if is_kiosk else {}
+    playing = next((entry for entry in entries if entry.state == EntryState.PLAYING), None)
+    joined = playing and await db.get(PlaylistTrack, ((await best_voted(db)).id, playing.track_id))
+
+    def undo_until(entry: QueueEntry) -> datetime | None:
+        until = entry.added_at + kiosk.UNDO_SECONDS
+        fresh = entry.state == EntryState.WAITING and now < until
+        return _when(until) if is_kiosk and entry.requested_by == viewer.id and fresh else None
 
     def out(entry: QueueEntry) -> EntryOut:
         tally = scores.get(entry.id, Tally())
         before = [at for at in plays.get(entry.track_id, []) if at < entry.added_at]
+        thumbs = kiosk_votes.get(entry.id, (0, 0))
         return EntryOut(
             id=entry.id,
             state=entry.state,
@@ -113,6 +143,10 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
             pinned=entry.pinned_position is not None,
             played_at=_when(before[-1]) if before else None,
             album=entry.track.album if entry.album_id else None,
+            kiosk_up=thumbs[0],
+            kiosk_down=thumbs[1],
+            undo_until=undo_until(entry),
+            best_voted_at=_when(joined.added_at) if joined and entry is playing else None,
         )
 
     by_state = {state: [e for e in entries if e.state == state] for state in EntryState}
@@ -136,6 +170,20 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
             ],
             skip_at=-(await get_pref(db, "downvote_threshold")),
         )
+    kiosk_out = None
+    if is_kiosk:
+        state = await kiosk.places(db, viewer, now)
+        await db.commit()  # a break that's over ends here
+        kiosk_out = KioskOut(
+            places=state.total,
+            used=state.used,
+            break_until=_when(state.break_until) if state.break_until else None,
+            break_seconds=await get_pref(db, "kiosk_break_minutes") * 60,
+            votes=kiosk.VOTES,
+            undo_seconds=kiosk.UNDO_SECONDS,
+            theme=await get_pref(db, "kiosk_theme"),
+            now=_when(now),
+        )
     return QueueOut(
         playing=next(map(out, by_state[EntryState.PLAYING]), None),
         next=next(map(out, by_state[EntryState.NEXT]), None),
@@ -144,6 +192,7 @@ async def view(db: AsyncSession, viewer: User, queue: QueueEngine) -> QueueOut:
         activity=[ActivityOut(text=a["text"], at=_when(a["at"])) for a in queue.activity],
         mine=sum(entry.requested_by == viewer.id and not entry.album_id for entry in entries),
         request_cap=await get_pref(db, "request_cap"),
+        kiosk=kiosk_out,
     )
 
 
@@ -181,34 +230,77 @@ async def add(body: RequestIn, user: Requester, request: Request, db: Db) -> Que
     if track.explicit and not await get_pref(db, "allow_explicit"):
         raise HTTPException(403, "Explicit tracks are turned off.")
 
+    at_kiosk = kiosk.is_kiosk(user)
     async with queue.lock:
         if await db.scalar(select(QueueEntry.id).where(QueueEntry.track_id == track.id)):
             raise HTTPException(409, "That song is already in the queue.")
-        cap = await get_pref(db, "request_cap")
-        # Songs queued with the rest of their album don't count.
-        mine = await db.scalar(
-            select(func.count())
-            .select_from(QueueEntry)
-            .where(QueueEntry.requested_by == user.id, QueueEntry.album_id.is_(None))
-        )
-        # Admins have no cap.
-        if mine >= cap and user.role != Role.ADMIN:
-            raise HTTPException(
-                409, f"You have {cap} requests in the queue already. Add more once one has played."
+        now = time.time()
+        if at_kiosk:
+            # The kiosk has places and breaks instead of a cap.
+            await kiosk.check_room(db, user, now)
+        else:
+            cap = await get_pref(db, "request_cap")
+            # Songs queued with the rest of their album don't count.
+            mine = await db.scalar(
+                select(func.count())
+                .select_from(QueueEntry)
+                .where(QueueEntry.requested_by == user.id, QueueEntry.album_id.is_(None))
             )
-        db.add(QueueEntry(track_id=track.id, requested_by=user.id, added_at=time.time()))
+            # Admins have no cap.
+            if mine >= cap and user.role != Role.ADMIN:
+                raise HTTPException(
+                    409,
+                    f"You have {cap} requests in the queue already. Add more once one has played.",
+                )
+        db.add(QueueEntry(track_id=track.id, requested_by=user.id, added_at=now))
         try:
             await db.commit()
         except IntegrityError:
             raise HTTPException(409, "That song is already in the queue.") from None
+        if at_kiosk:
+            await kiosk.after_request(db, user, now)
 
-    queue.note(f"{user.display_name} requested {track.title}")
+    queue.note(
+        f"Someone at the kiosk requested {track.title}"
+        if at_kiosk
+        else f"{user.display_name} requested {track.title}"
+    )
     await queue.changed()
     # If the speakers had run out of things to play, or GuildFM opened with nothing to play,
     # this starts the new request.
     await queue.keep_fed()
     await request.app.state.schedule.try_start()
     return await view(db, user, queue)
+
+
+class FavouriteOut(BaseModel):
+    track: TrackOut
+    queued: bool  # already in the queue, so it can't be requested again
+    playing: bool
+
+
+FAVOURITES = 30
+
+
+@router.get("/favourites")
+async def favourites(_: Requester, db: Db) -> list[FavouriteOut]:
+    """The office's favourites, from Best Voted, most thumbs up first: the songs the kiosk offers
+    before anyone searches."""
+    allow_explicit = await get_pref(db, "allow_explicit")
+    songs = sorted(
+        await tracks_of(db, (await best_voted(db)).id),
+        key=lambda song: (-song.upvotes, -song.added_at),
+    )
+    states = dict((await db.execute(select(QueueEntry.track_id, QueueEntry.state))).all())
+    return [
+        FavouriteOut(
+            track=TrackOut.of(song.track),
+            queued=song.track_id in states,
+            playing=states.get(song.track_id) == EntryState.PLAYING,
+        )
+        for song in songs
+        if allow_explicit or not song.track.explicit
+    ][:FAVOURITES]
 
 
 class AlbumQueuedOut(BaseModel):
@@ -269,13 +361,20 @@ async def vote(entry_id: int, body: VoteIn, user: Voter, request: Request, db: D
         if not playing:
             entry = await waiting_entry(db, entry_id)
         title = entry.track.title
-        existing = await db.get(Vote, (entry_id, user.id))
-        thumbs_up = body.value == 1 and (existing is None or existing.value != 1)
-        if body.value == 0:
-            if existing:
-                await db.delete(existing)
+        at_kiosk = kiosk.is_kiosk(user)
+        if at_kiosk:
+            # Each tap at the kiosk is another vote, up to kiosk.VOTES each way.
+            await kiosk.check_not_on_break(db, user, time.time())
+            await kiosk.vote(db, user, entry_id, body.value)
+            thumbs_up = body.value == 1
         else:
-            await db.merge(Vote(entry_id=entry_id, user_id=user.id, value=body.value))
+            existing = await db.get(Vote, (entry_id, user.id))
+            thumbs_up = body.value == 1 and (existing is None or existing.value != 1)
+            if body.value == 0:
+                if existing:
+                    await db.delete(existing)
+            else:
+                await db.merge(Vote(entry_id=entry_id, user_id=user.id, value=body.value))
         await db.commit()
 
         joined = removed = False
@@ -291,7 +390,8 @@ async def vote(entry_id: int, body: VoteIn, user: Voter, request: Request, db: D
     if removed:
         queue.note(f"{title} was removed after too many thumbs down")
     elif thumbs_up:
-        queue.note(f"{user.display_name} gave {title} a thumbs up")
+        who = "Someone at the kiosk" if at_kiosk else user.display_name
+        queue.note(f"{who} gave {title} a thumbs up")
     if joined:
         queue.note(f"{title} made it into Best Voted")
     await queue.changed()
@@ -306,19 +406,32 @@ async def remove(entry_id: int, user: ActiveUser, request: Request, db: Db) -> Q
         if entry is None:
             raise HTTPException(404, "That request isn't in the queue any more.")
         own = entry.requested_by == user.id
-        allowed = Permission.REMOVE_OWN_TRACKS if own else Permission.MANAGE_QUEUE
-        if not can(user.role, allowed):
-            raise HTTPException(403, "You can only remove your own requests.")
+        at_kiosk = kiosk.is_kiosk(user)
+        if at_kiosk:
+            # The kiosk can only take its own request back, just after adding it.
+            if not own:
+                raise HTTPException(403, "You can only remove your own requests.")
+            kiosk.check_undo(entry, time.time())
+        else:
+            allowed = Permission.REMOVE_OWN_TRACKS if own else Permission.MANAGE_QUEUE
+            if not can(user.role, allowed):
+                raise HTTPException(403, "You can only remove your own requests.")
         entry = await waiting_entry(db, entry_id)
         title = entry.track.title
         await db.delete(entry)
+        if at_kiosk:
+            # That gives a place back, so taking back the request that started a break ends it.
+            user.kiosk_break_until = None
         await db.commit()
 
-    queue.note(
-        f"{user.display_name} removed {title}"
-        if own
-        else f"{user.display_name} took {title} out of the queue"
-    )
+    if at_kiosk:
+        queue.note(f"Someone at the kiosk took {title} back")
+    else:
+        queue.note(
+            f"{user.display_name} removed {title}"
+            if own
+            else f"{user.display_name} took {title} out of the queue"
+        )
     await queue.changed()
     return await view(db, user, queue)
 

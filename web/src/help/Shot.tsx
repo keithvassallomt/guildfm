@@ -9,8 +9,10 @@ type Size = "phone" | "desktop";
 /** One screenshot: its size in CSS pixels, a version for caching, and whether it's the whole
  *  screen rather than a crop. */
 type Variant = { w: number; h: number; v: string; screen: boolean };
+/** The roles with help to read. A kiosk has its own screen and never opens the help. */
+export type HelpRole = Exclude<Role, "kiosk">;
 /** Whose eyes a shot was taken through: a role, or a guest, signed out. */
-export type Reading = Role | "guest";
+export type Reading = HelpRole | "guest";
 type Taken = Record<string, Partial<Record<Size, Partial<Record<Reading, Variant>>>>>;
 
 const SHOTS = taken as Taken;

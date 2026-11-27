@@ -21,6 +21,7 @@ from guildfm.lineups import Change, Opening, follow, gap_station, minute_of, put
 from guildfm.live import LiveHub
 from guildfm.models import (
     EntryState,
+    KioskVote,
     Lineup,
     Play,
     Playlist,
@@ -83,8 +84,10 @@ class Tally:
 
 
 async def tallies(db: AsyncSession, entry_ids: Sequence[int]) -> dict[int, Tally]:
+    """Everyone's thumbs on each song: people's votes, and the kiosk's taps counted with them."""
     if not entry_ids:
         return {}
+    counts: dict[int, tuple[int, int]] = {}
     rows = await db.execute(
         select(
             Vote.entry_id,
@@ -94,15 +97,55 @@ async def tallies(db: AsyncSession, entry_ids: Sequence[int]) -> dict[int, Tally
         .where(Vote.entry_id.in_(entry_ids))
         .group_by(Vote.entry_id)
     )
-    return {entry_id: Tally(up, down) for entry_id, up, down in rows}
+    for entry_id, up, down in rows:
+        counts[entry_id] = (up, down)
+    kiosk = await db.execute(
+        select(KioskVote.entry_id, func.sum(KioskVote.up), func.sum(KioskVote.down))
+        .where(KioskVote.entry_id.in_(entry_ids))
+        .group_by(KioskVote.entry_id)
+    )
+    for entry_id, up, down in kiosk:
+        before = counts.get(entry_id, (0, 0))
+        counts[entry_id] = (before[0] + up, before[1] + down)
+    return {entry_id: Tally(up, down) for entry_id, (up, down) in counts.items()}
+
+
+def turns(entries: Sequence[QueueEntry]) -> dict[int, int]:
+    """Each request's turn: a person's first waiting request is turn 1, their second turn 2, and
+    so on, in the order they asked. The songs of an album queued in one go share a turn. A song
+    nobody requested is a turn 1 of its own."""
+    turn: dict[int, int] = {}
+    taken: dict[int, int] = {}  # turns each requester has used so far
+    albums: dict[tuple[int, str], int] = {}  # the turn each queued album has
+    for entry in sorted(entries, key=lambda entry: (entry.added_at, entry.id)):
+        person = entry.requested_by
+        if person is None:
+            turn[entry.id] = 1
+            continue
+        album = (person, entry.album_id) if entry.album_id else None
+        if album and album in albums:
+            turn[entry.id] = albums[album]
+            continue
+        taken[person] = taken.get(person, 0) + 1
+        turn[entry.id] = taken[person]
+        if album:
+            albums[album] = turn[entry.id]
+    return turn
 
 
 def in_order(entries: Sequence[QueueEntry], scores: dict[int, Tally]) -> list[QueueEntry]:
-    """Highest score first, earliest request first on a tie. Entries a curator placed keep
-    their position whatever the votes say."""
+    """Highest score first. On a tie, requests take turns: everyone's first request before
+    anyone's second, then seconds before thirds, the earliest first among them. Entries a
+    curator placed keep their position whatever the votes say."""
+    turn = turns(entries)
     free = sorted(
         (entry for entry in entries if entry.pinned_position is None),
-        key=lambda entry: (-scores.get(entry.id, Tally()).score, entry.added_at, entry.id),
+        key=lambda entry: (
+            -scores.get(entry.id, Tally()).score,
+            turn[entry.id],
+            entry.added_at,
+            entry.id,
+        ),
     )
     pinned = sorted(
         (entry for entry in entries if entry.pinned_position is not None),

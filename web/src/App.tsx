@@ -52,6 +52,8 @@ function Shell() {
 
 // The help is only loaded when it's opened.
 const Help = lazy(() => import("./help/Help"));
+// Only a kiosk account loads the kiosk's screen.
+const Kiosk = lazy(() => import("./kiosk/Kiosk"));
 
 /** Where the Library's pages went when it split into Playlists and Radio. */
 function OldLibrary() {
@@ -93,6 +95,16 @@ export function App() {
     );
   }
   if (me.must_change_password) return <ChoosePasswordPage />;
+  // The touchscreen in the office has its own screen, and nothing else.
+  if (me.role === "kiosk") {
+    return (
+      <LiveProvider onUnauthorised={() => refresh().catch(() => {})}>
+        <Suspense fallback={null}>
+          <Kiosk />
+        </Suspense>
+      </LiveProvider>
+    );
+  }
 
   return (
     <LiveProvider onUnauthorised={() => refresh().catch(() => {})}>

@@ -34,7 +34,7 @@ export default function NewsDialog({ notes, onClose }: Props) {
       >
         {shown.map((note) => (
           <section key={note.version} className={styles.note}>
-            <Markdown text={note.text} role={me.role} />
+            <Markdown text={note.text} role={me.role === "kiosk" ? "user" : me.role} />
           </section>
         ))}
       </div>

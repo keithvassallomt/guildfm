@@ -15,13 +15,13 @@ pages: /admin/users
 
 ::: phone
 1. Tap the arrow beside them.
-2. Choose **User**, **Curator** or **Admin**.
+2. Choose **User**, **Curator**, **Admin** or **Kiosk**.
 :::
 ::: desktop
-Choose **User**, **Curator** or **Admin** beside them.
+Choose **User**, **Curator**, **Admin** or **Kiosk** beside them.
 :::
 
-It takes effect straight away. See [What GuildFM is](topic:welcome) for what each role can do.
+It takes effect straight away. See [What GuildFM is](topic:welcome) for what each role can do. **Kiosk** is only for the touchscreen in the office: see [The kiosk](topic:kiosk).
 
 ![Changing someone's role](shot:users-manage)
 

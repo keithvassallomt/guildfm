@@ -36,6 +36,9 @@ DEFAULTS: dict[str, Any] = {
     "announcement_voice": "cedar",
     "monitor": False,  # monitor mode: playing in browsers instead of on the speakers
     "monitor_skip_music": False,  # in monitor mode, songs only play until the talk is ready
+    "kiosk_places": 8,  # requests the kiosk can have in before it takes a break
+    "kiosk_break_minutes": 3,
+    "kiosk_theme": "dark",  # how the kiosk's screen looks: "dark" or "light"
     # What GuildFM is, for the AI writing system idents in the jingle generator.
     "about": (
         "GuildFM is the office radio. Everyone requests songs and votes on them, and AI stations "

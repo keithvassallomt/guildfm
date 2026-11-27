@@ -1078,7 +1078,7 @@
    "admin": {
     "w": 386,
     "h": 362,
-    "v": "1ad61733",
+    "v": "82be45e0",
     "screen": false
    }
   },
@@ -1086,7 +1086,7 @@
    "admin": {
     "w": 490,
     "h": 378,
-    "v": "a08b8252",
+    "v": "19da7c27",
     "screen": false
    }
   }
@@ -1096,7 +1096,7 @@
    "admin": {
     "w": 386,
     "h": 982,
-    "v": "90dad9d5",
+    "v": "1fcba85c",
     "screen": false
    }
   },
@@ -1109,12 +1109,30 @@
    }
   }
  },
+ "settings-kiosk": {
+  "phone": {
+   "admin": {
+    "w": 386,
+    "h": 454,
+    "v": "6317aa86",
+    "screen": false
+   }
+  },
+  "desktop": {
+   "admin": {
+    "w": 490,
+    "h": 405,
+    "v": "27f39931",
+    "screen": false
+   }
+  }
+ },
  "settings-monitor": {
   "phone": {
    "admin": {
     "w": 386,
     "h": 332,
-    "v": "a4009931",
+    "v": "6d0de277",
     "screen": false
    }
   },
@@ -1122,7 +1140,7 @@
    "admin": {
     "w": 490,
     "h": 280,
-    "v": "02621c9e",
+    "v": "8d978fcd",
     "screen": false
    }
   }
@@ -1132,7 +1150,7 @@
    "admin": {
     "w": 386,
     "h": 274,
-    "v": "355a3984",
+    "v": "5263307b",
     "screen": false
    }
   },
@@ -1168,7 +1186,7 @@
    "admin": {
     "w": 386,
     "h": 512,
-    "v": "794578d4",
+    "v": "faeb0cc6",
     "screen": false
    }
   },
@@ -1420,7 +1438,7 @@
    "admin": {
     "w": 386,
     "h": 266,
-    "v": "618c8820",
+    "v": "866ada9a",
     "screen": false
    }
   },
@@ -1428,7 +1446,7 @@
    "admin": {
     "w": 980,
     "h": 100,
-    "v": "83f18cf7",
+    "v": "d7e2f38d",
     "screen": false
    }
   }

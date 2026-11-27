@@ -27,6 +27,7 @@ class Role(StrEnum):
     USER = "user"
     CURATOR = "curator"
     ADMIN = "admin"
+    KIOSK = "kiosk"  # the touchscreen in the office, by the kiosk's own rules (kiosk.py)
 
 
 class User(Base):
@@ -50,6 +51,11 @@ class User(Base):
     # The newest version whose "What's new" they've seen. A new account starts at the version
     # it was made on, so nobody is told what's new about things they never knew otherwise.
     news_seen: Mapped[str] = mapped_column(String(20), default=__version__)
+    # A kiosk account's places count its requests added since this time (seconds since the
+    # epoch): when its break ends, they're all free again.
+    kiosk_since: Mapped[float] = mapped_column(default=0.0)
+    # When a kiosk account's break ends, while it's on one.
+    kiosk_break_until: Mapped[float | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     @property
@@ -513,6 +519,22 @@ class QueueEntry(Base):
     requester: Mapped[User | None] = relationship(lazy="joined")
     playlist: Mapped[Playlist | None] = relationship(lazy="joined")
     station: Mapped[Station | None] = relationship(lazy="joined")
+
+
+class KioskVote(Base):
+    """A kiosk's thumbs on a request or the playing song: each tap is a vote, up to kiosk.VOTES
+    each way, counted with everyone's."""
+
+    __tablename__ = "kiosk_votes"
+
+    entry_id: Mapped[int] = mapped_column(
+        ForeignKey("queue.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    up: Mapped[int] = mapped_column(default=0)
+    down: Mapped[int] = mapped_column(default=0)
 
 
 class Vote(Base):

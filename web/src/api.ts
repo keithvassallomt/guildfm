@@ -1,4 +1,5 @@
-export type Role = "user" | "curator" | "admin";
+/** A kiosk is the touchscreen in the office, which shows its own screen instead of the app. */
+export type Role = "user" | "curator" | "admin" | "kiosk";
 
 export type Permission =
   | "add_tracks"
@@ -217,7 +218,31 @@ export type QueueEntry = {
   played_at: string | null;
   /** The album's name, for a song a curator or admin queued with the rest of its album. */
   album: string | null;
+  /** For the kiosk: its own thumbs on the song. */
+  kiosk_up: number;
+  kiosk_down: number;
+  /** For the kiosk: until when it can take its request back. */
+  undo_until: string | null;
+  /** For the song that's playing: when it joined Best Voted, if it's in it. */
+  best_voted_at: string | null;
 };
+
+/** Where the kiosk stands: its places, and its break while it's on one. */
+export type KioskState = {
+  places: number;
+  used: number;
+  break_until: string | null;
+  break_seconds: number;
+  /** The most it counts for each way on a song. */
+  votes: number;
+  undo_seconds: number;
+  theme: "dark" | "light";
+  /** The server's time, so the screen's countdowns don't rely on its own clock. */
+  now: string;
+};
+
+/** One of the office's favourites, from Best Voted, for the kiosk to offer. */
+export type Favourite = { track: SearchTrack; queued: boolean; playing: boolean };
 
 /** A whole album queued by a curator or admin, and how many of its songs went in. */
 export type AlbumQueued = { queue: QueueState; added: number };
@@ -240,6 +265,8 @@ export type QueueState = {
   activity: { text: string; at: string }[];
   mine: number;
   request_cap: number;
+  /** Where the kiosk stands, when the viewer is one. */
+  kiosk: KioskState | null;
 };
 
 export type SearchResult = {
@@ -291,6 +318,10 @@ export type SettingsValues = {
   announcement_voice: string;
   /** What GuildFM is, for the AI writing system idents. */
   about: string;
+  /** Requests the kiosk can have in before it takes a break. */
+  kiosk_places: number;
+  kiosk_break_minutes: number;
+  kiosk_theme: "dark" | "light";
 };
 
 export type SettingsState = {

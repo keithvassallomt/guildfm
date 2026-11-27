@@ -35,6 +35,16 @@ Choosing **Requests only** on Now Playing is different: then nothing takes over.
 
 ![When the queue runs out](shot:settings-runs-out)
 
+## Kiosk
+
+For the touchscreen in the office. See [The kiosk](topic:kiosk).
+
+- **Places**: how many songs the kiosk can add before it takes a break. 8 to start with. A song that plays gives its place back.
+- **Break**: in minutes, how long the kiosk can't add or vote once its places are all taken. 3 to start with. After it, all its places are free again.
+- **Look**: **Dark** or **Light**.
+
+![Kiosk settings](shot:settings-kiosk)
+
 ## AI and voice
 
 - **Weather location**: where the weather comes from, for stations with global awareness. It's saved when you leave the box.

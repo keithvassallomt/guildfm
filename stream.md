@@ -18,7 +18,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Users must register an account and log in to access the system. Users can create their own accounts.
 - An initial admin account is seeded to the system.
 - Admins can delete accounts, though not their own. Deleting someone signs them out straight away, and their queued requests and votes go with them.
-- There are three roles: user, curator and admin.
+- There are three roles: user, curator and admin. A fourth, kiosk, is for the touchscreen in the office (see Kiosk), and only an admin can give it.
 
 | Permission | User | Curator | Admin |
 |---|---|---|---|
@@ -64,6 +64,7 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 
 ## Queue and Voting
 - Users can vote tracks up or down, using thumbs up and thumbs down. The system automatically orders the queue by votes.
+- On equal votes, requests take turns: each person's first waiting request plays before anyone's second, then seconds before thirds, and the earliest goes first among them. An album a curator queues counts as one turn.
 - A track whose score falls to the downvote threshold is removed from the queue. The threshold is a setting.
 - Users can also vote on the song that's playing, whether it was a request or came from a playlist or a station, on Now Playing and at the top of the Queue. No number of thumbs down stops it. Its votes are kept with its play in the history and count towards Best Voted, as votes in the queue do, and votes it had as a request carry on. The song locked in as next can't be voted on.
 - Users can remove their own tracks, but only their own.
@@ -217,6 +218,13 @@ UI prototype: [GuildFM Prototype](https://claude.ai/artifact/J9FURLqbP6ryuCQWhe6
 - Line-ups has its own place in the sidebar on a desktop. On a phone it's reached from Now Playing's Line-ups tab, keeping the bottom tabs to five.
 - Deleting a station or playlist leaves a gap where it was on any line-up, even while the line-up is playing it. Deleting the line-up that's on means nothing fills the gaps, as when a playing playlist is deleted.
 
+## Kiosk
+A portrait touchscreen in the office where anyone walking past can see what's on, vote and add songs, without a phone or an account. It's signed in as a kiosk account, which an admin makes on the Users page, and shows its own screen instead of the app.
+- **Requests**: the kiosk counts as one person when requests take turns, and has no request cap. It has 8 places instead (a setting): each request takes one, and one that starts playing or leaves the queue gives it back. Taking the 8th starts a break of 3 minutes (a setting) when the kiosk can't add or vote, shown with a countdown; after it, all 8 are free again. Its requests say "Added at the kiosk".
+- **Undo**: a request can be taken back for 10 seconds after it's added, and not after. Nothing else can be removed at the kiosk.
+- **Votes**: each tap is a new vote. The kiosk counts as at most two voters each way on a request or the song that's playing, so on its own it can never remove a request. Its votes count with everyone's: in the order, the thumbs-down limit and Best Voted.
+- **The screen**: the song that's playing on a spinning record, the queue as a wall of album covers, one big Add a song button (the office favourites from Best Voted, and search with the kiosk's own keyboard), and a QR code for https://guildfm.com for anyone who wants their name on their requests. Dark or light (a setting). It fits any portrait screen and is made for touch.
+
 ## As an app
 - GuildFM can be installed as an app, opening from the home screen or dock in its own window, with its own icon. Profile has a section on it: an Install button where the browser offers one, and on an iPhone or iPad, Safari's two steps (Share, then Add to Home Screen). It's hidden when GuildFM is already running as the app.
 - Chrome, Edge and Android only offer to install over HTTPS (or on the machine itself), so in the office that needs GuildFM behind HTTPS. Over plain HTTP, their "add to home screen" is a shortcut that opens a browser tab.
@@ -252,6 +260,7 @@ GuildFM runs unattended on an always-on machine in the office. How to set it up 
 - Weather location (default: Carlisle, Cumbria, UK).
 - Announcement voice.
 - Monitor mode (default: off). See Playback.
+- Kiosk: its places (default: 8), the break when they're all taken (default: 3 minutes), and its look (dark or light, default: dark). See Kiosk.
 
 ## Technical Notes
 - **Stack**: Python backend (FastAPI), SQLite database, TypeScript front end (mobile first), live updates over websockets.

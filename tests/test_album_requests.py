@@ -35,6 +35,19 @@ def test_curators_queue_a_whole_album_in_order(client: TestClient, people) -> No
     assert request.json()["mine"] == 1
 
 
+def test_a_whole_album_is_one_turn(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    for name in ("fm1", "fm2"):
+        client.post("/api/queue", json={"track_id": spotify_id(name)}).raise_for_status()
+    sign_in(client, *people["curator"])
+    body = queue_album(client, RUMOURS).json()
+    songs = [(e["track"]["title"], e["album"]) for e in everything(body["queue"])]
+    # The album plays straight through as the curator's first turn, before the user's second.
+    assert songs[0] == ("Song 1", None)
+    assert {album for _, album in songs[1:-1]} == {"Rumours"}
+    assert songs[-1] == ("Song 2", None)
+
+
 def test_songs_already_queued_stay_where_they_are(client: TestClient, people) -> None:
     sign_in(client, *people["user"])
     client.post("/api/queue", json={"track_id": spotify_id("gyow")}).raise_for_status()

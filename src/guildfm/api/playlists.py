@@ -14,6 +14,7 @@ from guildfm.api.schemas import TrackOut
 from guildfm.api.search import AlbumOut
 from guildfm.auth import require
 from guildfm.db import get_session
+from guildfm.kiosk import is_kiosk
 from guildfm.models import Playlist, PlaylistKind, PlaylistTrack, SourceState, Track, User
 from guildfm.permissions import Permission
 from guildfm.playlists import add_track, covers, current_source, thumb_down, tracks_of
@@ -330,6 +331,8 @@ class ThumbIn(BaseModel):
 @router.post("/source/vote")
 async def thumb(body: ThumbIn, user: Voter, request: Request, db: Db) -> dict:
     """A thumbs down on one of the playlist's or station's upcoming songs."""
+    if is_kiosk(user):
+        raise HTTPException(403, "The kiosk only votes on requests and the song that's playing.")
     async with engine(request).lock:
         if await current_source(db) is None:
             raise HTTPException(409, "Nothing is filling the gaps between requests.")

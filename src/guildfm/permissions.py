@@ -35,6 +35,9 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.USER: frozenset(_EVERYONE),
     Role.CURATOR: frozenset(_CURATORS),
     Role.ADMIN: frozenset(Permission),
+    # Requests and votes by the kiosk's own rules (kiosk.py): it can only take a request back
+    # in the few seconds after adding it.
+    Role.KIOSK: frozenset({Permission.ADD_TRACKS, Permission.VOTE}),
 }
 
 

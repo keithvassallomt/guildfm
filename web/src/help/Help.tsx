@@ -9,7 +9,7 @@ import { useWide } from "../components/useWide";
 import page from "../pages/Page.module.css";
 import h from "./Help.module.css";
 import { Markdown, sections } from "./Markdown";
-import type { Reading } from "./Shot";
+import type { HelpRole, Reading } from "./Shot";
 import {
   AREAS,
   type Can,
@@ -22,8 +22,8 @@ import {
   words,
 } from "./topics";
 
-const ROLES: Role[] = ["user", "curator", "admin"];
-const ROLE_NAMES: Record<Role, string> = { user: "User", curator: "Curator", admin: "Admin" };
+const ROLES: HelpRole[] = ["user", "curator", "admin"];
+const ROLE_NAMES: Record<HelpRole, string> = { user: "User", curator: "Curator", admin: "Admin" };
 const READ_AS = "guildfm-help-as";
 
 /** Whose eyes the help is read through: your own, or for admins and curators, a role below
@@ -33,11 +33,12 @@ type Reader = { role: Reading; can: Can; guest: boolean };
 
 function useReader(): { reader: Reader; readAs: ReactNode } {
   const { me, can } = useAuth();
-  const own = me?.role ?? null;
+  // A kiosk never opens the help: it has its own screen.
+  const own: HelpRole | null = me && me.role !== "kiosk" ? me.role : null;
   const choices = own ? ROLES.slice(0, ROLES.indexOf(own) + 1) : [];
-  const [as, setAs] = useState<Role | null>(() => {
+  const [as, setAs] = useState<HelpRole | null>(() => {
     try {
-      const saved = sessionStorage.getItem(READ_AS) as Role | null;
+      const saved = sessionStorage.getItem(READ_AS) as HelpRole | null;
       return saved && choices.includes(saved) ? saved : own;
     } catch {
       return own;
@@ -52,7 +53,7 @@ function useReader(): { reader: Reader; readAs: ReactNode } {
     }
   }, [as, own, roles]);
 
-  const choose = (role: Role) => {
+  const choose = (role: HelpRole) => {
     setAs(role);
     try {
       sessionStorage.setItem(READ_AS, role);
@@ -74,7 +75,7 @@ function useReader(): { reader: Reader; readAs: ReactNode } {
         <SegmentedControl
           label="Read the help as"
           options={choices.map((choice) => ({ value: choice, label: ROLE_NAMES[choice] }))}
-          value={reader.role as Role}
+          value={reader.role as HelpRole}
           onChange={choose}
         />
       </div>

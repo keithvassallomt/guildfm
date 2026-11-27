@@ -35,6 +35,7 @@ from guildfm.models import (
     PickNote,
     Play,
     QueueEntry,
+    Role,
     TalkUnit,
     Track,
 )
@@ -144,7 +145,12 @@ async def history(
         askers = [play.requester for play in plays if play.requester]
         if requests and askers:
             counts = Counter(
-                person.display_name if person.announce_requests else "someone" for person in askers
+                "the kiosk"
+                if person.role == Role.KIOSK
+                else person.display_name
+                if person.announce_requests
+                else "someone"
+                for person in askers
             )
             asked = [f"{name} ({_times(n)})" if n > 1 else name for name, n in counts.items()]
             line += f", requested by {_listed(asked)}"
@@ -362,9 +368,14 @@ class DJ:
             before = playing and Song(playing.track.title, playing.track.artists)
             after = Song(entry.track.title, entry.track.artists)
             requester = entry.requester
+            # A request from the kiosk has nobody's name on it.
+            at_kiosk = bool(requester) and requester.role == Role.KIOSK
             named = (
                 requester.display_name
-                if requester and station.announce_requests and requester.announce_requests
+                if requester
+                and not at_kiosk
+                and station.announce_requests
+                and requester.announce_requests
                 else None
             )
             remarks = await history(db, entry, station.announce_requests, named)
@@ -384,7 +395,7 @@ class DJ:
 
         # Talks on the first song after the station comes on, then as often as it says, and
         # for a request, named or not: for an album queued whole, on its first song only.
-        shout_out = bool(requester) and announcing and (not album or starts_album)
+        shout_out = bool(requester) and announcing and not at_kiosk and (not album or starts_album)
         songs = memory.get("songs", every - 1) + 1
         now = self._clock().astimezone(zone)
         talked_at = memory.get("talked_at")
@@ -409,6 +420,8 @@ class DJ:
                 up_next += "starting with this. Say their name." if named else "starting with this."
             else:
                 up_next += f" It's from the album {album}, which {named or 'someone'} put on."
+        elif requester and announcing and at_kiosk:
+            up_next += " Someone picked it on the kiosk, the touchscreen in the office."
         elif requester and announcing:
             up_next += (
                 f" {named} requested it: say their name."

@@ -37,6 +37,11 @@ const DAYS: [Day, string][] = [
   ["sun", "Sunday"],
 ];
 
+const KIOSK_LOOKS = [
+  { value: "dark" as const, label: "Dark" },
+  { value: "light" as const, label: "Light" },
+];
+
 const RECENTLY = [
   { value: "12", label: "12 h" },
   { value: "24", label: "24 h" },
@@ -208,6 +213,46 @@ export function SettingsPage() {
               <p className={styles.muted}>
                 This is for when a playlist plays to the end, or nothing was chosen. Choosing
                 Requests only on Now Playing means nothing takes over.
+              </p>
+            </Section>
+
+            <Section title="Kiosk">
+              <Row
+                label="Places"
+                hint="Songs the kiosk can add before it takes a break. One that plays gives its place back."
+              >
+                <Stepper
+                  label="Kiosk places"
+                  value={values.kiosk_places}
+                  min={1}
+                  max={30}
+                  onChange={(kiosk_places) => save({ kiosk_places })}
+                />
+              </Row>
+              <Row
+                label="Break"
+                hint="Minutes. Once its places are all taken, the kiosk can't add or vote for this long."
+              >
+                <Stepper
+                  label="Kiosk break"
+                  value={values.kiosk_break_minutes}
+                  min={1}
+                  max={30}
+                  onChange={(kiosk_break_minutes) => save({ kiosk_break_minutes })}
+                />
+              </Row>
+              <div className={s.stacked}>
+                <RowText label="Look" hint="How the kiosk's screen looks." />
+                <SegmentedControl
+                  label="Kiosk look"
+                  options={KIOSK_LOOKS}
+                  value={values.kiosk_theme}
+                  onChange={(kiosk_theme) => save({ kiosk_theme })}
+                />
+              </div>
+              <p className={styles.muted}>
+                The kiosk is the touchscreen in the office. Give an account the Kiosk role on the
+                Users page, then sign in with it on the kiosk.
               </p>
             </Section>
           </div>

@@ -7,6 +7,23 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The kiosk: a screen for a touchscreen in the office, where anyone walking past can see
+  what's playing, vote and add songs with a tap. The song that's playing spins on a record, the
+  queue is a wall of album covers, and one big button adds a song, from the office favourites
+  (Best Voted) or a search typed on the kiosk's own keyboard. A QR code takes people to
+  guildfm.com to request with their own name. It counts as one person when requests take turns,
+  has 8 places and then a 3-minute break, can take a song back for 10 seconds after adding it,
+  and counts as at most two votes each way on a song.
+- A Kiosk role for the account the kiosk signs in with, given on the Users page.
+- Kiosk settings: its places, the break once they're all taken, and its look (dark or light).
+
+### Changed
+
+- Requests take turns on equal votes: everyone's first request plays before anyone's second.
+  An album a curator queues counts as one turn.
+
 ## [0.1.17] - 2026-11-27
 
 ### Changed

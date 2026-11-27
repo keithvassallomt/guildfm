@@ -133,6 +133,20 @@ def test_votes_order_the_queue(client: TestClient, people) -> None:
     assert body["waiting"][2]["my_vote"] == 0
 
 
+def test_requests_take_turns_on_equal_votes(client: TestClient, people) -> None:
+    sign_in(client, *people["user"])
+    for number in (1, 2, 3):
+        request(client, f"fm{number}")
+    sign_in(client, *people["curator"])
+    request(client, "fm4")
+    # The curator's first request plays before the user's second.
+    assert titles(queue(client)) == ["Song 1", "Song 4", "Song 2", "Song 3"]
+
+    # Votes still come first.
+    vote(client, entry_for(client, "Song 3"), 1)
+    assert titles(queue(client)) == ["Song 3", "Song 1", "Song 4", "Song 2"]
+
+
 def test_one_vote_each_which_can_change_or_be_taken_back(client: TestClient, people) -> None:
     sign_in(client, *people["user"])
     request(client, "fm1")

@@ -72,6 +72,9 @@ class SettingsIn(BaseModel):
     announcement_voice: Voice | None = None
     # What GuildFM is, for the AI writing system idents.
     about: About | None = None
+    kiosk_places: int | None = Field(None, ge=1, le=30)
+    kiosk_break_minutes: int | None = Field(None, ge=1, le=30)
+    kiosk_theme: Literal["dark", "light"] | None = None
 
 
 class Place(BaseModel):
