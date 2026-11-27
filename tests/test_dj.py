@@ -218,8 +218,10 @@ def test_request_shout_outs(client: TestClient, people, openai: FakeOpenAI, spea
     client.patch("/api/me", json={"announce_requests": False}).raise_for_status()
     client.post("/api/queue", json={"track_id": spotify_id("dreams")}).raise_for_status()
     next_song(client, speakers)
-    # The user opted out, and it isn't time to talk anyway.
-    assert len(lines(openai)) == 1
+    # The user opted out: it isn't time to talk, but the DJ says it's a request, with no name.
+    assert len(lines(openai)) == 2
+    assert "It's a request, from someone who'd rather not be named." in lines(openai)[-1]
+    assert "User" not in lines(openai)[-1]
 
     sign_in(client, *people["curator"])
     client.post("/api/queue", json={"track_id": spotify_id("gyow")}).raise_for_status()

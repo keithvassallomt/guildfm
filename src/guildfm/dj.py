@@ -3,7 +3,8 @@ for requests, in the station's personality and voice.
 
 GuildFM asks the DJ about each song as it's lined up on the speakers, about a minute and a half
 before the current one ends. The DJ talks every so many songs or minutes, as the station says,
-and for every request while announcing requests is on, unless the person who asked opted out.
+and for every request while announcing requests is on, without a name if the person who asked
+opted out.
 The AI writes the line, which plays between the songs from the Sonos queue, so every room hears
 it in step. It never goes over music: Sonos plays a clip over the music one room at a time, with
 no way to start the rooms together, so they echo. Lines go through the announcer, so
@@ -382,8 +383,8 @@ class DJ:
             lineup = source.lineup.name if source.lineup else None
 
         # Talks on the first song after the station comes on, then as often as it says, and
-        # for a request: for an album queued whole, on its first song only.
-        shout_out = bool(named) and (not album or starts_album)
+        # for a request, named or not: for an album queued whole, on its first song only.
+        shout_out = bool(requester) and announcing and (not album or starts_album)
         songs = memory.get("songs", every - 1) + 1
         now = self._clock().astimezone(zone)
         talked_at = memory.get("talked_at")
@@ -409,7 +410,11 @@ class DJ:
             else:
                 up_next += f" It's from the album {album}, which {named or 'someone'} put on."
         elif requester and announcing:
-            up_next += f" {named} requested it: say their name." if named else " It's a request."
+            up_next += (
+                f" {named} requested it: say their name."
+                if named
+                else " It's a request, from someone who'd rather not be named."
+            )
         if note and not requester:
             up_next += f" Why it was picked: {note}"
         said = memory.get("said", [])

@@ -15,7 +15,7 @@ Now and then the DJ mentions how the office voted, such as how many thumbs up th
 
 When your request plays on a station with a DJ, the DJ might say your name, such as "This one's for Priya, who asked for some Fleetwood Mac." If it suits their personality, they may gently tease you for asking for the same artist again.
 
-To keep your name off air, go to your **Profile** and turn off **Announce my requests**.
+To keep your name off air, go to your **Profile** and turn off **Announce my requests**. The DJ still says it's a request, just not who asked.
 
 ![Announce my requests, on your Profile](shot:profile-on-air)
 

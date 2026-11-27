@@ -59,7 +59,7 @@ On a **Music with a DJ** station, the **Talking** step (or **Change** on its **T
 - **How often**: **Every song**, **Every few songs** (about every three), **Now and then** (about every 15 minutes), or **Let me choose** a number of songs or minutes. They always talk on the first song after the station comes on.
 - **What they say**: **Just the songs** keeps it short. **Songs and stories** adds trivia, the weather, and the odd story about the song.
 - **Something like** shows a line of what that sounds like, and **Hear** plays it in the DJ's voice.
-- **Say who asked for a song**: the DJ says who asked for it, unless they've turned that off on their Profile. With it on, the DJ announces every request, however often they'd normally talk.
+- **Say who asked for a song**: the DJ says who asked for it, unless they've turned that off on their Profile, in which case the DJ says it's a request without a name. With it on, the DJ announces every request, however often they'd normally talk.
 
 ![How often the DJ talks](shot:station-talking)
 

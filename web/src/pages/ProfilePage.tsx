@@ -181,7 +181,7 @@ export function ProfilePage() {
             <span className={profile.sampleLabel}>How it sounds</span>
             {me.announce_requests
               ? `"This next one goes out to ${shownName}. Here's MGMT with Electric Feel."`
-              : `"Here's MGMT with Electric Feel." Your name stays off air.`}
+              : `"Here's a request: MGMT with Electric Feel." Your name stays off air.`}
           </div>
           <FormError message={error} />
         </section>

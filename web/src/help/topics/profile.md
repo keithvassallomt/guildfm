@@ -32,7 +32,7 @@ Your photo shows beside your requests, in the songs played today, and wherever e
 
 ## Your name on air
 
-When **Announce my requests** is on, the DJ on an AI radio station can say your name when it plays a song you asked for. Turn it off to keep your name off air. **How it sounds** shows an example.
+When **Announce my requests** is on, the DJ on an AI radio station can say your name when it plays a song you asked for. Turn it off to keep your name off air: the DJ still says it's a request, just not who asked. **How it sounds** shows an example.
 
 ![Announce my requests](shot:profile-on-air)
 
